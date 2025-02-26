@@ -5,8 +5,21 @@ if ($_SESSION['role'] != 'admin') {
     exit;
 }
 require_once '../../classes/Member.php';
-$member = new Member();
-$members = $member->getMembers();
+require_once '../../classes/Payment.php';
+require_once '../../classes/Loan.php';
+
+// Connect to database
+$conn = (new Database())->getConnection();
+
+// Fetch all members
+$stmt = $conn->query("SELECT * FROM members");
+$members = $stmt->fetch_all(MYSQLI_ASSOC);
+
+// Aggregate stats
+$total_members = count($members);
+$total_payments = $conn->query("SELECT SUM(amount) as total FROM payments")->fetch_assoc()['total'] ?? 0;
+$total_loans = $conn->query("SELECT SUM(amount) as total FROM loans")->fetch_assoc()['total'] ?? 0;
+$total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral_benefits WHERE amount_paid IS NOT NULL")->fetch_assoc()['total'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -38,7 +51,6 @@ $members = $member->getMembers();
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
             font-family: 'Noto Sans', sans-serif;
         }
         .card {
@@ -88,63 +100,80 @@ $members = $member->getMembers();
         <h3 class="text-xl font-bold mb-6 text-orange-600">Admin Menu</h3>
         <ul class="space-y-4">
             <li><a href="add_member.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-user-plus mr-2"></i>Add Member</a></li>
-            <li><a href="incidents.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-file-alt mr-2"></i>Record Incident</a></li>
+            <li><a href="incidents.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-file-alt mr-2"></i>Record Funeral Benefit</a></li>
             <li><a href="payments.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-money-bill mr-2"></i>Manage Payments</a></li>
             <li><a href="loans.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-hand-holding-usd mr-2"></i>Manage Loans</a></li>
+            <li><a href="#members" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-users mr-2"></i>View Members</a></li>
         </ul>
     </aside>
 
     <!-- Dashboard Content -->
     <main class="flex-1 p-6 ml-64">
         <h1 class="text-3xl font-bold mb-6 text-orange-600">Admin Dashboard</h1>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Welcome Card -->
-            <div class="card p-6 rounded-xl">
-                <h2 class="text-xl font-semibold mb-2">Welcome, <?php echo $_SESSION['user']; ?>!</h2>
-                <p class="text-gray-600 dark:text-gray-400">Manage funeral aid and community support for Maranadhara Samithi.</p>
-                <a href="add_member.php" class="mt-4 inline-block text-white px-4 py-2 rounded-lg btn-admin">Add New Member</a>
-            </div>
 
-            <!-- Quick Stats Card -->
+        <!-- Overview Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <div class="card p-6 rounded-xl">
-                <h2 class="text-xl font-semibold mb-2">Quick Stats</h2>
-                <p class="text-gray-600 dark:text-gray-400">Total Members: <?php echo count($members); ?></p>
-                <p class="text-gray-600 dark:text-gray-400">More stats coming soon...</p>
+                <h2 class="text-lg font-semibold mb-2">Total Members</h2>
+                <p class="text-2xl font-bold text-orange-600"><?php echo $total_members; ?></p>
+            </div>
+            <div class="card p-6 rounded-xl">
+                <h2 class="text-lg font-semibold mb-2">Total Contributions</h2>
+                <p class="text-2xl font-bold text-orange-600">LKR <?php echo number_format($total_payments, 2); ?></p>
+            </div>
+            <div class="card p-6 rounded-xl">
+                <h2 class="text-lg font-semibold mb-2">Total Loans</h2>
+                <p class="text-2xl font-bold text-orange-600">LKR <?php echo number_format($total_loans, 2); ?></p>
+            </div>
+            <div class="card p-6 rounded-xl">
+                <h2 class="text-lg font-semibold mb-2">Total Funeral Aid</h2>
+                <p class="text-2xl font-bold text-orange-600">LKR <?php echo number_format($total_funeral_aid, 2); ?></p>
             </div>
         </div>
 
-        <!-- Members Table -->
-        <div class="mt-6 card p-6 rounded-xl">
-            <h2 class="text-xl font-semibold mb-4">Members</h2>
+        <!-- Quick Actions -->
+        <div class="card p-6 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <a href="add_member.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Add Member</a>
+                <a href="incidents.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Record Funeral</a>
+                <a href="payments.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Add Payment</a>
+                <a href="loans.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Add Loan</a>
+            </div>
+        </div>
+
+        <!-- Members Overview -->
+        <div id="members" class="card p-6 rounded-xl">
+            <h2 class="text-xl font-semibold mb-4">Members Overview</h2>
             <div class="overflow-x-auto">
                 <table class="w-full table-hover">
                     <thead>
                     <tr class="border-b dark:border-gray-600">
-                        <th class="py-2 px-4 text-left">Name</th>
+                        <th class="py-2 px-4 text-left">Member ID</th>
+                        <th class="py-2 px-4 text-left">Full Name</th>
                         <th class="py-2 px-4 text-left">Contact</th>
+                        <th class="py-2 px-4 text-left">Membership Type</th>
+                        <th class="py-2 px-4 text-left">Payment Status</th>
+                        <th class="py-2 px-4 text-left">Member Status</th>
                     </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($members as $m): ?>
                         <tr class="border-b dark:border-gray-600">
-                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['name']); ?></td>
-                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['contact']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['member_id']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['full_name']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['contact_number']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['membership_type']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['payment_status']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['member_status']); ?></td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($members)): ?>
-                        <tr>
-                            <td colspan="2" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No members yet.</td>
-                        </tr>
+                        <tr><td colspan="6" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No members yet.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- Community Updates Placeholder -->
-        <div class="mt-6 card p-6 rounded-xl">
-            <h2 class="text-xl font-semibold mb-2">Community Updates</h2>
-            <p class="text-gray-600 dark:text-gray-400">Coming soon: Announcements and community events.</p>
         </div>
     </main>
 </div>

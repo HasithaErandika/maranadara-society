@@ -6,39 +6,48 @@ if ($_SESSION['role'] != 'user') {
 }
 require_once '../../classes/Member.php';
 require_once '../../classes/Payment.php';
-require_once '../../classes/Incident.php';
 require_once '../../classes/Loan.php';
 
-// Assume the logged-in user’s username links to their member record
-$member = new Member();
-$payment = new Payment();
-$incident = new Incident();
-$loan = new Loan();
-
-// Fetch member details (assuming username matches a member record)
+// Connect to database
 $conn = (new Database())->getConnection();
-$stmt = $conn->prepare("SELECT * FROM members WHERE name = ?"); // Adjust if you use a different identifier
+
+// Fetch member details linked to the logged-in user
+$stmt = $conn->prepare("SELECT m.* FROM members m JOIN users u ON m.id = u.member_id WHERE u.username = ?");
 $stmt->bind_param("s", $_SESSION['user']);
 $stmt->execute();
 $member_details = $stmt->get_result()->fetch_assoc();
 
-// Fetch payments made by the user (membership fees)
-$stmt = $conn->prepare("SELECT amount, date FROM payments WHERE member_id = ?");
+// Fetch family details
+$stmt = $conn->prepare("SELECT * FROM family_details WHERE member_id = ?");
 $stmt->bind_param("i", $member_details['id']);
 $stmt->execute();
-$membership_payments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$family_details = $stmt->get_result()->fetch_assoc();
 
-// Fetch payments received (incidents, e.g., funeral aid)
-$stmt = $conn->prepare("SELECT type, date, payment FROM incidents WHERE member_id = ?");
+// Fetch payments
+$stmt = $conn->prepare("SELECT amount, date, payment_mode FROM payments WHERE member_id = ?");
 $stmt->bind_param("i", $member_details['id']);
 $stmt->execute();
-$received_payments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$payments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$total_paid = array_sum(array_column($payments, 'amount'));
+$pending_dues = $member_details['contribution_amount'] * (date('Y') - substr($member_details['date_of_joining'], 0, 4) + 1) * 12 - $total_paid;
 
-// Fetch loans taken by the user
-$stmt = $conn->prepare("SELECT amount, interest_rate, duration, monthly_payment FROM loans WHERE member_id = ?");
+// Fetch funeral benefits
+$stmt = $conn->prepare("SELECT * FROM funeral_benefits WHERE member_id = ?");
+$stmt->bind_param("i", $member_details['id']);
+$stmt->execute();
+$funeral_benefits = $stmt->get_result()->fetch_assoc();
+
+// Fetch loans
+$stmt = $conn->prepare("SELECT * FROM loans WHERE member_id = ?");
 $stmt->bind_param("i", $member_details['id']);
 $stmt->execute();
 $loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Fetch documents
+$stmt = $conn->prepare("SELECT * FROM documents WHERE member_id = ?");
+$stmt->bind_param("i", $member_details['id']);
+$stmt->execute();
+$documents = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,7 +79,6 @@ $loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
             font-family: 'Noto Sans', sans-serif;
         }
         .card {
@@ -91,7 +99,7 @@ $loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             transform: scale(1.05);
         }
         .table-hover tbody tr:hover {
-            background-color: #e8f5e9; /* Light green */
+            background-color: #e8f5e9;
         }
         .sidebar {
             background-color: var(--card-bg);
@@ -119,10 +127,13 @@ $loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <aside class="w-64 sidebar p-6 fixed h-full">
         <h3 class="text-xl font-bold mb-6 text-green-600">Member Menu</h3>
         <ul class="space-y-4">
-            <li><a href="#membership" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-id-card mr-2"></i>Membership Details</a></li>
-            <li><a href="#payments" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-money-bill mr-2"></i>Payments</a></li>
-            <li><a href="#received" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-hand-holding-heart mr-2"></i>Received Payments</a></li>
+            <li><a href="#member-info" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-id-card mr-2"></i>Member Info</a></li>
+            <li><a href="#membership" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-clipboard mr-2"></i>Membership</a></li>
+            <li><a href="#family" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-users mr-2"></i>Family</a></li>
+            <li><a href="#financial" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-money-bill mr-2"></i>Financial</a></li>
+            <li><a href="#funeral" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-hand-holding-heart mr-2"></i>Funeral Benefits</a></li>
             <li><a href="#loans" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-hand-holding-usd mr-2"></i>Loans</a></li>
+            <li><a href="#documents" class="text-gray-700 dark:text-gray-300 hover:text-green-600 flex items-center"><i class="fas fa-file-alt mr-2"></i>Documents</a></li>
         </ul>
     </aside>
 
@@ -130,74 +141,100 @@ $loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     <main class="flex-1 p-6 ml-64">
         <h1 class="text-3xl font-bold mb-6 text-green-600">Member Dashboard</h1>
 
+        <!-- Member Information -->
+        <div id="member-info" class="card p-6 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold mb-4">Member Information</h2>
+            <?php if ($member_details): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p><strong>Member ID:</strong> <?php echo htmlspecialchars($member_details['member_id']); ?></p>
+                    <p><strong>Full Name:</strong> <?php echo htmlspecialchars($member_details['full_name']); ?></p>
+                    <p><strong>Date of Birth:</strong> <?php echo htmlspecialchars($member_details['date_of_birth']); ?></p>
+                    <p><strong>Gender:</strong> <?php echo htmlspecialchars($member_details['gender']); ?></p>
+                    <p><strong>NIC Number:</strong> <?php echo htmlspecialchars($member_details['nic_number']); ?></p>
+                    <p><strong>Address:</strong> <?php echo htmlspecialchars($member_details['address']); ?></p>
+                    <p><strong>Contact Number:</strong> <?php echo htmlspecialchars($member_details['contact_number']); ?></p>
+                    <p><strong>Email:</strong> <?php echo $member_details['email'] ? htmlspecialchars($member_details['email']) : 'N/A'; ?></p>
+                    <p><strong>Occupation:</strong> <?php echo $member_details['occupation'] ? htmlspecialchars($member_details['occupation']) : 'N/A'; ?></p>
+                </div>
+            <?php else: ?>
+                <p class="text-gray-600 dark:text-gray-400">No member information found.</p>
+            <?php endif; ?>
+        </div>
+
         <!-- Membership Details -->
         <div id="membership" class="card p-6 rounded-xl mb-6">
             <h2 class="text-xl font-semibold mb-4">Membership Details</h2>
             <?php if ($member_details): ?>
-                <p><strong>Name:</strong> <?php echo htmlspecialchars($member_details['name']); ?></p>
-                <p><strong>Address:</strong> <?php echo htmlspecialchars($member_details['address']); ?></p>
-                <p><strong>Contact:</strong> <?php echo htmlspecialchars($member_details['contact']); ?></p>
-            <?php else: ?>
-                <p class="text-gray-600 dark:text-gray-400">No membership details found. Contact an admin.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p><strong>Membership Number:</strong> <?php echo htmlspecialchars($member_details['member_id']); ?></p>
+                    <p><strong>Date of Joining:</strong> <?php echo htmlspecialchars($member_details['date_of_joining']); ?></p>
+                    <p><strong>Membership Type:</strong> <?php echo htmlspecialchars($member_details['membership_type']); ?></p>
+                    <p><strong>Contribution Amount:</strong> LKR <?php echo number_format($member_details['contribution_amount'], 2); ?></p>
+                    <p><strong>Payment Status:</strong> <?php echo htmlspecialchars($member_details['payment_status']); ?></p>
+                    <p><strong>Member Status:</strong> <?php echo htmlspecialchars($member_details['member_status']); ?></p>
+                </div>
             <?php endif; ?>
         </div>
 
-        <!-- Membership Payments -->
-        <div id="payments" class="card p-6 rounded-xl mb-6">
-            <h2 class="text-xl font-semibold mb-4">Membership Payments</h2>
+        <!-- Family Details -->
+        <div id="family" class="card p-6 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold mb-4">Family Details</h2>
+            <?php if ($family_details): ?>
+                <p><strong>Spouse's Name:</strong> <?php echo $family_details['spouse_name'] ? htmlspecialchars($family_details['spouse_name']) : 'N/A'; ?></p>
+                <p><strong>Children:</strong> <?php echo $family_details['children_info'] ? htmlspecialchars($family_details['children_info']) : 'N/A'; ?></p>
+                <p><strong>Dependents:</strong> <?php echo $family_details['dependents_info'] ? htmlspecialchars($family_details['dependents_info']) : 'N/A'; ?></p>
+            <?php else: ?>
+                <p class="text-gray-600 dark:text-gray-400">No family details recorded.</p>
+            <?php endif; ?>
+        </div>
+
+        <!-- Financial & Payment Records -->
+        <div id="financial" class="card p-6 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold mb-4">Financial & Payment Records</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <p><strong>Total Contributions Paid:</strong> LKR <?php echo number_format($total_paid, 2); ?></p>
+                <p><strong>Pending Dues:</strong> LKR <?php echo number_format(max(0, $pending_dues), 2); ?></p>
+            </div>
+            <h3 class="text-lg font-semibold mb-2">Payment History</h3>
             <div class="overflow-x-auto">
                 <table class="w-full table-hover">
                     <thead>
                     <tr class="border-b dark:border-gray-600">
-                        <th class="py-2 px-4 text-left">Amount (LKR)</th>
                         <th class="py-2 px-4 text-left">Date</th>
+                        <th class="py-2 px-4 text-left">Amount (LKR)</th>
+                        <th class="py-2 px-4 text-left">Payment Mode</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <?php foreach ($membership_payments as $p): ?>
+                    <?php foreach ($payments as $p): ?>
                         <tr class="border-b dark:border-gray-600">
-                            <td class="py-2 px-4"><?php echo number_format($p['amount'], 2); ?></td>
                             <td class="py-2 px-4"><?php echo htmlspecialchars($p['date']); ?></td>
+                            <td class="py-2 px-4"><?php echo number_format($p['amount'], 2); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($p['payment_mode']); ?></td>
                         </tr>
                     <?php endforeach; ?>
-                    <?php if (empty($membership_payments)): ?>
-                        <tr>
-                            <td colspan="2" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No payments recorded.</td>
-                        </tr>
+                    <?php if (empty($payments)): ?>
+                        <tr><td colspan="3" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No payments recorded.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Payments Received -->
-        <div id="received" class="card p-6 rounded-xl mb-6">
-            <h2 class="text-xl font-semibold mb-4">Payments Received from Society</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full table-hover">
-                    <thead>
-                    <tr class="border-b dark:border-gray-600">
-                        <th class="py-2 px-4 text-left">Type</th>
-                        <th class="py-2 px-4 text-left">Date</th>
-                        <th class="py-2 px-4 text-left">Amount (LKR)</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php foreach ($received_payments as $r): ?>
-                        <tr class="border-b dark:border-gray-600">
-                            <td class="py-2 px-4"><?php echo htmlspecialchars($r['type']); ?></td>
-                            <td class="py-2 px-4"><?php echo htmlspecialchars($r['date']); ?></td>
-                            <td class="py-2 px-4"><?php echo number_format($r['payment'], 2); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    <?php if (empty($received_payments)): ?>
-                        <tr>
-                            <td colspan="3" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No payments received.</td>
-                        </tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+        <!-- Funeral Benefit Details -->
+        <div id="funeral" class="card p-6 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold mb-4">Funeral Benefit Details</h2>
+            <?php if ($funeral_benefits): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p><strong>Nominee Name:</strong> <?php echo htmlspecialchars($funeral_benefits['nominee_name']); ?></p>
+                    <p><strong>Nominee Relationship:</strong> <?php echo htmlspecialchars($funeral_benefits['nominee_relationship']); ?></p>
+                    <p><strong>Death Certificate Date:</strong> <?php echo $funeral_benefits['death_certificate_date'] ?: 'N/A'; ?></p>
+                    <p><strong>Amount Paid:</strong> LKR <?php echo $funeral_benefits['amount_paid'] ? number_format($funeral_benefits['amount_paid'], 2) : 'N/A'; ?></p>
+                    <p><strong>Payment Date:</strong> <?php echo $funeral_benefits['payment_date'] ?: 'N/A'; ?></p>
+                </div>
+            <?php else: ?>
+                <p class="text-gray-600 dark:text-gray-400">No funeral benefits recorded.</p>
+            <?php endif; ?>
         </div>
 
         <!-- Loans -->
@@ -223,9 +260,35 @@ $loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($loans)): ?>
-                        <tr>
-                            <td colspan="4" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No loans taken.</td>
+                        <tr><td colspan="4" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No loans taken.</td></tr>
+                    <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Additional Notes & Documents -->
+        <div id="documents" class="card p-6 rounded-xl mb-6">
+            <h2 class="text-xl font-semibold mb-4">Additional Notes & Documents</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full table-hover">
+                    <thead>
+                    <tr class="border-b dark:border-gray-600">
+                        <th class="py-2 px-4 text-left">Document Type</th>
+                        <th class="py-2 px-4 text-left">Notes</th>
+                        <th class="py-2 px-4 text-left">Upload Date</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($documents as $d): ?>
+                        <tr class="border-b dark:border-gray-600">
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($d['document_type']); ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($d['notes']) ?: 'N/A'; ?></td>
+                            <td class="py-2 px-4"><?php echo htmlspecialchars($d['upload_date']); ?></td>
                         </tr>
+                    <?php endforeach; ?>
+                    <?php if (empty($documents)): ?>
+                        <tr><td colspan="3" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No documents uploaded.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
