@@ -1,17 +1,25 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
+    background-color: #f8f9fa;
 }
-input, select, button {
-    margin: 5px 0;
-    padding: 5px;
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-button {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    cursor: pointer;
+
+.card {
+    border-radius: 10px;
 }
-button:hover {
-    background-color: #45a049;
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.alert {
+    margin-bottom: 20px;
 }
