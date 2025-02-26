@@ -1,5 +1,6 @@
 <?php
-require_once '../classes/Database.php';
+// classes/Member.php
+require_once __DIR__ . '/Database.php'; // Same directory, more reliable
 
 class Member {
     private $db;
