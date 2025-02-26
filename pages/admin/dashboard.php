@@ -8,18 +8,14 @@ require_once '../../classes/Member.php';
 require_once '../../classes/Payment.php';
 require_once '../../classes/Loan.php';
 
-// Connect to database
 $conn = (new Database())->getConnection();
-
-// Fetch all members
 $stmt = $conn->query("SELECT * FROM members");
 $members = $stmt->fetch_all(MYSQLI_ASSOC);
 
-// Aggregate stats
 $total_members = count($members);
 $total_payments = $conn->query("SELECT SUM(amount) as total FROM payments")->fetch_assoc()['total'] ?? 0;
 $total_loans = $conn->query("SELECT SUM(amount) as total FROM loans")->fetch_assoc()['total'] ?? 0;
-$total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral_benefits WHERE amount_paid IS NOT NULL")->fetch_assoc()['total'] ?? 0;
+$total_incident_aid = $conn->query("SELECT SUM(amount_paid) as total FROM incidents WHERE amount_paid IS NOT NULL")->fetch_assoc()['total'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -35,7 +31,7 @@ $total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral
             --text-color: #1f2937;
             --card-bg: #ffffff;
             --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            --btn-bg: #d35400; /* Admin orange */
+            --btn-bg: #d35400;
             --btn-hover: #b84500;
             --border-color: #d1d5db;
         }
@@ -71,7 +67,7 @@ $total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral
             transform: scale(1.05);
         }
         .table-hover tbody tr:hover {
-            background-color: #fef5e7; /* Light saffron */
+            background-color: #fef5e7;
         }
         .sidebar {
             background-color: var(--card-bg);
@@ -100,7 +96,7 @@ $total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral
         <h3 class="text-xl font-bold mb-6 text-orange-600">Admin Menu</h3>
         <ul class="space-y-4">
             <li><a href="add_member.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-user-plus mr-2"></i>Add Member</a></li>
-            <li><a href="incidents.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-file-alt mr-2"></i>Record Funeral Benefit</a></li>
+            <li><a href="incidents.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-file-alt mr-2"></i>Record Incident</a></li>
             <li><a href="payments.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-money-bill mr-2"></i>Manage Payments</a></li>
             <li><a href="loans.php" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-hand-holding-usd mr-2"></i>Manage Loans</a></li>
             <li><a href="#members" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 flex items-center"><i class="fas fa-users mr-2"></i>View Members</a></li>
@@ -126,8 +122,8 @@ $total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral
                 <p class="text-2xl font-bold text-orange-600">LKR <?php echo number_format($total_loans, 2); ?></p>
             </div>
             <div class="card p-6 rounded-xl">
-                <h2 class="text-lg font-semibold mb-2">Total Funeral Aid</h2>
-                <p class="text-2xl font-bold text-orange-600">LKR <?php echo number_format($total_funeral_aid, 2); ?></p>
+                <h2 class="text-lg font-semibold mb-2">Total Incident Aid</h2>
+                <p class="text-2xl font-bold text-orange-600">LKR <?php echo number_format($total_incident_aid, 2); ?></p>
             </div>
         </div>
 
@@ -136,7 +132,7 @@ $total_funeral_aid = $conn->query("SELECT SUM(amount_paid) as total FROM funeral
             <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <a href="add_member.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Add Member</a>
-                <a href="incidents.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Record Funeral</a>
+                <a href="incidents.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Record Incident</a>
                 <a href="payments.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Add Payment</a>
                 <a href="loans.php" class="text-white px-4 py-2 rounded-lg btn-admin text-center">Add Loan</a>
             </div>
