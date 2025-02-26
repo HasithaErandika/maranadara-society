@@ -1,0 +1,4 @@
+config/db_config.php
+*.log
+*.cache
+vendor/
