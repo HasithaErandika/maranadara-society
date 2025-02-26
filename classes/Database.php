@@ -1,6 +1,5 @@
 <?php
-// classes/Database.php
-require_once __DIR__ . '/../config/db_config.php'; // Adjusted path
+require_once __DIR__ . '/../config/db_config.php';
 
 class Database {
     private $conn;

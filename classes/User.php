@@ -8,6 +8,7 @@ class User {
         $this->db = new Database();
     }
 
+    // Login function
     public function login($username, $password) {
         $conn = $this->db->getConnection();
         $stmt = $conn->prepare("SELECT password, role FROM users WHERE username = ?");
@@ -23,6 +24,7 @@ class User {
         return false;
     }
 
+    // Logout function
     public function logout() {
         session_start();
         session_destroy();
