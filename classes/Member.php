@@ -48,5 +48,12 @@ class Member {
         $last_num = $last_member ? (int)substr($last_member['member_id'], 3) : 0;
         return 'MS-' . str_pad($last_num + 1, 3, '0', STR_PAD_LEFT);
     }
+    public function isNicUnique($nic_number) {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM members WHERE nic_number = ?");
+        $stmt->bind_param("s", $nic_number);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_row()[0] == 0;
+    }
 }
 ?>
