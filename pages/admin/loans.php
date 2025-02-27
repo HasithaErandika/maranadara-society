@@ -12,12 +12,12 @@ $member = new Member();
 $loan = new Loan();
 $payment = new Payment();
 $conn = (new Database())->getConnection();
-$error = $success = $monthly_payment = '';
+$error = $success = '';
+$loan_breakdown = null;
 
 $members = $member->getAllMembers();
-$loans = $loan->getAllLoans();
-$loan_settlement_payments = $payment->getPaymentsByType('Loan Settlement');
-
+$selected_member_id = isset($_GET['member_id']) ? intval($_GET['member_id']) : null;
+$loans = $loan->getAllLoans($selected_member_id);
 $action = isset($_GET['action']) ? $_GET['action'] : 'view';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
@@ -29,34 +29,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $start_date = $_POST['start_date'];
         $remarks = $_POST['remarks'] ?: null;
 
-        // Validate inputs
         if (empty($member_id) || $amount <= 0 || $interest_rate < 0 || $duration <= 0 || empty($start_date)) {
             $error = "All fields are required, and values must be valid.";
         } elseif (!strtotime($start_date)) {
             $error = "Invalid start date format.";
         } else {
             if ($loan->addLoan($member_id, $amount, $interest_rate, $duration, $start_date, $remarks)) {
-                $success = "Loan added successfully!";
-                $loans = $loan->getAllLoans();
+                $success = "Loan application submitted Successfully!";
+                $loans = $loan->getAllLoans($selected_member_id);
             } else {
-                $error = "Error adding loan. Check your inputs or database connection.";
+                $error = "Error adding loan. Member may have an unsettled loan.";
             }
         }
     } elseif (isset($_POST['delete'])) {
         $id = $_POST['id'];
-        $stmt = $conn->prepare("SELECT is_confirmed FROM loans WHERE id = ?");
+        $stmt = $conn->prepare("SELECT status FROM loans WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
 
-        if ($result['is_confirmed']) {
-            $error = "Cannot delete a confirmed loan.";
+        if ($result['status'] != 'Applied') {
+            $error = "Can only delete loans in 'Applied' status.";
         } else {
             $stmt = $conn->prepare("DELETE FROM loans WHERE id = ?");
             $stmt->bind_param("i", $id);
             if ($stmt->execute()) {
-                $success = "Loan deleted successfully!";
-                $loans = $loan->getAllLoans();
+                $success = "Loan deleted Successfully!";
+                $loans = $loan->getAllLoans($selected_member_id);
             } else {
                 $error = "Error deleting loan: " . $conn->error;
             }
@@ -67,17 +66,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $duration = intval($_POST['duration']);
 
         if ($amount > 0 && $interest_rate >= 0 && $duration > 0) {
-            $monthly_payment = $loan->calculateMonthlyPayment($amount, $interest_rate, $duration);
+            $loan_breakdown = $loan->calculateLoanBreakdown($amount, $interest_rate, $duration);
         } else {
             $error = "Please enter valid values for calculation.";
         }
-    } elseif (isset($_POST['confirm'])) {
+    } elseif (isset($_POST['approve'])) {
         $id = $_POST['id'];
-        if ($loan->confirmLoan($id, $_SESSION['user'])) {
-            $success = "Loan confirmed successfully!";
-            $loans = $loan->getAllLoans();
+        if ($loan->approveLoan($id, $_SESSION['user'])) {
+            $success = "Loan approved Successfully!";
+            $loans = $loan->getAllLoans($selected_member_id);
         } else {
-            $error = "Error confirming loan or already confirmed.";
+            $error = "Error approving loan or not in 'Applied' status.";
+        }
+    } elseif (isset($_POST['settle'])) {
+        $id = $_POST['id'];
+        if ($loan->settleLoan($id, $_SESSION['user'])) {
+            $success = "Loan settled Successfully!";
+            $loans = $loan->getAllLoans($selected_member_id);
+        } else {
+            $error = "Error settling loan: Total paid must equal or exceed total payable.";
         }
     }
 }
@@ -87,206 +94,180 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Loans - Maranadhara Samithi</title>
+    <title>Loan Management - Maranadhara Samithi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root {
-            --bg-color: #f3f4f6;
-            --text-color: #1f2937;
-            --card-bg: #ffffff;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --btn-bg: #d35400;
-            --btn-hover: #b84500;
-            --border-color: #e5e7eb;
-            --accent-color: #f97316;
-            --confirm-bg: #10b981;
-            --confirm-hover: #059669;
-            --sidebar-width: 64px;
-            --sidebar-expanded: 240px;
-        }
-        [data-theme="dark"] {
-            --bg-color: #1f2937;
-            --text-color: #f3f4f6;
-            --card-bg: #374151;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            --btn-bg: #e67e22;
-            --btn-hover: #f39c12;
-            --border-color: #4b5563;
-            --accent-color: #fb923c;
-            --confirm-bg: #34d399;
-            --confirm-hover: #6ee7b7;
-        }
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Noto Sans', sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            background: linear-gradient(to right, #f0f4f8, #e2e8f0);
+            color: #2d3748;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
         }
         .card {
-            background-color: var(--card-bg);
-            box-shadow: var(--card-shadow);
+            background: white;
             border-radius: 12px;
-            padding: 1rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: transform 0.2s;
         }
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
         }
-        .btn-admin {
-            background-color: var(--btn-bg);
-            transition: all 0.3s ease;
+        .btn {
+            padding: 0.5rem 1.5rem;
             border-radius: 8px;
-        }
-        .btn-admin:hover {
-            background-color: var(--btn-hover);
-            transform: scale(1.03);
-        }
-        .btn-delete {
-            background-color: #dc2626;
             transition: all 0.3s ease;
-            border-radius: 8px;
         }
-        .btn-delete:hover {
-            background-color: #b91c1c;
-            transform: scale(1.03);
+        .btn-primary {
+            background: #1e40af;
+            color: white;
         }
-        .btn-confirm {
-            background-color: var(--confirm-bg);
-            transition: all 0.3s ease;
-            border-radius: 8px;
+        .btn-primary:hover {
+            background: #1e3a8a;
         }
-        .btn-confirm:hover {
-            background-color: var(--confirm-hover);
-            transform: scale(1.03);
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #059669;
         }
         .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--card-bg);
-            box-shadow: var(--card-shadow);
+            width: 72px;
+            background: white;
             border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: width 0.3s ease;
             position: fixed;
             top: 80px;
             left: 16px;
             height: calc(100vh - 100px);
             overflow: hidden;
-            z-index: 20;
         }
-        .sidebar:hover, .sidebar-expanded {
-            width: var(--sidebar-expanded);
-            z-index: 30;
+        .sidebar:hover {
+            width: 256px;
         }
         .sidebar-item {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
-            color: var(--text-color);
-            transition: background-color 0.2s ease;
+            padding: 14px 16px;
+            color: #2d3748;
+            transition: background 0.2s;
         }
         .sidebar-item:hover, .sidebar-item.active {
-            background-color: #f97316;
+            background: #f59e0b;
             color: white;
         }
         .sidebar-item i {
-            width: 24px;
+            width: 28px;
             text-align: center;
             margin-right: 12px;
         }
         .sidebar-item span {
             display: none;
-            white-space: nowrap;
         }
-        .sidebar:hover .sidebar-item span, .sidebar-expanded .sidebar-item span {
+        .sidebar:hover .sidebar-item span {
             display: inline;
         }
         .main-content {
-            transition: margin-left 0.3s ease;
-            margin-left: calc(var(--sidebar-width) + 16px);
+            margin-left: 100px;
+            padding: 2rem;
         }
-        .sidebar:hover ~ .main-content, .sidebar-expanded ~ .main-content {
-            margin-left: calc(var(--sidebar-expanded) + 16px);
-        }
-        .input-field {
-            border: 1px solid var(--border-color);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        .input-field, select {
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            padding: 0.5rem;
+            padding: 0.75rem;
+            width: 100%;
+            transition: border-color 0.2s;
         }
-        .input-field:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+        .input-field:focus, select:focus {
+            border-color: #f59e0b;
             outline: none;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
         }
         .table-container {
             overflow-x: auto;
             border-radius: 12px;
-            background-color: var(--card-bg);
+            background: white;
         }
         table {
             width: 100%;
             border-collapse: collapse;
         }
         th, td {
-            padding: 12px 16px;
+            padding: 14px 16px;
             text-align: left;
         }
         th {
-            background-color: #f97316;
+            background: #f59e0b;
             color: white;
-            position: sticky;
-            top: 0;
-            z-index: 10;
         }
         tr:nth-child(even) {
-            background-color: #f9fafb;
+            background: #f7fafc;
         }
         tr:hover {
-            background-color: #fef5e7;
+            background: #fef3c7;
         }
-        .settled-badge, .confirmed-badge {
-            background-color: var(--confirm-bg);
-            color: white;
-            padding: 0.25rem 0.75rem;
+        .status-bar {
+            display: flex;
+            width: 100%;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .status-settled {
+            background: #10b981;
+        }
+        .status-pending {
+            background: #6b7280;
+        }
+        .status-applied {
+            background: #d97706;
+        }
+        .badge {
+            padding: 0.35rem 0.85rem;
             border-radius: 1rem;
             font-size: 0.875rem;
             display: inline-flex;
             align-items: center;
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 0;
-                left: 0;
-            }
-            .sidebar-expanded {
-                width: var(--sidebar-expanded);
-            }
-            .main-content {
-                margin-left: 16px;
-            }
-            .sidebar:hover {
-                width: var(--sidebar-width);
-            }
-            .sidebar:hover ~ .main-content {
-                margin-left: calc(var(--sidebar-width) + 16px);
-            }
+        .badge-success {
+            background: #10b981;
+            color: white;
+        }
+        .badge-pending {
+            background: #6b7280;
+            color: white;
+        }
+        .badge-applied {
+            background: #d97706;
+            color: white;
         }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
 <!-- Navbar -->
-<nav class="shadow-lg fixed w-full z-10 top-0 bg-white dark:bg-gray-900">
+<nav class="shadow-lg fixed w-full z-10 top-0 bg-white">
     <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-        <a href="../../index.php" class="text-2xl font-bold text-orange-600 flex items-center" aria-label="Home">
+        <a href="../../index.php" class="text-2xl font-bold text-amber-500 flex items-center">
             <i class="fas fa-hands-helping mr-2"></i>Maranadhara Samithi
         </a>
         <div class="flex items-center space-x-4">
-            <span class="text-gray-700 dark:text-gray-300 hidden md:inline">Welcome, <?php echo htmlspecialchars($_SESSION['user']); ?></span>
-            <button class="md:hidden text-orange-600" id="sidebar-toggle" aria-label="Toggle Sidebar">
+            <span class="text-gray-700 hidden md:inline">Welcome, <?php echo htmlspecialchars($_SESSION['user']); ?></span>
+            <button class="md:hidden text-amber-500" id="sidebar-toggle">
                 <i class="fas fa-bars text-2xl"></i>
             </button>
-            <a href="../login.php?logout=1" class="text-white px-4 py-2 rounded-lg btn-admin" aria-label="Logout">Logout</a>
+            <a href="../login.php?logout=1" class="btn btn-primary">Logout</a>
         </div>
     </div>
 </nav>
@@ -308,27 +289,61 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </aside>
 
     <!-- Dashboard Content -->
-    <main class="flex-1 p-6 main-content" id="main-content">
+    <main class="main-content">
         <div class="mb-6">
-            <h1 class="text-3xl font-extrabold text-orange-600">Manage Loans</h1>
-            <p class="text-gray-600 dark:text-gray-400 mt-1">Oversee and add loans efficiently.</p>
+            <h1 class="text-3xl font-extrabold text-amber-600">Loan Management</h1>
+            <p class="text-gray-600 mt-1">View and manage loan details with ease.</p>
         </div>
 
         <?php if ($error): ?>
-            <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo $error; ?></div>
+            <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6 flex items-center">
+                <i class="fas fa-exclamation-circle mr-2"></i><?php echo $error; ?>
+            </div>
         <?php endif; ?>
         <?php if ($success): ?>
-            <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6"><?php echo $success; ?></div>
+            <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6 flex items-center">
+                <i class="fas fa-check-circle mr-2"></i><?php echo $success; ?>
+            </div>
         <?php endif; ?>
 
         <?php if ($action == 'add'): ?>
+            <!-- Loan Calculator -->
+            <div class="card mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-amber-600">Loan Calculator</h2>
+                <form method="POST" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="calc_amount" class="block text-sm font-medium mb-1 text-gray-700">Loan Amount (LKR)</label>
+                        <input type="number" id="calc_amount" name="amount" step="0.01" class="input-field" required>
+                    </div>
+                    <div>
+                        <label for="calc_interest" class="block text-sm font-medium mb-1 text-gray-700">Interest Rate (%)</label>
+                        <input type="number" id="calc_interest" name="interest_rate" step="0.01" class="input-field" required>
+                    </div>
+                    <div>
+                        <label for="calc_duration" class="block text-sm font-medium mb-1 text-gray-700">Duration (Months)</label>
+                        <input type="number" id="calc_duration" name="duration" class="input-field" required>
+                    </div>
+                    <div class="sm:col-span-3 text-center">
+                        <button type="submit" name="calculate" class="btn btn-primary">Calculate</button>
+                    </div>
+                </form>
+                <?php if ($loan_breakdown): ?>
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p class="text-gray-700"><strong>Loan Amount:</strong> LKR <?php echo $loan_breakdown['amount']; ?></p>
+                        <p class="text-gray-700"><strong>Total Interest:</strong> LKR <?php echo $loan_breakdown['interest']; ?></p>
+                        <p class="text-gray-700"><strong>Monthly Payment:</strong> LKR <?php echo $loan_breakdown['monthly_payment']; ?></p>
+                        <p class="text-gray-700"><strong>Total Payable:</strong> LKR <?php echo $loan_breakdown['total_payable']; ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
             <!-- Add Loan Form -->
             <div class="card mb-6">
-                <h2 class="text-lg font-semibold mb-3 text-orange-600">Add New Loan</h2>
+                <h2 class="text-xl font-semibold mb-4 text-amber-600">Add New Loan</h2>
                 <form method="POST" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="member_id" class="block text-sm font-medium mb-1">Member</label>
-                        <select id="member_id" name="member_id" class="input-field w-full" required>
+                        <label for="member_id" class="block text-sm font-medium mb-1 text-gray-700">Member</label>
+                        <select id="member_id" name="member_id" class="input-field" required>
                             <option value="">Select Member</option>
                             <?php foreach ($members as $m): ?>
                                 <option value="<?php echo $m['id']; ?>"><?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?></option>
@@ -336,137 +351,153 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </select>
                     </div>
                     <div>
-                        <label for="amount" class="block text-sm font-medium mb-1">Amount (LKR)</label>
-                        <input type="number" id="amount" name="amount" step="0.01" class="input-field w-full" required>
+                        <label for="amount" class="block text-sm font-medium mb-1 text-gray-700">Amount (LKR)</label>
+                        <input type="number" id="amount" name="amount" step="0.01" class="input-field" value="<?php echo $loan_breakdown['amount'] ?? ''; ?>" required>
                     </div>
                     <div>
-                        <label for="interest_rate" class="block text-sm font-medium mb-1">Interest Rate (%)</label>
-                        <input type="number" id="interest_rate" name="interest_rate" step="0.01" class="input-field w-full" required>
+                        <label for="interest_rate" class="block text-sm font-medium mb-1 text-gray-700">Interest Rate (%)</label>
+                        <input type="number" id="interest_rate" name="interest_rate" step="0.01" class="input-field" value="<?php echo $loan_breakdown ? floatval($_POST['interest_rate']) : ''; ?>" required>
                     </div>
                     <div>
-                        <label for="duration" class="block text-sm font-medium mb-1">Duration (Months)</label>
-                        <input type="number" id="duration" name="duration" class="input-field w-full" required>
+                        <label for="duration" class="block text-sm font-medium mb-1 text-gray-700">Duration (Months)</label>
+                        <input type="number" id="duration" name="duration" class="input-field" value="<?php echo $loan_breakdown ? intval($_POST['duration']) : ''; ?>" required>
                     </div>
                     <div>
-                        <label for="start_date" class="block text-sm font-medium mb-1">Start Date</label>
-                        <input type="date" id="start_date" name="start_date" class="input-field w-full" required>
+                        <label for="start_date" class="block text-sm font-medium mb-1 text-gray-700">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" class="input-field" required>
                     </div>
                     <div class="sm:col-span-2">
-                        <label for="remarks" class="block text-sm font-medium mb-1">Remarks</label>
-                        <textarea id="remarks" name="remarks" class="input-field w-full" rows="2"></textarea>
-                    </div>
-                    <div class="sm:col-span-2">
-                        <div class="card p-3 bg-gray-50 dark:bg-gray-800">
-                            <h3 class="text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">Loan Calculator</h3>
-                            <button type="submit" name="calculate" class="text-white px-4 py-2 btn-admin">Calculate Monthly Payment</button>
-                            <?php if ($monthly_payment): ?>
-                                <p class="text-green-600 mt-2">Estimated Monthly Payment: LKR <?php echo number_format($monthly_payment, 2); ?></p>
-                            <?php endif; ?>
-                        </div>
+                        <label for="remarks" class="block text-sm font-medium mb-1 text-gray-700">Remarks</label>
+                        <textarea id="remarks" name="remarks" class="input-field" rows="3"></textarea>
                     </div>
                     <div class="sm:col-span-2 text-center">
-                        <button type="submit" name="add" class="text-white px-6 py-2 rounded-lg font-semibold btn-admin">Add Loan</button>
+                        <button type="submit" name="add" class="btn btn-primary">Submit Loan Application</button>
                     </div>
                 </form>
             </div>
         <?php else: ?>
             <!-- Loan List -->
             <div class="card mb-6">
-                <h2 class="text-lg font-semibold mb-3 text-orange-600">Loan Records</h2>
+                <h2 class="text-xl font-semibold mb-4 text-amber-600">Loan Records</h2>
+                <form method="GET" class="mb-4 flex items-center gap-4">
+                    <label for="member_id" class="text-sm font-medium text-gray-700">Filter by Member:</label>
+                    <select id="member_id" name="member_id" class="input-field w-full md:w-1/3" onchange="this.form.submit()">
+                        <option value="">All Members</option>
+                        <?php foreach ($members as $m): ?>
+                            <option value="<?php echo $m['id']; ?>" <?php echo $selected_member_id == $m['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
                 <div class="table-container">
                     <table>
                         <thead>
                         <tr>
                             <th>Member ID</th>
-                            <th>Amount (LKR)</th>
-                            <th>Interest Rate (%)</th>
-                            <th>Duration (Months)</th>
-                            <th>Monthly Payment (LKR)</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
+                            <th>Loan Amount (LKR)</th>
+                            <th>Final Payment</th>
+                            <th>Total Paid (LKR)</th>
+                            <th>Total Payable (LKR)</th>
                             <th>Status</th>
-                            <th>Remarks</th>
                             <th>Actions</th>
                         </tr>
                         </thead>
                         <tbody>
-                        <?php foreach ($loans as $l): ?>
-                            <?php
-                            $m = $member->getMemberById($l['member_id']);
-                            $settled_payments = array_filter($loan_settlement_payments, fn($p) => $p['member_id'] == $l['member_id']);
-                            $total_settled = array_sum(array_column($settled_payments, 'amount'));
-                            $total_loan_cost = $l['monthly_payment'] * $l['duration'];
-                            $is_settled = $total_settled >= $total_loan_cost;
+                        <?php
+                        $settled_count = 0;
+                        $pending_count = 0;
+                        $applied_count = 0;
+                        foreach ($loans as $l) {
+                            $final_payment = $l['total_payable']; // Original total payable becomes Final Payment
+                            $total_paid = $l['total_paid'];
+                            $total_payable = $final_payment - $total_paid; // New Total Payable calculation
+                            $status = ($total_payable <= 0) ? 'Settled' : ($l['status'] == 'Applied' ? 'Applied' : 'Pending');
+
+                            if ($status == 'Settled') $settled_count++;
+                            elseif ($status == 'Pending') $pending_count++;
+                            elseif ($status == 'Applied') $applied_count++;
                             ?>
                             <tr>
-                                <td>
-                                    <?php if ($is_settled): ?>
-                                        <span class="settled-badge"><i class="fas fa-check mr-1"></i>Settled</span>
-                                    <?php endif; ?>
-                                    <?php echo htmlspecialchars($m['member_id']); ?>
-                                </td>
+                                <td><?php echo htmlspecialchars($member->getMemberById($l['member_id'])['member_id']); ?></td>
                                 <td><?php echo number_format($l['amount'], 2); ?></td>
-                                <td><?php echo number_format($l['interest_rate'], 2); ?></td>
-                                <td><?php echo $l['duration']; ?></td>
-                                <td><?php echo number_format($l['monthly_payment'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($l['start_date']); ?></td>
-                                <td><?php echo htmlspecialchars($l['end_date']); ?></td>
+                                <td><?php echo number_format($final_payment, 2); ?></td>
+                                <td><?php echo number_format($total_paid, 2); ?></td>
+                                <td><?php echo number_format($total_payable, 2); ?></td>
                                 <td>
-                                    <?php if ($is_settled): ?>
-                                        Settled
-                                    <?php elseif ($l['is_confirmed']): ?>
-                                        <span class="confirmed-badge"><i class="fas fa-check mr-1"></i><?php echo htmlspecialchars($l['status']); ?> by <?php echo htmlspecialchars($l['confirmed_by']); ?></span>
-                                    <?php else: ?>
-                                        <?php echo htmlspecialchars($l['status']); ?>
-                                        <form method="POST" class="inline">
-                                            <input type="hidden" name="id" value="<?php echo $l['id']; ?>">
-                                            <button type="submit" name="confirm" class="btn-confirm text-white px-3 py-1"><i class="fas fa-check"></i></button>
-                                        </form>
+                                    <?php if ($status == 'Settled'): ?>
+                                        <span class="badge badge-success"><i class="fas fa-check mr-1"></i>Settled</span>
+                                    <?php elseif ($status == 'Pending'): ?>
+                                        <span class="badge badge-pending"><?php echo htmlspecialchars($status); ?></span>
+                                    <?php elseif ($status == 'Applied'): ?>
+                                        <span class="badge badge-applied"><?php echo htmlspecialchars($status); ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?php echo htmlspecialchars($l['remarks'] ?? 'N/A'); ?></td>
                                 <td class="flex space-x-2">
-                                    <?php if (!$l['is_confirmed'] && !$is_settled): ?>
-                                        <a href="edit_loan.php?id=<?php echo $l['id']; ?>" class="text-white px-2 py-1 rounded-lg btn-admin"><i class="fas fa-edit"></i></a>
+                                    <?php if ($l['status'] == 'Applied'): ?>
                                         <form method="POST" class="inline">
                                             <input type="hidden" name="id" value="<?php echo $l['id']; ?>">
-                                            <button type="submit" name="delete" class="text-white px-2 py-1 btn-delete"><i class="fas fa-trash"></i></button>
+                                            <button type="submit" name="approve" class="btn btn-success px-2 py-1"><i class="fas fa-check"></i></button>
+                                        </form>
+                                        <form method="POST" class="inline">
+                                            <input type="hidden" name="id" value="<?php echo $l['id']; ?>">
+                                            <button type="submit" name="delete" class="btn btn-danger px-2 py-1"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    <?php elseif ($status == 'Pending' && $total_payable <= 0): ?>
+                                        <form method="POST" class="inline">
+                                            <input type="hidden" name="id" value="<?php echo $l['id']; ?>">
+                                            <button type="submit" name="settle" class="btn btn-success px-2 py-1">Settle</button>
                                         </form>
                                     <?php endif; ?>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php } ?>
                         <?php if (empty($loans)): ?>
-                            <tr><td colspan="10" class="text-center text-gray-500 dark:text-gray-400 py-4">No loans recorded.</td></tr>
+                            <tr><td colspan="7" class="text-center text-gray-500 py-4">No loans recorded.</td></tr>
                         <?php endif; ?>
                         </tbody>
                     </table>
+                    <?php if (!empty($loans)): ?>
+                        <?php
+                        $total_loans = count($loans);
+                        $settled_width = $total_loans ? ($settled_count / $total_loans) * 100 : 0;
+                        $pending_width = $total_loans ? ($pending_count / $total_loans) * 100 : 0;
+                        $applied_width = $total_loans ? ($applied_count / $total_loans) * 100 : 0;
+                        ?>
+                        <div class="mt-4">
+                            <h3 class="text-lg font-semibold text-amber-600">Status Overview</h3>
+                            <div class="status-bar">
+                                <div class="status-settled" style="width: <?php echo $settled_width; ?>%;"></div>
+                                <div class="status-pending" style="width: <?php echo $pending_width; ?>%;"></div>
+                                <div class="status-applied" style="width: <?php echo $applied_width; ?>%;"></div>
+                            </div>
+                            <div class="flex justify-between text-sm mt-2 text-gray-700">
+                                <span>Settled: <?php echo $settled_count; ?></span>
+                                <span>Pending: <?php echo $pending_count; ?></span>
+                                <span>Applied: <?php echo $applied_count; ?></span>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>
-        <p class="text-center"><a href="dashboard.php" class="text-orange-600 hover:underline">Back to Dashboard</a></p>
+        <p class="text-center"><a href="dashboard.php" class="text-amber-600 hover:underline">Back to Dashboard</a></p>
     </main>
 </div>
 
 <!-- Footer -->
-<footer class="py-6 bg-white dark:bg-gray-900">
+<footer class="py-6 bg-white">
     <div class="container mx-auto px-6">
-        <p class="text-center text-gray-600 dark:text-gray-400 text-sm">© 2025 Maranadhara Samithi. All rights reserved.</p>
+        <p class="text-center text-gray-600 text-sm">© 2025 Maranadhara Samithi. All rights reserved.</p>
     </div>
 </footer>
 
 <script>
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    const mainContent = document.getElementById('main-content');
-
     sidebarToggle.addEventListener('click', () => {
         sidebar.classList.toggle('sidebar-expanded');
     });
-
-    if (window.innerWidth <= 768) {
-        sidebar.addEventListener('mouseenter', (e) => e.preventDefault());
-    }
 </script>
 </body>
 </html>
