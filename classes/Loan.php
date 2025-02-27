@@ -17,7 +17,7 @@ class Loan {
         return $stmt->execute();
     }
 
-    // Get loans for a member (for user dashboard)
+    // Get loans for a member
     public function getLoansByMemberId($member_id) {
         $conn = $this->db->getConnection();
         $stmt = $conn->prepare("SELECT * FROM loans WHERE member_id = ?");
@@ -26,24 +26,32 @@ class Loan {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Get all loans (for admin dashboard and loans.php)
+    // Get all loans
     public function getAllLoans() {
         $conn = $this->db->getConnection();
         $result = $conn->query("SELECT * FROM loans");
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Get total loans (for admin dashboard stats)
+    // Get total loans
     public function getTotalLoans() {
         $conn = $this->db->getConnection();
         $result = $conn->query("SELECT SUM(amount) as total FROM loans")->fetch_assoc();
         return $result['total'] ?? 0;
     }
 
-    // Calculate monthly payment (amortization formula)
-    public function calculateMonthlyPayment($principal, $rate, $months) {
-        $monthly_rate = $rate / 12 / 100;
-        return $principal * $monthly_rate * pow(1 + $monthly_rate, $months) / (pow(1 + $monthly_rate, $months) - 1);
+    // Calculate monthly payment
+    public function calculateAndFormatMonthlyPayment($amount, $rate, $duration) {
+        return number_format($this->calculateMonthlyPayment($amount, $rate, $duration), 2);
+    }
+
+
+    // Confirm a loan
+    public function confirmLoan($id, $confirmed_by) {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("UPDATE loans SET is_confirmed = TRUE, confirmed_by = ? WHERE id = ? AND is_confirmed = FALSE");
+        $stmt->bind_param("si", $confirmed_by, $id);
+        return $stmt->execute();
     }
 }
 ?>

@@ -6,14 +6,17 @@ if ($_SESSION['role'] != 'admin') {
 }
 require_once '../../classes/Member.php';
 require_once '../../classes/Loan.php';
+require_once '../../classes/Payment.php';
 
 $member = new Member();
 $loan = new Loan();
+$payment = new Payment();
 $conn = (new Database())->getConnection();
 $error = $success = $monthly_payment = '';
 
 $members = $member->getAllMembers();
 $loans = $loan->getAllLoans();
+$loan_settlement_payments = $payment->getPaymentsByType('Loan Settlement');
 
 $action = isset($_GET['action']) ? $_GET['action'] : 'view';
 
@@ -26,40 +29,66 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if ($loan->addLoan($member_id, $amount, $interest_rate, $duration)) {
             $success = "Loan added successfully!";
-            $loans = $loan->getAllLoans(); // Refresh list
+            $loans = $loan->getAllLoans();
         } else {
             $error = "Error adding loan.";
         }
     } elseif (isset($_POST['delete'])) {
         $id = $_POST['id'];
-        $stmt = $conn->prepare("DELETE FROM loans WHERE id = ?");
+        $stmt = $conn->prepare("SELECT is_confirmed FROM loans WHERE id = ?");
         $stmt->bind_param("i", $id);
-        if ($stmt->execute()) {
-            $success = "Loan deleted successfully!";
-            $loans = $loan->getAllLoans(); // Refresh list
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+
+        if ($result['is_confirmed']) {
+            $error = "Cannot delete a confirmed loan.";
         } else {
-            $error = "Error deleting loan: " . $conn->error;
+            $stmt = $conn->prepare("DELETE FROM loans WHERE id = ?");
+            $stmt->bind_param("i", $id);
+            if ($stmt->execute()) {
+                $success = "Loan deleted successfully!";
+                $loans = $loan->getAllLoans();
+            } else {
+                $error = "Error deleting loan: " . $conn->error;
+            }
         }
     } elseif (isset($_POST['update'])) {
         $id = $_POST['id'];
-        $amount = $_POST['amount'];
-        $interest_rate = $_POST['interest_rate'];
-        $duration = $_POST['duration'];
-        $monthly_payment = $loan->calculateMonthlyPayment($amount, $interest_rate, $duration);
+        $stmt = $conn->prepare("SELECT is_confirmed FROM loans WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
 
-        $stmt = $conn->prepare("UPDATE loans SET amount = ?, interest_rate = ?, duration = ?, monthly_payment = ? WHERE id = ?");
-        $stmt->bind_param("ddidi", $amount, $interest_rate, $duration, $monthly_payment, $id);
-        if ($stmt->execute()) {
-            $success = "Loan updated successfully!";
-            $loans = $loan->getAllLoans(); // Refresh list
+        if ($result['is_confirmed']) {
+            $error = "Cannot update a confirmed loan.";
         } else {
-            $error = "Error updating loan: " . $conn->error;
+            $amount = $_POST['amount'];
+            $interest_rate = $_POST['interest_rate'];
+            $duration = $_POST['duration'];
+            $monthly_payment = $loan->calculateMonthlyPayment($amount, $interest_rate, $duration);
+
+            $stmt = $conn->prepare("UPDATE loans SET amount = ?, interest_rate = ?, duration = ?, monthly_payment = ? WHERE id = ?");
+            $stmt->bind_param("ddidi", $amount, $interest_rate, $duration, $monthly_payment, $id);
+            if ($stmt->execute()) {
+                $success = "Loan updated successfully!";
+                $loans = $loan->getAllLoans();
+            } else {
+                $error = "Error updating loan: " . $conn->error;
+            }
         }
     } elseif (isset($_POST['calculate'])) {
         $amount = $_POST['amount'];
         $interest_rate = $_POST['interest_rate'];
         $duration = $_POST['duration'];
         $monthly_payment = $loan->calculateMonthlyPayment($amount, $interest_rate, $duration);
+    } elseif (isset($_POST['confirm'])) {
+        $id = $_POST['id'];
+        if ($loan->confirmLoan($id, $_SESSION['user'])) {
+            $success = "Loan confirmed successfully!";
+            $loans = $loan->getAllLoans();
+        } else {
+            $error = "Error confirming loan or already confirmed.";
+        }
     }
 }
 ?>
@@ -76,28 +105,41 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             --bg-color: #f3f4f6;
             --text-color: #1f2937;
             --card-bg: #ffffff;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --card-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
             --btn-bg: #d35400;
             --btn-hover: #b84500;
             --border-color: #d1d5db;
+            --accent-color: #f97316;
+            --confirm-bg: #10b981;
+            --confirm-hover: #059669;
         }
         [data-theme="dark"] {
             --bg-color: #1f2937;
             --text-color: #f3f4f6;
             --card-bg: #374151;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --card-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
             --btn-bg: #e67e22;
             --btn-hover: #f39c12;
             --border-color: #4b5563;
+            --accent-color: #fb923c;
+            --confirm-bg: #34d399;
+            --confirm-hover: #6ee7b7;
         }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             font-family: 'Noto Sans', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
         .card {
             background-color: var(--card-bg);
             box-shadow: var(--card-shadow);
+            border-radius: 0.75rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
         }
         .btn-admin {
             background-color: var(--btn-bg);
@@ -109,9 +151,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         .btn-delete {
             background-color: #dc2626;
+            transition: all 0.3s ease;
         }
         .btn-delete:hover {
             background-color: #b91c1c;
+            transform: scale(1.05);
+        }
+        .btn-confirm {
+            background-color: var(--confirm-bg);
+            transition: all 0.3s ease;
+        }
+        .btn-confirm:hover {
+            background-color: var(--confirm-hover);
+            transform: scale(1.05);
         }
         .table-hover tbody tr:hover {
             background-color: #fef5e7;
@@ -119,11 +171,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .input-field {
             border: 1px solid var(--border-color);
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 0.375rem;
         }
         .input-field:focus {
-            border-color: #d35400;
-            box-shadow: 0 0 0 3px rgba(211, 84, 0, 0.2);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
             outline: none;
+        }
+        .settled-badge {
+            background-color: #10b981;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+        .confirmed-badge {
+            background-color: var(--confirm-bg);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
         }
     </style>
 </head>
@@ -143,71 +213,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 <!-- Main Content -->
 <div class="container mx-auto px-6 py-20">
-    <div class="card p-6 rounded-xl">
-        <h1 class="text-2xl font-bold mb-6 text-orange-600">Manage Loans</h1>
-
+    <div class="card p-6">
+        <h1 class="text-3xl font-extrabold mb-6 text-orange-600">Manage Loans</h1>
         <?php if ($action == 'add'): ?>
-            <?php if (!empty($error)): ?>
-                <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo htmlspecialchars($error); ?></div>
+            <?php if ($error): ?>
+                <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo $error; ?></div>
             <?php endif; ?>
-            <?php if (!empty($success)): ?>
-                <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6"><?php echo htmlspecialchars($success); ?> Redirecting...</div>
+            <?php if ($success): ?>
+                <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6"><?php echo $success; ?> Redirecting...</div>
             <?php endif; ?>
-
-            <form method="POST" class="space-y-6" id="loan-form">
+            <form method="POST" class="space-y-6">
                 <!-- Loan Details -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label for="member_id" class="block font-medium mb-1">Member</label>
-                        <select id="member_id" name="member_id" class="input-field w-full px-4 py-2 rounded-lg" required>
+                        <label for="member_id" class="block font-medium mb-1 text-gray-700">Member</label>
+                        <select id="member_id" name="member_id" class="input-field w-full px-4 py-2" required>
                             <option value="">Select Member</option>
                             <?php foreach ($members as $m): ?>
-                                <option value="<?php echo htmlspecialchars($m['id']); ?>">
-                                    <?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?>
-                                </option>
+                                <option value="<?php echo $m['id']; ?>"><?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div>
-                        <label for="amount" class="block font-medium mb-1">Loan Amount (LKR)</label>
-                        <input type="number" id="amount" name="amount" step="0.01" class="input-field w-full px-4 py-2 rounded-lg" required>
+                        <label for="amount" class="block font-medium mb-1 text-gray-700">Amount (LKR)</label>
+                        <input type="number" id="amount" name="amount" step="0.01" class="input-field w-full px-4 py-2" required>
                     </div>
                     <div>
-                        <label for="interest_rate" class="block font-medium mb-1">Interest Rate (%)</label>
-                        <input type="number" id="interest_rate" name="interest_rate" step="0.01" class="input-field w-full px-4 py-2 rounded-lg" required>
+                        <label for="interest_rate" class="block font-medium mb-1 text-gray-700">Interest Rate (%)</label>
+                        <input type="number" id="interest_rate" name="interest_rate" step="0.01" class="input-field w-full px-4 py-2" required>
                     </div>
                     <div>
-                        <label for="duration" class="block font-medium mb-1">Duration (Months)</label>
-                        <input type="number" id="duration" name="duration" class="input-field w-full px-4 py-2 rounded-lg" required>
+                        <label for="duration" class="block font-medium mb-1 text-gray-700">Duration (Months)</label>
+                        <input type="number" id="duration" name="duration" class="input-field w-full px-4 py-2" required>
                     </div>
                 </div>
 
                 <!-- Loan Calculator -->
                 <div class="card p-4 bg-gray-50 dark:bg-gray-800">
-                    <h2 class="text-lg font-semibold mb-2">Loan Calculator</h2>
-                    <button type="button" id="calculate-loan" class="text-white px-4 py-2 rounded-lg btn-admin mb-2">Calculate Monthly Payment</button>
-
-                    <div id="loan-results" class="hidden mt-2">
-                        <p class="text-green-600 font-medium">Estimated Monthly Payment: LKR <span id="monthly-payment">0.00</span></p>
-                        <p class="text-gray-700">Total Interest Payable: LKR <span id="total-interest">0.00</span></p>
-                        <p class="text-gray-700">Total Repayment Amount: LKR <span id="total-repayment">0.00</span></p>
-                    </div>
+                    <h2 class="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Loan Calculator</h2>
+                    <button type="submit" name="calculate" class="text-white px-4 py-2 rounded-lg btn-admin mb-2">Calculate Monthly Payment</button>
+                    <?php if ($monthly_payment): ?>
+                        <p class="text-green-600">Estimated Monthly Payment: LKR <?php echo number_format($monthly_payment, 2); ?></p>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Submit Button -->
                 <div class="text-center">
-                    <button type="submit" name="add" id="submit-loan" class="text-white px-6 py-3 rounded-lg font-semibold btn-admin">Add Loan</button>
+                    <button type="submit" name="add" class="text-white px-6 py-3 rounded-lg font-semibold btn-admin">Add Loan</button>
                 </div>
             </form>
-
         <?php else: ?>
-            <?php if (!empty($error)): ?>
-                <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo htmlspecialchars($error); ?></div>
+            <?php if ($error): ?>
+                <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo $error; ?></div>
             <?php endif; ?>
-            <?php if (!empty($success)): ?>
-                <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6"><?php echo htmlspecialchars($success); ?></div>
+            <?php if ($success): ?>
+                <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6"><?php echo $success; ?></div>
             <?php endif; ?>
-
             <div class="overflow-x-auto">
                 <table class="w-full table-hover">
                     <thead>
@@ -217,26 +278,72 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <th class="py-2 px-4 text-left">Interest Rate (%)</th>
                         <th class="py-2 px-4 text-left">Duration (Months)</th>
                         <th class="py-2 px-4 text-left">Monthly Payment (LKR)</th>
+                        <th class="py-2 px-4 text-left">Status</th>
                         <th class="py-2 px-4 text-left">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     <?php foreach ($loans as $l): ?>
-                        <?php $m = $member->getMemberById($l['member_id']); ?>
+                        <?php
+                        $m = $member->getMemberById($l['member_id']);
+                        $settled_payments = array_filter($loan_settlement_payments, fn($p) => $p['member_id'] == $l['member_id']);
+                        $total_settled = array_sum(array_column($settled_payments, 'amount'));
+                        $total_loan_cost = $l['monthly_payment'] * $l['duration'];
+                        $is_settled = $total_settled >= $total_loan_cost;
+                        ?>
                         <tr class="border-b dark:border-gray-600">
-                            <td class="py-2 px-4"><?php echo htmlspecialchars($m['member_id']); ?></td>
-                            <td class="py-2 px-4"><?php echo number_format($l['amount'], 2); ?></td>
-                            <td class="py-2 px-4"><?php echo number_format($l['interest_rate'], 2); ?></td>
-                            <td class="py-2 px-4"><?php echo $l['duration']; ?></td>
-                            <td class="py-2 px-4"><?php echo number_format($l['monthly_payment'], 2); ?></td>
-                            <td class="py-2 px-4 flex space-x-2">
-                                <form method="POST">
+                            <td class="py-2 px-4">
+                                <?php if ($is_settled): ?>
+                                    <span class="settled-badge"><i class="fas fa-check mr-1"></i>Settled</span>
+                                <?php endif; ?>
+                                <?php echo htmlspecialchars($m['member_id']); ?>
+                            </td>
+                            <td class="py-2 px-4">
+                                <?php if ($l['is_confirmed']): ?>
+                                    <?php echo number_format($l['amount'], 2); ?>
+                                <?php else: ?>
+                                <form method="POST" class="inline">
                                     <input type="hidden" name="id" value="<?php echo $l['id']; ?>">
+                                    <input type="number" name="amount" value="<?php echo htmlspecialchars($l['amount']); ?>" step="0.01" class="input-field w-full px-2 py-1">
+                                    <?php endif; ?>
+                            </td>
+                            <td class="py-2 px-4">
+                                <?php if ($l['is_confirmed']): ?>
+                                    <?php echo number_format($l['interest_rate'], 2); ?>
+                                <?php else: ?>
+                                    <input type="number" name="interest_rate" value="<?php echo htmlspecialchars($l['interest_rate']); ?>" step="0.01" class="input-field w-full px-2 py-1">
+                                <?php endif; ?>
+                            </td>
+                            <td class="py-2 px-4">
+                                <?php if ($l['is_confirmed']): ?>
+                                    <?php echo $l['duration']; ?>
+                                <?php else: ?>
+                                    <input type="number" name="duration" value="<?php echo htmlspecialchars($l['duration']); ?>" class="input-field w-full px-2 py-1">
+                                <?php endif; ?>
+                            </td>
+                            <td class="py-2 px-4"><?php echo number_format($l['monthly_payment'], 2); ?></td>
+                            <td class="py-2 px-4">
+                                <?php if ($l['is_confirmed']): ?>
+                                    <span class="confirmed-badge"><i class="fas fa-check mr-1"></i>Confirmed by <?php echo htmlspecialchars($l['confirmed_by']); ?></span>
+                                <?php else: ?>
+                                    <form method="POST" class="inline">
+                                        <input type="hidden" name="id" value="<?php echo $l['id']; ?>">
+                                        <button type="submit" name="confirm" class="btn-confirm text-white px-3 py-1 rounded-lg"><i class="fas fa-check"></i> Confirm</button>
+                                    </form>
+                                <?php endif; ?>
+                            </td>
+                            <td class="py-2 px-4 flex space-x-2">
+                                <?php if (!$l['is_confirmed']): ?>
+                                    <button type="submit" name="update" class="text-white px-2 py-1 rounded-lg btn-admin"><i class="fas fa-save"></i></button>
                                     <button type="submit" name="delete" class="text-white px-2 py-1 rounded-lg btn-delete"><i class="fas fa-trash"></i></button>
-                                </form>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    <?php if (empty($loans)): ?>
+                        <tr><td colspan="7" class="py-2 px-4 text-center text-gray-500 dark:text-gray-400">No loans recorded.</td></tr>
+                    <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -244,27 +351,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <p class="text-center mt-4"><a href="dashboard.php" class="text-orange-600 hover:underline">Back to Dashboard</a></p>
     </div>
 </div>
-
-<!-- JavaScript for Loan Calculation -->
-<script>
-    document.getElementById("calculate-loan").addEventListener("click", function() {
-        let P = parseFloat(document.getElementById("amount").value);
-        let r = parseFloat(document.getElementById("interest_rate").value) / 12 / 100;
-        let n = parseInt(document.getElementById("duration").value);
-
-        if (P > 0 && r > 0 && n > 0) {
-            let M = P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
-            let totalInterest = (M * n) - P;
-            let totalRepayment = M * n;
-
-            document.getElementById("monthly-payment").textContent = M.toFixed(2);
-            document.getElementById("total-interest").textContent = totalInterest.toFixed(2);
-            document.getElementById("total-repayment").textContent = totalRepayment.toFixed(2);
-
-            document.getElementById("loan-results").classList.remove("hidden");
-        }
-    });
-</script>
-
 </body>
 </html>

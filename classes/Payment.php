@@ -8,23 +8,22 @@ class Payment {
         $this->db = new Database();
     }
 
-    // Add a payment with payment_type
-    public function addPayment($member_id, $amount, $date, $payment_mode, $payment_type) {
+    // Add a payment
+    public function addPayment($member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $is_confirmed = false, $confirmed_by = null) {
         $conn = $this->db->getConnection();
-        $stmt = $conn->prepare("INSERT INTO payments (member_id, amount, date, payment_mode, payment_type) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("idsss", $member_id, $amount, $date, $payment_mode, $payment_type);
+        $stmt = $conn->prepare("INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, receipt_number, remarks, is_confirmed, confirmed_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("idsssssis", $member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $is_confirmed, $confirmed_by);
         return $stmt->execute();
     }
 
-    // Get payments for a member (for user dashboard)
+    // Get payments for a member
     public function getPaymentsByMemberId($member_id) {
         $conn = $this->db->getConnection();
         if ($member_id === null) {
-            // Fetch all payments when member_id is null (for admin payments.php)
             $result = $conn->query("SELECT * FROM payments");
             return $result->fetch_all(MYSQLI_ASSOC);
         }
-        $stmt = $conn->prepare("SELECT amount, date, payment_mode, payment_type FROM payments WHERE member_id = ?");
+        $stmt = $conn->prepare("SELECT amount, date, payment_mode, payment_type, receipt_number, remarks, is_confirmed, confirmed_by FROM payments WHERE member_id = ?");
         $stmt->bind_param("i", $member_id);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -46,17 +45,26 @@ class Payment {
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Get total payments (for admin dashboard stats)
+    // Get total payments (Membership Fees only)
     public function getTotalPayments() {
         $conn = $this->db->getConnection();
         $result = $conn->query("SELECT SUM(amount) as total FROM payments WHERE payment_type = 'Membership Fee'")->fetch_assoc();
-        return $result['total'] ?? 0; // Only membership fees for dashboard stats
+        return $result['total'] ?? 0;
     }
-    // Add this method to the existing Payment.php
+
+    // Get total society issued payments
     public function getTotalSocietyIssuedPayments() {
         $conn = $this->db->getConnection();
         $result = $conn->query("SELECT SUM(amount) as total FROM payments WHERE payment_type = 'Society Issued'")->fetch_assoc();
         return $result['total'] ?? 0;
+    }
+
+    // Confirm a payment
+    public function confirmPayment($id, $confirmed_by) {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("UPDATE payments SET is_confirmed = TRUE, confirmed_by = ? WHERE id = ? AND is_confirmed = FALSE");
+        $stmt->bind_param("si", $confirmed_by, $id);
+        return $stmt->execute();
     }
 }
 ?>
