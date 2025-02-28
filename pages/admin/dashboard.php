@@ -100,7 +100,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
         }
         .sidebar:hover, .sidebar-expanded {
             width: var(--sidebar-expanded);
-            z-index: 30; /* Higher z-index when expanded */
+            z-index: 30;
         }
         .sidebar-item {
             display: flex;
@@ -164,7 +164,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
                 margin-left: 16px;
             }
             .sidebar:hover {
-                width: var(--sidebar-width); /* No hover expansion on mobile */
+                width: var(--sidebar-width);
             }
             .sidebar:hover ~ .main-content {
                 margin-left: calc(var(--sidebar-width) + 16px);

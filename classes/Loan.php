@@ -15,7 +15,11 @@ class Loan {
             return false;
         }
 
-        $stmt = $conn->prepare("SELECT id, amount, date_issued FROM loans WHERE member_id = ? AND status = 'active'");
+        $stmt = $conn->prepare("
+            SELECT id, amount, interest_rate, duration, monthly_payment, start_date 
+            FROM loans 
+            WHERE member_id = ? AND status = 'active'
+        ");
         if (!$stmt) {
             error_log("Prepare failed: " . $conn->error);
             return false;
@@ -38,6 +42,7 @@ class Loan {
         return $loans;
     }
 
+    // Rest of the class remains unchanged
     public function getTotalLoans() {
         $conn = $this->db->getConnection();
         if (!$conn) {
