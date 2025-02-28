@@ -75,128 +75,160 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #f3f4f6;
-            --text-color: #1f2937;
+            --bg-color: #f9fafb;
+            --text-color: #111827;
             --card-bg: #ffffff;
             --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --btn-bg: #d35400;
-            --btn-hover: #b84500;
+            --btn-bg: #ea580c;
+            --btn-hover: #c2410c;
             --border-color: #e5e7eb;
             --accent-color: #f97316;
-            --sidebar-width: 64px;
-            --sidebar-expanded: 240px;
+            --sidebar-width: 72px;
+            --sidebar-expanded: 260px;
         }
         [data-theme="dark"] {
-            --bg-color: #1f2937;
-            --text-color: #f3f4f6;
-            --card-bg: #374151;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            --btn-bg: #e67e22;
-            --btn-hover: #f39c12;
-            --border-color: #4b5563;
+            --bg-color: #111827;
+            --text-color: #f9fafb;
+            --card-bg: #1f2937;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            --btn-bg: #f97316;
+            --btn-hover: #ea580c;
+            --border-color: #374151;
             --accent-color: #fb923c;
         }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: 'Noto Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             transition: background-color 0.3s ease, color 0.3s ease;
         }
         .card {
             background-color: var(--card-bg);
             box-shadow: var(--card-shadow);
-            border-radius: 12px;
-            padding: 1rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
         }
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
         }
         .btn-admin {
             background-color: var(--btn-bg);
+            color: white;
+            padding: 0.75rem 1.5rem;
             transition: all 0.3s ease;
             border-radius: 8px;
         }
         .btn-admin:hover {
             background-color: var(--btn-hover);
-            transform: scale(1.03);
+            transform: translateY(-2px);
+        }
+        .btn-cancel {
+            background-color: #6b7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+        }
+        .btn-cancel:hover {
+            background-color: #4b5563;
+            transform: translateY(-2px);
         }
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--card-bg);
             box-shadow: var(--card-shadow);
-            border-radius: 12px;
+            border-radius: 16px;
             transition: width 0.3s ease;
             position: fixed;
-            top: 80px;
+            top: 84px;
             left: 16px;
-            height: calc(100vh - 100px);
+            height: calc(100vh - 104px);
             overflow: hidden;
             z-index: 20;
         }
-        .sidebar:hover, .sidebar-expanded {
+        .sidebar:hover, .sidebar.expanded {
             width: var(--sidebar-expanded);
-            z-index: 30;
         }
         .sidebar-item {
             display: flex;
             align-items: center;
-            padding: 12px 16px;
+            padding: 14px 20px;
             color: var(--text-color);
-            transition: background-color 0.2s ease;
+            transition: all 0.2s ease;
         }
         .sidebar-item:hover, .sidebar-item.active {
-            background-color: #f97316;
+            background-color: var(--accent-color);
             color: white;
         }
         .sidebar-item i {
             width: 24px;
             text-align: center;
-            margin-right: 12px;
+            margin-right: 16px;
         }
         .sidebar-item span {
             display: none;
             white-space: nowrap;
         }
-        .sidebar:hover .sidebar-item span, .sidebar-expanded .sidebar-item span {
+        .sidebar:hover .sidebar-item span, .sidebar.expanded .sidebar-item span {
             display: inline;
         }
         .main-content {
+            margin-left: calc(var(--sidebar-width) + 32px);
             transition: margin-left 0.3s ease;
-            margin-left: calc(var(--sidebar-width) + 16px);
         }
-        .sidebar:hover ~ .main-content, .sidebar-expanded ~ .main-content {
-            margin-left: calc(var(--sidebar-expanded) + 16px);
+        .sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content {
+            margin-left: calc(var(--sidebar-expanded) + 32px);
         }
         .input-field {
             border: 1px solid var(--border-color);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.3s ease;
             border-radius: 8px;
+            padding: 0.75rem 1rem;
+            width: 100%;
         }
         .input-field:focus {
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
             outline: none;
+        }
+        .input-field:valid {
+            border-color: #10b981;
         }
         .section-header {
             background: linear-gradient(135deg, #f97316, #fb923c);
             color: white;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.5rem;
             border-radius: 8px 8px 0 0;
-            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
         }
         .error-text {
             color: #dc2626;
             font-size: 0.875rem;
+            margin-top: 0.25rem;
             display: none;
+        }
+        .form-group {
+            position: relative;
+        }
+        .form-group i {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #10b981;
+            display: none;
+        }
+        .form-group.valid i {
+            display: block;
         }
         @media (max-width: 768px) {
             .sidebar {
                 width: 0;
                 left: 0;
             }
-            .sidebar-expanded {
+            .sidebar.expanded {
                 width: var(--sidebar-expanded);
             }
             .main-content {
@@ -206,12 +238,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 width: var(--sidebar-width);
             }
             .sidebar:hover ~ .main-content {
-                margin-left: calc(var(--sidebar-width) + 16px);
+                margin-left: calc(var(--sidebar-width) + 32px);
             }
+            .card {
+                padding: 1.5rem;
+            }
+        }
+        .theme-toggle {
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle:hover {
+            background-color: var(--border-color);
         }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
 <!-- Navbar -->
 <nav class="shadow-lg fixed w-full z-10 top-0 bg-white dark:bg-gray-900">
     <div class="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -220,10 +264,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </a>
         <div class="flex items-center space-x-4">
             <span class="text-gray-700 dark:text-gray-300 hidden md:inline">Welcome, <?php echo htmlspecialchars($_SESSION['user']); ?></span>
+            <button class="theme-toggle" id="theme-toggle" aria-label="Toggle Theme">
+                <i class="fas fa-moon"></i>
+            </button>
             <button class="md:hidden text-orange-600" id="sidebar-toggle" aria-label="Toggle Sidebar">
                 <i class="fas fa-bars text-2xl"></i>
             </button>
-            <a href="../login.php?logout=1" class="text-white px-4 py-2 rounded-lg btn-admin" aria-label="Logout">Logout</a>
+            <a href="../login.php?logout=1" class="text-white btn-admin" aria-label="Logout">Logout</a>
         </div>
     </div>
 </nav>
@@ -232,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <div class="flex min-h-screen pt-20">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
-        <ul class="mt-4">
+        <ul class="mt-6">
             <li class="sidebar-item"><a href="dashboard.php" class="flex items-center"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></li>
             <li class="sidebar-item active"><a href="add_member.php" class="flex items-center"><i class="fas fa-user-plus"></i><span>Add Member</span></a></li>
             <li class="sidebar-item"><a href="incidents.php?action=add" class="flex items-center"><i class="fas fa-file-alt"></i><span>Record Incident</span></a></li>
@@ -245,64 +292,78 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </aside>
 
     <!-- Form Content -->
-    <main class="flex-1 p-6 main-content" id="main-content">
-        <div class="max-w-3xl mx-auto">
-            <h1 class="text-3xl font-extrabold mb-6 text-orange-600">Add New Member</h1>
+    <main class="flex-1 p-8 main-content" id="main-content">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl font-extrabold mb-8 text-orange-600">Add New Member</h1>
             <?php if ($error): ?>
-                <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo $error; ?></div>
+                <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-8 flex items-center animate-fade-in">
+                    <i class="fas fa-exclamation-circle mr-2"></i><?php echo $error; ?>
+                </div>
             <?php endif; ?>
             <?php if ($success): ?>
-                <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-6"><?php echo $success; ?></div>
+                <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-8 flex items-center animate-fade-in">
+                    <i class="fas fa-check-circle mr-2"></i><?php echo $success; ?>
+                </div>
             <?php endif; ?>
 
-            <form method="POST" class="card space-y-6" id="add-member-form">
+            <form method="POST" class="card space-y-8" id="add-member-form">
                 <!-- Member Information -->
                 <div>
                     <div class="section-header">Member Information</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                        <div>
-                            <label for="member_id" class="block text-sm font-medium mb-1">Membership ID</label>
-                            <input type="text" id="member_id" name="member_id" class="input-field w-full px-3 py-2" placeholder="e.g., MS-001" required>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                        <div class="form-group">
+                            <label for="member_id" class="block text-sm font-semibold mb-2">Membership ID <span class="text-red-500">*</span></label>
+                            <input type="text" id="member_id" name="member_id" class="input-field" placeholder="e.g., MS-001" required aria-describedby="member_id-error">
+                            <i class="fas fa-check"></i>
                             <span class="error-text" id="member_id-error">Must be 'MS-' followed by at least 3 digits.</span>
                         </div>
-                        <div>
-                            <label for="full_name" class="block text-sm font-medium mb-1">Full Name</label>
-                            <input type="text" id="full_name" name="full_name" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="full_name" class="block text-sm font-semibold mb-2">Full Name <span class="text-red-500">*</span></label>
+                            <input type="text" id="full_name" name="full_name" class="input-field" required aria-describedby="full_name-error">
+                            <i class="fas fa-check"></i>
                             <span class="error-text" id="full_name-error">Full name is required.</span>
                         </div>
-                        <div>
-                            <label for="date_of_birth" class="block text-sm font-medium mb-1">Date of Birth</label>
-                            <input type="date" id="date_of_birth" name="date_of_birth" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="date_of_birth" class="block text-sm font-semibold mb-2">Date of Birth <span class="text-red-500">*</span></label>
+                            <input type="date" id="date_of_birth" name="date_of_birth" class="input-field" required>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="gender" class="block text-sm font-medium mb-1">Gender</label>
-                            <select id="gender" name="gender" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="gender" class="block text-sm font-semibold mb-2">Gender <span class="text-red-500">*</span></label>
+                            <select id="gender" name="gender" class="input-field" required>
+                                <option value="" disabled selected>Select Gender</option>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                                 <option value="Other">Other</option>
                             </select>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="nic_number" class="block text-sm font-medium mb-1">NIC Number</label>
-                            <input type="text" id="nic_number" name="nic_number" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="nic_number" class="block text-sm font-semibold mb-2">NIC Number <span class="text-red-500">*</span></label>
+                            <input type="text" id="nic_number" name="nic_number" class="input-field" required aria-describedby="nic_number-error">
+                            <i class="fas fa-check"></i>
                             <span class="error-text" id="nic_number-error">Must be at least 9 characters.</span>
                         </div>
-                        <div class="sm:col-span-2">
-                            <label for="address" class="block text-sm font-medium mb-1">Address</label>
-                            <input type="text" id="address" name="address" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group md:col-span-2">
+                            <label for="address" class="block text-sm font-semibold mb-2">Address <span class="text-red-500">*</span></label>
+                            <input type="text" id="address" name="address" class="input-field" required>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="contact_number" class="block text-sm font-medium mb-1">Contact Number</label>
-                            <input type="text" id="contact_number" name="contact_number" class="input-field w-full px-3 py-2" placeholder="+94XXXXXXXXX" required>
+                        <div class="form-group">
+                            <label for="contact_number" class="block text-sm font-semibold mb-2">Contact Number <span class="text-red-500">*</span></label>
+                            <input type="text" id="contact_number" name="contact_number" class="input-field" placeholder="+94XXXXXXXXX" required aria-describedby="contact_number-error">
+                            <i class="fas fa-check"></i>
                             <span class="error-text" id="contact_number-error">Format: +94 followed by 9 digits.</span>
                         </div>
-                        <div>
-                            <label for="email" class="block text-sm font-medium mb-1">Email (Optional)</label>
-                            <input type="email" id="email" name="email" class="input-field w-full px-3 py-2">
+                        <div class="form-group">
+                            <label for="email" class="block text-sm font-semibold mb-2">Email (Optional)</label>
+                            <input type="email" id="email" name="email" class="input-field" placeholder="example@domain.com">
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="occupation" class="block text-sm font-medium mb-1">Occupation (Optional)</label>
-                            <input type="text" id="occupation" name="occupation" class="input-field w-full px-3 py-2">
+                        <div class="form-group">
+                            <label for="occupation" class="block text-sm font-semibold mb-2">Occupation (Optional)</label>
+                            <input type="text" id="occupation" name="occupation" class="input-field">
+                            <i class="fas fa-check"></i>
                         </div>
                     </div>
                 </div>
@@ -310,38 +371,46 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <!-- Membership Details -->
                 <div>
                     <div class="section-header">Membership Details</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                        <div>
-                            <label for="date_of_joining" class="block text-sm font-medium mb-1">Date of Joining</label>
-                            <input type="date" id="date_of_joining" name="date_of_joining" class="input-field w-full px-3 py-2" required>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                        <div class="form-group">
+                            <label for="date_of_joining" class="block text-sm font-semibold mb-2">Date of Joining <span class="text-red-500">*</span></label>
+                            <input type="date" id="date_of_joining" name="date_of_joining" class="input-field" required>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="membership_type" class="block text-sm font-medium mb-1">Membership Type</label>
-                            <select id="membership_type" name="membership_type" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="membership_type" class="block text-sm font-semibold mb-2">Membership Type <span class="text-red-500">*</span></label>
+                            <select id="membership_type" name="membership_type" class="input-field" required>
+                                <option value="" disabled selected>Select Type</option>
                                 <option value="Individual">Individual</option>
                                 <option value="Family">Family</option>
                                 <option value="Senior Citizen">Senior Citizen</option>
                             </select>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="contribution_amount" class="block text-sm font-medium mb-1">Contribution (LKR)</label>
-                            <input type="number" id="contribution_amount" name="contribution_amount" step="0.01" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="contribution_amount" class="block text-sm font-semibold mb-2">Contribution (LKR) <span class="text-red-500">*</span></label>
+                            <input type="number" id="contribution_amount" name="contribution_amount" step="0.01" class="input-field" required>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="payment_status" class="block text-sm font-medium mb-1">Payment Status</label>
-                            <select id="payment_status" name="payment_status" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="payment_status" class="block text-sm font-semibold mb-2">Payment Status <span class="text-red-500">*</span></label>
+                            <select id="payment_status" name="payment_status" class="input-field" required>
+                                <option value="" disabled selected>Select Status</option>
                                 <option value="Active">Active</option>
                                 <option value="Pending">Pending</option>
                                 <option value="Inactive">Inactive</option>
                             </select>
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="member_status" class="block text-sm font-medium mb-1">Member Status</label>
-                            <select id="member_status" name="member_status" class="input-field w-full px-3 py-2" required>
+                        <div class="form-group">
+                            <label for="member_status" class="block text-sm font-semibold mb-2">Member Status <span class="text-red-500">*</span></label>
+                            <select id="member_status" name="member_status" class="input-field" required>
+                                <option value="" disabled selected>Select Status</option>
                                 <option value="Active">Active</option>
                                 <option value="Deceased">Deceased</option>
                                 <option value="Resigned">Resigned</option>
                             </select>
+                            <i class="fas fa-check"></i>
                         </div>
                     </div>
                 </div>
@@ -349,28 +418,32 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <!-- Family Details -->
                 <div>
                     <div class="section-header">Family Details (Optional)</div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                        <div>
-                            <label for="spouse_name" class="block text-sm font-medium mb-1">Spouse's Name</label>
-                            <input type="text" id="spouse_name" name="spouse_name" class="input-field w-full px-3 py-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                        <div class="form-group">
+                            <label for="spouse_name" class="block text-sm font-semibold mb-2">Spouse's Name</label>
+                            <input type="text" id="spouse_name" name="spouse_name" class="input-field" placeholder="e.g., Priya Fernando">
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div>
-                            <label for="children_info" class="block text-sm font-medium mb-1">Children (Name:Age, ...)</label>
-                            <input type="text" id="children_info" name="children_info" class="input-field w-full px-3 py-2" placeholder="e.g., Sahan:12, Nimasha:8">
+                        <div class="form-group">
+                            <label for="children_info" class="block text-sm font-semibold mb-2">Children (Name:Age)</label>
+                            <input type="text" id="children_info" name="children_info" class="input-field" placeholder="e.g., Sahan:12, Nimasha:8">
+                            <i class="fas fa-check"></i>
                         </div>
-                        <div class="sm:col-span-2">
-                            <label for="dependents_info" class="block text-sm font-medium mb-1">Dependents (Relation:Name, ...)</label>
-                            <input type="text" id="dependents_info" name="dependents_info" class="input-field w-full px-3 py-2" placeholder="e.g., Mother:Sunila">
+                        <div class="form-group md:col-span-2">
+                            <label for="dependents_info" class="block text-sm font-semibold mb-2">Dependents (Relation:Name)</label>
+                            <input type="text" id="dependents_info" name="dependents_info" class="input-field" placeholder="e.g., Mother:Sunila">
+                            <i class="fas fa-check"></i>
                         </div>
                     </div>
                 </div>
 
-                <!-- Submit Button -->
-                <div class="text-center">
-                    <button type="submit" class="text-white px-6 py-3 btn-admin font-semibold">Add Member</button>
+                <!-- Buttons -->
+                <div class="flex justify-center space-x-4">
+                    <button type="submit" class="btn-admin font-semibold">Add Member</button>
+                    <a href="dashboard.php" class="btn-cancel font-semibold">Cancel</a>
                 </div>
             </form>
-            <p class="text-center mt-4"><a href="dashboard.php" class="text-orange-600 hover:underline">Back to Dashboard</a></p>
+            <p class="text-center mt-6"><a href="dashboard.php" class="text-orange-600 hover:underline">Back to Dashboard</a></p>
         </div>
     </main>
 </div>
@@ -385,57 +458,73 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <script>
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    const mainContent = document.getElementById('main-content');
+    const themeToggle = document.getElementById('theme-toggle');
+    const form = document.getElementById('add-member-form');
 
+    // Sidebar toggle for mobile
     sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('sidebar-expanded');
+        sidebar.classList.toggle('expanded');
     });
 
+    // Theme toggle
+    themeToggle.addEventListener('click', () => {
+        document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+        themeToggle.querySelector('i').classList.toggle('fa-moon');
+        themeToggle.querySelector('i').classList.toggle('fa-sun');
+    });
+
+    // Prevent hover on mobile
     if (window.innerWidth <= 768) {
         sidebar.addEventListener('mouseenter', (e) => e.preventDefault());
     }
 
-    // Client-side validation
-    const form = document.getElementById('add-member-form');
+    // Real-time validation
+    const inputs = form.querySelectorAll('.input-field');
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const group = input.closest('.form-group');
+            const error = input.nextElementSibling.nextElementSibling;
+
+            if (input.id === 'member_id' && !/^MS-\d{3,}$/.test(input.value)) {
+                error.style.display = 'block';
+                group.classList.remove('valid');
+            } else if (input.id === 'full_name' && !input.value.trim()) {
+                error.style.display = 'block';
+                group.classList.remove('valid');
+            } else if (input.id === 'nic_number' && input.value.length < 9) {
+                error.style.display = 'block';
+                group.classList.remove('valid');
+            } else if (input.id === 'contact_number' && !/^\+94\d{9}$/.test(input.value)) {
+                error.style.display = 'block';
+                group.classList.remove('valid');
+            } else if (input.required && !input.value) {
+                error.style.display = 'block';
+                group.classList.remove('valid');
+            } else {
+                error.style.display = 'none';
+                group.classList.add('valid');
+            }
+        });
+    });
+
+    // Form submission validation
     form.addEventListener('submit', (e) => {
         let valid = true;
-        const memberId = document.getElementById('member_id');
-        const fullName = document.getElementById('full_name');
-        const nicNumber = document.getElementById('nic_number');
-        const contactNumber = document.getElementById('contact_number');
+        inputs.forEach(input => {
+            const group = input.closest('.form-group');
+            const error = input.nextElementSibling.nextElementSibling;
 
-        if (!/ ^MS-\d{3,}$/.test(memberId.value)) {
-            document.getElementById('member_id-error').style.display = 'block';
-            valid = false;
-        } else {
-            document.getElementById('member_id-error').style.display = 'none';
-        }
-
-        if (!fullName.value.trim()) {
-            document.getElementById('full_name-error').style.display = 'block';
-            valid = false;
-        } else {
-            document.getElementById('full_name-error').style.display = 'none';
-        }
-
-        if (nicNumber.value.length < 9) {
-            document.getElementById('nic_number-error').style.display = 'block';
-            valid = false;
-        } else {
-            document.getElementById('nic_number-error').style.display = 'none';
-        }
-
-        if (!/^\+94\d{9}$/.test(contactNumber.value)) {
-            document.getElementById('contact_number-error').style.display = 'block';
-            valid = false;
-        } else {
-            document.getElementById('contact_number-error').style.display = 'none';
-        }
+            if (input.required && !input.value) {
+                error.style.display = 'block';
+                group.classList.remove('valid');
+                valid = false;
+            }
+        });
 
         if (!valid) e.preventDefault();
     });
 
-    // Countdown timer for success redirect
+    // Countdown timer
     if (document.getElementById('countdown')) {
         let timeLeft = 2;
         const countdown = document.getElementById('countdown');
