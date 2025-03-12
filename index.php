@@ -20,21 +20,11 @@ session_start();
             --btn-bg: #d35400;
             --btn-hover: #b84500;
             --border-color: #d1d5db;
-        }
-        [data-theme="dark"] {
-            --bg-color: #1f2937;
-            --text-color: #f3f4f6;
-            --card-bg: #374151;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            --nav-bg: #111827;
-            --btn-bg: #e67e22;
-            --btn-hover: #f39c12;
-            --border-color: #4b5563;
+            --accent-color: #d35400;
         }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
             font-family: 'Noto Sans', sans-serif;
         }
         nav, footer {
@@ -71,7 +61,7 @@ session_start();
         }
         .dropdown-menu a:hover {
             background-color: #fef5e7;
-            color: #d35400;
+            color: var(--accent-color);
         }
         .feature-card {
             background-color: var(--card-bg);
@@ -97,13 +87,13 @@ session_start();
     </style>
 </head>
 <body class="font-sans">
-<!-- Navbar with Theme Toggle and Login Dropdown -->
+<!-- Navbar without Theme Toggle -->
 <nav class="shadow-lg fixed w-full z-10 top-0">
     <div class="container mx-auto px-6 py-4 flex justify-between items-center">
         <a href="index.php" class="text-2xl font-bold text-orange-600 flex items-center">
             <i class="fas fa-hands-helping mr-2"></i>Maranadhara Samithi
         </a>
-        <div class="flex items-center space-x-6">
+        <div class="flex items-center">
             <div class="dropdown">
                 <button class="text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition-colors duration-300 flex items-center hero-cta">
                     <i class="fas fa-user mr-2"></i>Login
@@ -113,9 +103,6 @@ session_start();
                     <a href="pages/login.php?role=admin">Admin Login</a>
                 </div>
             </div>
-            <button id="theme-toggle" class="toggle-btn text-2xl p-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                <i class="fas fa-sun"></i>
-            </button>
         </div>
     </div>
 </nav>
@@ -133,12 +120,12 @@ session_start();
 <section class="container mx-auto px-6 my-20">
     <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">About Maranadhara Samithi</h2>
     <div class="grid md:grid-cols-2 gap-8">
-        <div class="p-6 rounded-xl text-center feature-card bg-white dark:bg-gray-700 shadow-lg">
+        <div class="p-6 rounded-xl text-center feature-card">
             <i class="fas fa-hand-holding-heart text-orange-600 text-3xl mb-4"></i>
             <h3 class="text-xl font-semibold">Funeral Assistance</h3>
             <p class="mt-2">We ease the financial burden of funerals through collective member contributions.</p>
         </div>
-        <div class="p-6 rounded-xl text-center feature-card bg-white dark:bg-gray-700 shadow-lg">
+        <div class="p-6 rounded-xl text-center feature-card">
             <i class="fas fa-users text-orange-600 text-3xl mb-4"></i>
             <h3 class="text-xl font-semibold">Community Hub</h3>
             <p class="mt-2">Strengthening bonds with gatherings and mutual support for all members.</p>
@@ -149,7 +136,7 @@ session_start();
 <!-- Contact Section -->
 <section class="container mx-auto px-6 my-20">
     <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Get in Touch</h2>
-    <div class="max-w-lg mx-auto p-6 rounded-xl feature-card bg-white dark:bg-gray-700 shadow-lg">
+    <div class="max-w-lg mx-auto p-6 rounded-xl feature-card">
         <p class="text-center mb-4">Have questions or want to join? Contact us!</p>
         <p><i class="fas fa-map-marker-alt mr-2"></i>101 Webada Rd, Sri Lanka</p>
         <p><i class="fas fa-phone mr-2"></i>+94 123 456 789</p>
@@ -163,40 +150,15 @@ session_start();
         <div class="flex flex-col md:flex-row justify-between items-center">
             <p class="mb-4 md:mb-0">© 2025 Maranadhara Samithi. All rights reserved.</p>
             <div class="flex space-x-6">
-                <a href="#" class="hover:text-orange-400 transition-colors duration-300">Privacy Policy</a>
-                <a href="#" class="hover:text-orange-400 transition-colors duration-300">Terms of Service</a>
-                <a href="#" class="hover:text-orange-400 transition-colors duration-300">Contact</a>
+                <a href="#" class="hover:text-orange-600 transition-colors duration-300">Privacy Policy</a>
+                <a href="#" class="hover:text-orange-600 transition-colors duration-300">Terms of Service</a>
+                <a href="#" class="hover:text-orange-600 transition-colors duration-300">Contact</a>
             </div>
         </div>
     </div>
 </footer>
 
 <script>
-    const toggleButton = document.getElementById('theme-toggle');
-    const body = document.body;
-    const sunIcon = '<i class="fas fa-sun"></i>';
-    const moonIcon = '<i class="fas fa-moon"></i>';
-
-    if (localStorage.getItem('theme') === 'dark') {
-        body.setAttribute('data-theme', 'dark');
-        toggleButton.innerHTML = sunIcon;
-    } else {
-        body.removeAttribute('data-theme');
-        toggleButton.innerHTML = moonIcon;
-    }
-
-    toggleButton.addEventListener('click', () => {
-        if (body.getAttribute('data-theme') === 'dark') {
-            body.removeAttribute('data-theme');
-            toggleButton.innerHTML = moonIcon;
-            localStorage.setItem('theme', 'light');
-        } else {
-            body.setAttribute('data-theme', 'dark');
-            toggleButton.innerHTML = sunIcon;
-            localStorage.setItem('theme', 'dark');
-        }
-    });
-
     window.addEventListener('load', () => {
         document.querySelector('h1').classList.add('animate-fade-in');
     });

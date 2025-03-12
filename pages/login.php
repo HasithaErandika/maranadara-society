@@ -1,14 +1,18 @@
 <?php
 define('APP_START', true);
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 require_once '../classes/User.php';
 $user = new User();
 
-// Get role from URL, default to 'user' if not set
 $role = isset($_GET['role']) && $_GET['role'] === 'admin' ? 'admin' : 'user';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $login_role = $user->login($_POST['username'], $_POST['password']);
     if ($login_role) {
+        $_SESSION['role'] = $login_role;
+        $_SESSION['user'] = $_POST['username'];
         header("Location: " . ($login_role == 'admin' ? 'admin/dashboard.php' : 'user/dashboard.php'));
         exit;
     } else {
@@ -29,92 +33,134 @@ if (isset($_GET['logout'])) {
     <title>Login - Maranadhara Samithi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-color: #f3f4f6;
             --text-color: #1f2937;
             --card-bg: #ffffff;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            --btn-bg-admin: #d35400;
-            --btn-hover-admin: #b84500;
-            --btn-bg-user: #2ecc71;
-            --btn-hover-user: #27ae60;
+            --card-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
             --border-color: #d1d5db;
         }
-        [data-theme="dark"] {
-            --bg-color: #1f2937;
-            --text-color: #f3f4f6;
-            --card-bg: #374151;
-            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            --btn-bg-admin: #e67e22;
-            --btn-hover-admin: #f39c12;
-            --btn-bg-user: #27ae60;
-            --btn-hover-user: #219653;
-            --border-color: #4b5563;
+        /* User-specific styles */
+        .user-theme {
+            --btn-bg: #d35400; /* Orange from index */
+            --btn-hover: #b84500;
+            --accent-color: #d35400;
+        }
+        /* Admin-specific styles */
+        .admin-theme {
+            --btn-bg: #9a3412; /* Deeper red-orange */
+            --btn-hover: #7f2a0d;
+            --accent-color: #9a3412;
         }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
             font-family: 'Noto Sans', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .card {
-            background-color: var(--card-bg);
+            background: var(--card-bg);
             box-shadow: var(--card-shadow);
+            border-radius: 1rem;
+            padding: 2.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: 100%;
+            max-width: 450px;
         }
-        .btn-admin {
-            background-color: var(--btn-bg-admin);
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
         }
-        .btn-admin:hover {
-            background-color: var(--btn-hover-admin);
+        .btn-login {
+            background: var(--btn-bg);
+            color: white;
+            padding: 0.875rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
-        .btn-user {
-            background-color: var(--btn-bg-user);
-        }
-        .btn-user:hover {
-            background-color: var(--btn-hover-user);
+        .btn-login:hover {
+            background: var(--btn-hover);
+            transform: translateY(-2px);
         }
         .input-field {
             border: 1px solid var(--border-color);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: #f9fafb;
+            padding: 0.875rem 1rem 0.875rem 2.75rem;
+            border-radius: 0.5rem;
+            width: 100%;
+            transition: all 0.3s ease;
         }
-        <?php if ($role === 'admin'): ?>
         .input-field:focus {
-            border-color: #d35400;
-            box-shadow: 0 0 0 3px rgba(211, 84, 0, 0.2);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.2);
+            outline: none;
         }
-        <?php else: ?>
-        .input-field:focus {
-            border-color: #2ecc71;
-            box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+        .input-wrapper {
+            position: relative;
+            margin-bottom: 1.5rem;
         }
-        <?php endif; ?>
+        .input-wrapper i {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+        .back-link {
+            color: var(--accent-color);
+            transition: color 0.3s ease;
+        }
+        .back-link:hover {
+            color: var(--btn-hover);
+        }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center bg-gray-100">
-<div class="container mx-auto px-6">
-    <div class="max-w-md mx-auto card rounded-xl p-6">
-        <h2 class="text-2xl font-bold text-center mb-6">
-            <?php echo $role === 'admin' ? 'Admin Login' : 'User Login'; ?> - Maranadhara Samithi
-        </h2>
-        <?php if (isset($error)): ?>
-            <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-6"><?php echo $error; ?></div>
+<body class="<?php echo $role === 'admin' ? 'admin-theme' : 'user-theme'; ?>">
+<div class="card animate-fade-in">
+    <div class="flex justify-center mb-6">
+        <?php if ($role === 'admin'): ?>
+            <i class="fas fa-shield-alt text-4xl" style="color: var(--accent-color);"></i>
+        <?php else: ?>
+            <i class="fas fa-hands-helping text-4xl" style="color: var(--accent-color);"></i>
         <?php endif; ?>
-        <form method="POST" class="space-y-4">
-            <div>
-                <label for="username" class="block font-medium mb-1">Username</label>
-                <input type="text" id="username" name="username" placeholder="Enter username" class="input-field w-full px-4 py-2 rounded-lg" required>
-            </div>
-            <div>
-                <label for="password" class="block font-medium mb-1">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter password" class="input-field w-full px-4 py-2 rounded-lg" required>
-            </div>
-            <button type="submit" class="w-full text-white px-6 py-3 rounded-lg font-semibold <?php echo $role === 'admin' ? 'btn-admin' : 'btn-user'; ?> transition-all">
-                Login
-            </button>
-        </form>
-        <p class="text-center mt-4"><a href="../index.php" class="text-orange-600 hover:underline">Back to Home</a></p>
     </div>
+    <h2 class="text-2xl font-bold text-center mb-6">
+        <?php echo $role === 'admin' ? 'Admin Login' : 'Member Login'; ?> - Maranadhara Samithi
+    </h2>
+    <?php if (isset($error)): ?>
+        <div class="error-message mb-6"><?php echo $error; ?></div>
+    <?php endif; ?>
+    <form method="POST" class="space-y-6">
+        <div class="input-wrapper">
+            <i class="fas fa-user"></i>
+            <input type="text" id="username" name="username" placeholder="Username" class="input-field" required>
+        </div>
+        <div class="input-wrapper">
+            <i class="fas fa-lock"></i>
+            <input type="password" id="password" name="password" placeholder="Password" class="input-field" required>
+        </div>
+        <button type="submit" class="btn-login w-full">Login</button>
+    </form>
+    <p class="text-center mt-6"><a href="../index.php" class="back-link">Back to Home</a></p>
 </div>
+<script>
+    window.addEventListener('load', () => {
+        document.querySelector('.card').classList.add('animate-fade-in');
+    });
+</script>
 </body>
 </html>
