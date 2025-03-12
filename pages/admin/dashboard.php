@@ -45,7 +45,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-orange: #F97316;  /* Main orange color */
+            --primary-orange: #F97316;
             --orange-dark: #C2410C;
             --orange-light: #FED7AA;
             --gray-bg: #F9FAFB;
@@ -63,52 +63,6 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
             font-family: 'Inter', sans-serif;
             margin: 0;
             line-height: 1.5;
-        }
-
-        .sidebar {
-            width: var(--sidebar-width);
-            background: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            position: fixed;
-            top: 80px;
-            left: 16px;
-            height: calc(100vh - 96px);
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            overflow: hidden;
-            z-index: 1000;
-        }
-
-        .sidebar:hover, .sidebar.expanded {
-            width: var(--sidebar-expanded);
-        }
-
-        .sidebar-item {
-            padding: 12px 16px;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: all 0.2s ease;
-        }
-
-        .sidebar-item:hover, .sidebar-item.active {
-            background: var(--primary-orange);
-            color: white;
-        }
-
-        .sidebar-item i {
-            width: 20px;
-            text-align: center;
-        }
-
-        .sidebar-item span {
-            display: none;
-            font-weight: 500;
-        }
-
-        .sidebar:hover .sidebar-item span, .sidebar.expanded .sidebar-item span {
-            display: inline;
         }
 
         .main-content {
@@ -173,13 +127,6 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
         }
 
         @media (max-width: 768px) {
-            .sidebar {
-                width: 0;
-                left: 0;
-            }
-            .sidebar.expanded {
-                width: var(--sidebar-expanded);
-            }
             .main-content {
                 margin-left: 16px;
             }
@@ -189,18 +136,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
 <body>
 <?php include '../../includes/header.php'; ?>
 <div class="flex min-h-screen pt-20">
-    <aside class="sidebar" id="sidebar">
-        <nav class="mt-4">
-            <a href="dashboard.php" class="sidebar-item active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
-            <a href="add_member.php" class="sidebar-item"><i class="fas fa-user-plus"></i><span>Add Member</span></a>
-            <a href="incidents.php?action=add" class="sidebar-item"><i class="fas fa-file-alt"></i><span>Record Incident</span></a>
-            <a href="payments.php" class="sidebar-item"><i class="fas fa-money-bill"></i><span>Manage Payments</span></a>
-            <a href="loans.php?action=add" class="sidebar-item"><i class="fas fa-hand-holding-usd"></i><span>Add Loan</span></a>
-            <a href="members.php" class="sidebar-item"><i class="fas fa-users"></i><span>Manage Members</span></a>
-            <a href="loans.php" class="sidebar-item"><i class="fas fa-hand-holding-usd"></i><span>Manage Loans</span></a>
-            <a href="incidents.php" class="sidebar-item"><i class="fas fa-file-alt"></i><span>Manage Incidents</span></a>
-        </nav>
-    </aside>
+    <?php include '../../includes/sidepanel.php'; ?>
 
     <main class="main-content p-6 flex-1">
         <div class="mb-8 animate-in">

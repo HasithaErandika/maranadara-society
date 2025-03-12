@@ -10,14 +10,14 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 require_once '../../includes/header.php';
 require_once '../../classes/Member.php';
 require_once '../../classes/Family.php';
-require_once '../../classes/Database.php'; // Assuming Database class exists
+require_once '../../classes/Database.php';
 
 $member = new Member();
 $family = new Family();
 $error = $success = '';
 
 // Auto-generate member ID
-$last_member = $member->getLastMember(); // Assuming this method exists
+$last_member = $member->getLastMember();
 $last_id = $last_member ? (int)substr($last_member['member_id'], 3) : 0;
 $next_id = sprintf("MS-%03d", $last_id + 1);
 
@@ -40,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $children_info = trim($_POST['children_info']) ?: null;
     $dependents_info = trim($_POST['dependents_info']) ?: null;
 
-    // Server-side validation
     $conn = (new Database())->getConnection();
     $stmt = $conn->prepare("SELECT COUNT(*) FROM members WHERE member_id = ?");
     $stmt->bind_param("s", $member_id);
@@ -88,134 +87,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #f97316;
-            --primary-dark: #ea580c;
-            --secondary: #1f2937;
-            --bg-light: #f9fafb;
-            --card-bg: #ffffff;
+            --primary-orange: #F97316;
+            --orange-dark: #C2410C;
+            --orange-light: #FED7AA;
+            --gray-bg: #F9FAFB;
+            --card-bg: #FFFFFF;
             --text-primary: #111827;
-            --text-secondary: #6b7280;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --sidebar-width: 80px;
-            --sidebar-expanded: 280px;
+            --text-secondary: #6B7280;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --sidebar-width: 64px;
+            --sidebar-expanded: 240px;
         }
+
         body {
-            background-color: var(--bg-light);
+            background: var(--gray-bg);
             color: var(--text-primary);
             font-family: 'Inter', sans-serif;
             margin: 0;
+            line-height: 1.5;
         }
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 2rem;
-            transition: transform 0.2s ease;
-        }
-        .card:hover {
-            transform: translateY(-2px);
-        }
-        .btn {
-            background: var(--primary);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            font-weight: 600;
-        }
-        .btn:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-        }
-        .btn-cancel {
-            background: #6b7280;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            font-weight: 600;
-        }
-        .btn-cancel:hover {
-            background: #4b5563;
-            transform: translateY(-1px);
-        }
-        .sidebar {
-            width: var(--sidebar-width);
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            position: fixed;
-            top: 80px;
-            left: 16px;
-            height: calc(100vh - 96px);
-            transition: width 0.3s ease;
-            overflow: hidden;
-            z-index: 20;
-        }
-        .sidebar:hover {
-            width: var(--sidebar-expanded);
-        }
-        .sidebar-item {
-            display: flex;
-            align-items: center;
-            padding: 14px 20px;
-            color: var(--text-primary);
-            transition: all 0.2s ease;
-        }
-        .sidebar-item:hover, .sidebar-item.active {
-            background: var(--primary);
-            color: white;
-        }
-        .sidebar-item i {
-            width: 24px;
-            text-align: center;
-            margin-right: 16px;
-        }
-        .sidebar-item span {
-            display: none;
-            white-space: nowrap;
-        }
-        .sidebar:hover .sidebar-item span {
-            display: inline;
-        }
+
         .main-content {
             margin-left: calc(var(--sidebar-width) + 32px);
             transition: margin-left 0.3s ease;
         }
-        .sidebar:hover ~ .main-content {
+
+        .sidebar.expanded ~ .main-content {
             margin-left: calc(var(--sidebar-expanded) + 32px);
         }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background: var(--primary-orange);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: var(--orange-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-cancel {
+            background: var(--text-secondary);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: #4b5563;
+            transform: translateY(-1px);
+        }
+
         .input-field {
             border: 1px solid #d1d5db;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 0.75rem;
             width: 100%;
             transition: border-color 0.2s ease;
         }
+
         .input-field:focus {
-            border-color: var(--primary);
+            border-color: var(--primary-orange);
             outline: none;
             box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
         }
+
         .input-field:valid {
             border-color: #10b981;
         }
+
         .section-header {
-            background: linear-gradient(135deg, var(--primary), #fb923c);
+            background: var(--primary-orange);
             color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px 8px 0 0;
+            padding: 0.5rem 1rem;
+            border-radius: 6px 6px 0 0;
             font-weight: 600;
         }
+
         .error-text {
             color: #dc2626;
             font-size: 0.875rem;
             margin-top: 0.25rem;
             display: none;
         }
+
         .form-group {
             position: relative;
         }
+
         .form-group i {
             position: absolute;
             right: 1rem;
@@ -224,67 +201,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #10b981;
             display: none;
         }
+
         .form-group.valid i {
             display: block;
         }
+
+        .animate-in {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @media (max-width: 768px) {
-            .sidebar {
-                width: 0;
-            }
-            .sidebar:hover {
-                width: var(--sidebar-expanded);
-            }
             .main-content {
                 margin-left: 16px;
             }
-            .sidebar:hover ~ .main-content {
-                margin-left: calc(var(--sidebar-expanded) + 32px);
+            .sidebar.expanded ~ .main-content {
+                margin-left: calc(var(--sidebar-expanded) + 16px);
             }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 <?php include '../../includes/header.php'; ?>
-
 <div class="flex min-h-screen pt-20">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <ul class="mt-6">
-            <li class="sidebar-item"><a href="dashboard.php" class="flex items-center"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a></li>
-            <li class="sidebar-item active"><a href="add_member.php" class="flex items-center"><i class="fas fa-user-plus"></i><span>Add Member</span></a></li>
-            <li class="sidebar-item"><a href="incidents.php?action=add" class="flex items-center"><i class="fas fa-file-alt"></i><span>Record Incident</span></a></li>
-            <li class="sidebar-item"><a href="payments.php" class="flex items-center"><i class="fas fa-money-bill"></i><span>Manage Payments</span></a></li>
-            <li class="sidebar-item"><a href="loans.php?action=add" class="flex items-center"><i class="fas fa-hand-holding-usd"></i><span>Add Loan</span></a></li>
-            <li class="sidebar-item"><a href="members.php" class="flex items-center"><i class="fas fa-users"></i><span>Manage Members</span></a></li>
-            <li class="sidebar-item"><a href="loans.php" class="flex items-center"><i class="fas fa-hand-holding-usd"></i><span>Manage Loans</span></a></li>
-            <li class="sidebar-item"><a href="incidents.php" class="flex items-center"><i class="fas fa-file-alt"></i><span>Manage Incidents</span></a></li>
-        </ul>
-    </aside>
+    <?php include '../../includes/sidepanel.php'; ?>
 
-    <!-- Main Content -->
-    <main class="flex-1 p-6 main-content">
+    <main class="main-content p-6 flex-1">
         <div class="max-w-4xl mx-auto">
-            <h1 class="text-3xl font-bold mb-6" style="color: var(--primary);">Add New Member</h1>
+            <h1 class="text-3xl font-semibold text-gray-900 mb-6 animate-in">Add New Member</h1>
             <?php if ($error): ?>
-                <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 flex items-center animate-fade-in">
+                <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 flex items-center animate-in">
                     <i class="fas fa-exclamation-circle mr-2"></i> <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
             <?php if ($success): ?>
-                <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 flex items-center animate-fade-in">
+                <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 flex items-center animate-in">
                     <i class="fas fa-check-circle mr-2"></i> <?php echo $success; ?>
                 </div>
             <?php endif; ?>
 
-            <form method="POST" class="card space-y-6" id="add-member-form">
-                <!-- Member Information -->
+            <form method="POST" class="card space-y-6 animate-in" id="add-member-form">
                 <div>
                     <div class="section-header">Member Information</div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
@@ -345,7 +311,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Membership Details -->
                 <div>
                     <div class="section-header">Membership Details</div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
@@ -392,7 +357,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Family Details -->
                 <div>
                     <div class="section-header">Family Details (Optional)</div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
@@ -414,14 +378,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Buttons -->
                 <div class="flex justify-center space-x-4">
-                    <button type="submit" class="btn">Add Member</button>
+                    <button type="submit" class="btn-primary">Add Member</button>
                     <a href="dashboard.php" class="btn-cancel">Cancel</a>
                 </div>
             </form>
 
-            <p class="text-center mt-6"><a href="dashboard.php" class="text-primary hover:underline">Back to Dashboard</a></p>
+            <p class="text-center mt-6"><a href="dashboard.php" class="text-[var(--primary-orange)] hover:underline">Back to Dashboard</a></p>
         </div>
     </main>
 </div>
@@ -429,63 +392,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include '../../includes/footer.php'; ?>
 
 <script>
-    const form = document.getElementById('add-member-form');
-    const inputs = form.querySelectorAll('.input-field');
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
 
-    // Real-time validation
-    inputs.forEach(input => {
-        input.addEventListener('input', () => {
-            const group = input.closest('.form-group');
-            const error = group.querySelector('.error-text');
+        if (sidebar && sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('expanded');
+            });
 
-            if (input.id === 'member_id' && !/^MS-\d{3,}$/.test(input.value)) {
-                error.style.display = 'block';
-                group.classList.remove('valid');
-            } else if (input.id === 'full_name' && !input.value.trim()) {
-                error.style.display = 'block';
-                group.classList.remove('valid');
-            } else if (input.id === 'nic_number' && input.value.length < 9) {
-                error.style.display = 'block';
-                group.classList.remove('valid');
-            } else if (input.id === 'contact_number' && !/^\+94\d{9}$/.test(input.value)) {
-                error.style.display = 'block';
-                group.classList.remove('valid');
-            } else if (input.required && !input.value) {
-                error.style.display = 'block';
-                group.classList.remove('valid');
-            } else {
-                error.style.display = 'none';
-                group.classList.add('valid');
-            }
-        });
-    });
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
+                    !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    sidebar.classList.remove('expanded');
+                }
+            });
+        }
 
-    // Form submission validation
-    form.addEventListener('submit', (e) => {
-        let valid = true;
+        const form = document.getElementById('add-member-form');
+        const inputs = form.querySelectorAll('.input-field');
+
         inputs.forEach(input => {
-            const group = input.closest('.form-group');
-            const error = group.querySelector('.error-text');
+            input.addEventListener('input', () => {
+                const group = input.closest('.form-group');
+                const error = group.querySelector('.error-text');
 
-            if (input.required && !input.value) {
-                error.style.display = 'block';
-                group.classList.remove('valid');
-                valid = false;
-            }
+                if (input.id === 'member_id' && !/^MS-\d{3,}$/.test(input.value)) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                } else if (input.id === 'full_name' && !input.value.trim()) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                } else if (input.id === 'nic_number' && input.value.length < 9) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                } else if (input.id === 'contact_number' && !/^\+94\d{9}$/.test(input.value)) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                } else if (input.required && !input.value) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                } else {
+                    error.style.display = 'none';
+                    group.classList.add('valid');
+                }
+            });
         });
 
-        if (!valid) e.preventDefault();
-    });
+        form.addEventListener('submit', (e) => {
+            let valid = true;
+            inputs.forEach(input => {
+                const group = input.closest('.form-group');
+                const error = group.querySelector('.error-text');
 
-    // Countdown timer for success redirect
-    if (document.getElementById('countdown')) {
-        let timeLeft = 2;
-        const countdown = document.getElementById('countdown');
-        setInterval(() => {
-            timeLeft--;
-            countdown.textContent = timeLeft;
-        }, 1000);
-    }
+                if (input.required && !input.value) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                    valid = false;
+                }
+            });
+
+            if (!valid) e.preventDefault();
+        });
+
+        if (document.getElementById('countdown')) {
+            let timeLeft = 2;
+            const countdown = document.getElementById('countdown');
+            setInterval(() => {
+                timeLeft--;
+                countdown.textContent = timeLeft;
+            }, 1000);
+        }
+    });
 </script>
 </body>
 </html>
