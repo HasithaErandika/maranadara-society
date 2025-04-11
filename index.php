@@ -87,7 +87,7 @@ session_start();
     </style>
 </head>
 <body class="font-sans">
-<!-- Navbar without Theme Toggle -->
+<!-- Navbar -->
 <nav class="shadow-lg fixed w-full z-10 top-0">
     <div class="container mx-auto px-6 py-4 flex justify-between items-center">
         <a href="index.php" class="text-2xl font-bold text-orange-600 flex items-center">
@@ -96,11 +96,10 @@ session_start();
         <div class="flex items-center">
             <div class="dropdown">
                 <button class="text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition-colors duration-300 flex items-center hero-cta">
-                    <i class="fas fa-user mr-2"></i>Login
+                    <i class="fas fa-sign-in-alt mr-2"></i>Enter the System
                 </button>
                 <div class="dropdown-menu">
-                    <a href="pages/login.php?role=user">Member Login</a>
-                    <a href="pages/login.php?role=admin">Admin Login</a>
+                    <a href="login.php">Enter the System</a>
                 </div>
             </div>
         </div>
@@ -112,7 +111,7 @@ session_start();
     <h1 class="text-4xl md:text-5xl font-bold mb-4 animate-fade-in">මරණාධාර සමිතිය</h1>
     <p class="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">Supporting our community in times of need with funeral aid and solidarity.</p>
     <div class="mt-8 flex justify-center space-x-4">
-        <a href="pages/login.php" class="text-white px-6 py-3 rounded-lg font-semibold hero-cta shadow-md">Join or Login</a>
+        <a href="login.php" class="text-white px-6 py-3 rounded-lg font-semibold hero-cta shadow-md">Enter the System</a>
     </div>
 </header>
 

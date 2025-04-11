@@ -53,6 +53,8 @@ maranadara-society/
 │   ├── header.php        # Common header
 │   └── sidepanel.php     # Admin/user side navigation
 ├── pages/
+│   ├── login.php             # Login interface
+│   ├── test_hash.php         # Password hashing test utility
 │   ├── admin/
 │   │   ├── add_member.php
 │   │   ├── dashboard.php
@@ -66,8 +68,6 @@ maranadara-society/
 ├── .gitignore
 ├── .htaccess             # URL rewriting and security
 ├── index.php             # Landing page / route handler
-├── login.php             # Login interface
-├── test_hash.php         # Password hashing test utility
 ├── README.md             # Project documentation
 └── LICENSE               # MIT License
 ```

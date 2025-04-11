@@ -132,7 +132,7 @@ $documents = $document->getDocumentsByMemberId($member_id);
         </a>
         <div class="flex items-center space-x-6">
             <span class="text-blue-700 dark:text-blue-200">Hello, <?php echo $_SESSION['user']; ?>!</span>
-            <a href="../login.php?logout=1" class="text-white px-5 py-2 rounded-lg btn-user">Logout</a>
+            <a href="../../login.php?logout=1" class="text-white px-5 py-2 rounded-lg btn-user">Logout</a>
         </div>
     </div>
 </nav>
