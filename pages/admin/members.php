@@ -93,20 +93,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['delete'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-        if ($id && $member->deleteMember($id)) {
-            $success = "Member deleted successfully.";
-            header("Location: members.php");
-            exit;
+        if ($id) {
+            try {
+                if ($member->deleteMember($id)) {
+                    $success = "Member deleted successfully.";
+                } else {
+                    $error = "Failed to delete member. Please try again.";
+                }
+            } catch (Exception $e) {
+                $error = "Error deleting member: " . $e->getMessage();
+            }
         } else {
-            $error = "Failed to delete member.";
+            $error = "Invalid member ID.";
         }
     } elseif (isset($_POST['update'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-        $full_name = trim($_POST['full_name']);
-        $contact_number = trim($_POST['contact_number']);
-        $membership_type = trim($_POST['membership_type']);
-        $payment_status = trim($_POST['payment_status']);
-        $member_status = trim($_POST['member_status']);
+        $full_name = trim($_POST['full_name'] ?? '');
+        $contact_number = trim($_POST['contact_number'] ?? '');
+        $membership_type = trim($_POST['membership_type'] ?? '');
+        $payment_status = trim($_POST['payment_status'] ?? '');
+        $member_status = trim($_POST['member_status'] ?? '');
 
         if (empty($full_name) || empty($contact_number)) {
             $error = "Full name and contact number are required.";
@@ -117,14 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
             $error = "Invalid member status.";
         } else {
-            $stmt = $conn->prepare("UPDATE members SET full_name = ?, contact_number = ?, membership_type = ?, payment_status = ?, member_status = ? WHERE id = ?");
-            $stmt->bind_param("sssssi", $full_name, $contact_number, $membership_type, $payment_status, $member_status, $id);
-            if ($stmt->execute()) {
-                $success = "Member updated successfully.";
-                header("Location: members.php");
-                exit;
-            } else {
-                $error = "Error updating member: " . $conn->error;
+            try {
+                $stmt = $conn->prepare("UPDATE members SET full_name = ?, contact_number = ?, membership_type = ?, payment_status = ?, member_status = ? WHERE id = ?");
+                $stmt->bind_param("sssssi", $full_name, $contact_number, $membership_type, $payment_status, $member_status, $id);
+                if ($stmt->execute()) {
+                    $success = "Member updated successfully.";
+                } else {
+                    $error = "Error updating member: " . $conn->error;
+                }
+                $stmt->close();
+            } catch (Exception $e) {
+                $error = "Database error: " . $e->getMessage();
             }
         }
     }
@@ -137,169 +146,293 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Members - Maranadhara Samithi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Remix Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-orange: #F97316;
-            --orange-dark: #C2410C;
-            --orange-light: #FED7AA;
-            --gray-bg: #F9FAFB;
-            --card-bg: #FFFFFF;
-            --text-primary: #111827;
-            --text-secondary: #6B7280;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --primary: #F97316; /* Vibrant orange for primary actions */
+            --primary-dark: #EA580C; /* Darker orange for hover */
+            --primary-light: #FDBA74; /* Light orange for subtle accents */
+            --secondary: #4B5563; /* Neutral gray for secondary elements */
+            --background: #F7F7F7; /* Soft off-white background */
+            --card-bg: #FFFFFF; /* Clean white for cards */
+            --text-primary: #1F2937; /* Dark gray for primary text */
+            --text-secondary: #6B7280; /* Lighter gray for secondary text */
+            --error: #EF4444; /* Red for errors */
+            --success: #22C55E; /* Green for success */
+            --shadow: 0 6px 20px rgba(0, 0, 0, 0.05); /* Softer shadow */
+            --border: #E5E7EB; /* Light border color */
             --sidebar-width: 64px;
-            --sidebar-expanded: 240px;
+            --sidebar-expanded: 256px;
+            --header-height: 80px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
         body {
-            background: var(--gray-bg);
-            color: var(--text-primary);
             font-family: 'Inter', sans-serif;
-            margin: 0;
-            line-height: 1.6;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
         }
 
         .main-content {
-            margin-left: calc(var(--sidebar-width) + 32px);
+            margin-left: calc(var(--sidebar-width) + 2rem);
+            padding: calc(var(--header-height) + 2.5rem) 2.5rem 2.5rem;
             transition: margin-left 0.3s ease;
+            min-height: calc(100vh - var(--header-height));
         }
 
         .sidebar.expanded ~ .main-content {
-            margin-left: calc(var(--sidebar-expanded) + 32px);
+            margin-left: calc(var(--sidebar-expanded) + 2rem);
         }
 
+        /* Card */
         .card {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 24px;
+            border-radius: 16px;
             box-shadow: var(--shadow);
-            transition: transform 0.2s ease;
+            padding: 2.5rem;
+            animation: fadeIn 0.6s ease-out;
         }
 
-        .card:hover {
-            transform: translateY(-2px);
-        }
-
-        .btn-primary {
-            background: var(--primary-orange);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary:hover {
-            background: var(--orange-dark);
-            transform: translateY(-1px);
-        }
-
-        .btn-danger {
-            background: #dc2626;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-danger:hover {
-            background: #b91c1c;
-            transform: translateY(-1px);
-        }
-
-        .btn-icon {
-            background: none;
-            color: var(--text-secondary);
-            padding: 8px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .btn-icon:hover {
-            background: var(--orange-light);
-            color: var(--primary-orange);
-        }
-
-        .input-field {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px;
-            width: 100%;
-            transition: border-color 0.2s ease;
-            background: #fff;
-        }
-
-        .input-field:focus {
-            border-color: var(--primary-orange);
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
-        }
-
+        /* Table */
         .table-container {
             overflow-x: auto;
-            border-radius: 8px;
+            border-radius: 10px;
             background: var(--card-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
         }
 
         .table th, .table td {
-            padding: 14px;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 1.25rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
         }
 
-        .table thead th {
+        .table th {
             background: var(--card-bg);
             position: sticky;
             top: 0;
             z-index: 10;
             font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.875rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
+            text-transform: uppercase;
+            cursor: pointer;
         }
 
-        .table tbody tr:last-child td {
-            border-bottom: none;
+        .table th.sortable:hover {
+            background: #FFF7ED;
+            color: var(--primary);
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr {
+            transition: background 0.2s ease;
         }
 
         .table tbody tr:hover {
             background: rgba(249, 115, 22, 0.05);
         }
 
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.85rem 1.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #FFFFFF;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: #FFFFFF;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: #FFFFFF;
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(75, 85, 99, 0.2);
+        }
+
+        .btn-icon {
+            background: none;
+            color: var(--text-secondary);
+            padding: 0.6rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+        }
+
+        .btn-icon:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+
+        .btn:active::after {
+            width: 120px;
+            hight: 120px;
+        }
+
+        /* Input Fields */
+        .input-field {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.9rem;
+            background: #FFFFFF;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-light);
+            background: #FFF7ED;
+        }
+
+        .input-field.error {
+            border-color: var(--error);
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+        }
+
+        /* Search Bar */
+        .search-container {
+            position: relative;
+            max-width: 600px;
+        }
+
+        .search-container .ri-search-line {
+            position: absolute;
+            left: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .search-container .ri-close-line {
+            position: absolute;
+            right: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: none;
+            transition: color 0.2s ease;
+        }
+
+        .search-container .ri-close-line:hover {
+            color: var(--primary);
+        }
+
+        .search-container .input-field:not(:placeholder-shown) ~ .ri-close-line {
+            display: block;
+        }
+
+        .search-container .input-field {
+            padding-left: 3rem;
+        }
+
+        /* Accordions */
         .accordion-header {
-            background: var(--primary-orange);
-            color: white;
-            padding: 14px 20px;
-            border-radius: 8px 8px 0 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #FFFFFF;
+            padding: 1.25rem 1.75rem;
+            border-radius: 10px;
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-weight: 600;
+            font-size: 1.1rem;
+            transition: border-radius 0.3s ease, transform 0.2s ease;
+        }
+
+        .accordion-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
         }
 
         .accordion-content {
-            display: none;
-            padding: 20px;
-            border: 1px solid #e5e7eb;
+            max-height: 0;
+            overflow: hidden;
+            padding: 0 1.75rem;
+            border: 1px solid var(--border);
             border-top: none;
-            border-radius: 0 0 8px 8px;
-            background: #fafafa;
+            border-radius: 0 0 10px 10px;
+            background: #FAFAFA;
+            transition: all 0.4s ease;
         }
 
         .accordion-content.active {
-            display: block;
+            max-height: 2000px;
+            padding: 1.75rem;
         }
 
+        /* Modals */
         .modal {
             display: none;
             position: fixed;
@@ -307,157 +440,280 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(5px);
             z-index: 1000;
             justify-content: center;
             align-items: center;
+            animation: fadeIn 0.4s ease-out;
         }
 
         .modal-content {
             background: var(--card-bg);
-            border-radius: 12px;
-            padding: 24px;
+            border-radius: 16px;
+            padding: 2.5rem;
             width: 100%;
-            max-width: 500px;
+            max-width: 650px;
             box-shadow: var(--shadow);
+            animation: slideIn 0.4s ease-out;
             position: relative;
-            animation: modalIn 0.3s ease-out;
-        }
-
-        @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            overflow: hidden;
         }
 
         .modal-close {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 1.25rem;
+            right: 1.25rem;
             background: none;
             border: none;
             color: var(--text-secondary);
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             cursor: pointer;
-            transition: color 0.2s ease;
+            transition: color 0.2s ease, transform 0.2s ease;
         }
 
         .modal-close:hover {
-            color: var(--primary-orange);
+            color: var(--primary);
+            transform: scale(1.1);
         }
 
+        .delete-modal-content {
+            max-width: 450px;
+            text-align: center;
+        }
+
+        .delete-modal-content .ri-error-warning-fill {
+            font-size: 3.5rem;
+            color: var(--error);
+            margin-bottom: 1.25rem;
+        }
+
+        /* Alerts */
+        .alert {
+            display: flex;
+            align-items: center;
+            padding: 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .alert-success {
+            background: #DCFCE7;
+            color: var(--success);
+            border-left: 5px solid var(--success);
+        }
+
+        .alert-error {
+            background: #FEE2E2;
+            color: var(--error);
+            border-left: 5px solid var(--error);
+        }
+
+        /* Pagination */
         .pagination-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            background: #e5e7eb;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            background: var(--card-bg);
             color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
-        .pagination-btn:hover {
-            background: var(--primary-orange);
-            color: white;
+        .pagination-btn:hover:not(.disabled) {
+            background: var(--primary);
+            color: #FFFFFF;
+            border-color: var(--primary);
+            transform: translateY(-2px);
         }
 
         .pagination-btn.disabled {
-            background: #d1d5db;
-            color: #9ca3af;
+            background: #F3F4F6;
+            color: #9CA3AF;
             cursor: not-allowed;
+            border-color: #D1D5DB;
         }
 
+        /* Form Elements */
+        .error-text {
+            display: none;
+            color: var(--error);
+            font-size: 0.8rem;
+            margin-top: 0.3rem;
+        }
+
+        .error-text.show {
+            display: block;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            margin-bottom: 0.6rem;
+            display: block;
+        }
+
+        .form-group .required {
+            color: var(--error);
+            font-weight: 600;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Responsive Design */
         @media (max-width: 768px) {
             .main-content {
-                margin-left: 16px;
+                margin-left: 1.25rem;
+                padding: calc(var(--header-height) + 1.5rem) 1.5rem 1.5rem;
             }
+
             .sidebar.expanded ~ .main-content {
-                margin-left: calc(var(--sidebar-expanded) + 16px);
+                margin-left: calc(var(--sidebar-expanded) + 1.25rem);
             }
-            .card {
-                padding: 16px;
+
+            .table-container {
+                font-size: 0.85rem;
             }
+
             .table th, .table td {
-                padding: 10px;
+                padding: 0.75rem;
             }
+
             .modal-content {
-                max-width: 90%;
+                width: 95%;
+                padding: 2rem;
+            }
+
+            .delete-modal-content {
+                width: 90%;
+            }
+
+            .btn {
+                padding: 0.75rem 1.25rem;
+                font-size: 0.85rem;
+            }
+
+            .accordion-header {
+                font-size: 1rem;
+                padding: 1rem 1.5rem;
+            }
+
+            .accordion-content.active {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .table th, .table td {
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.8rem;
+            }
+
+            .modal-content {
+                padding: 1.5rem;
+            }
+
+            .delete-modal-content .ri-error-warning-fill {
+                font-size: 3rem;
             }
         }
     </style>
 </head>
 <body>
 <?php include '../../includes/header.php'; ?>
-<div class="flex min-h-screen pt-20">
+<div class="flex min-h-screen">
     <?php include '../../includes/sidepanel.php'; ?>
 
-    <main class="main-content p-6 flex-1">
-        <div class="max-w-6xl mx-auto">
-            <div class="flex justify-between items-center mb-8 animate-in">
+    <main class="main-content">
+        <div class="container">
+            <div class="flex justify-between items-center mb-10 animate-in">
                 <div>
-                    <h1 class="text-3xl font-semibold text-gray-900">Manage Members</h1>
+                    <h1 class="text-2xl md:text-3xl font-bold">Manage Members</h1>
                     <p class="text-sm text-[var(--text-secondary)] mt-2">Oversee member records and details efficiently.</p>
                 </div>
-                <a href="add_member.php" class="btn-primary"><i class="fas fa-user-plus"></i> Add New Member</a>
             </div>
 
             <?php if ($error): ?>
-                <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 flex items-center animate-in">
-                    <i class="fas fa-exclamation-circle mr-2"></i> <?php echo htmlspecialchars($error); ?>
+                <div class="alert alert-error animate-in">
+                    <i class="ri-error-warning-fill mr-2 text-lg"></i> <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
             <?php if ($success): ?>
-                <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 flex items-center animate-in">
-                    <i class="fas fa-check-circle mr-2"></i> <?php echo htmlspecialchars($success); ?>
+                <div class="alert alert-success animate-in">
+                    <i class="ri-checkbox-circle-fill mr-2 text-lg"></i> <?php echo htmlspecialchars($success); ?>
                 </div>
             <?php endif; ?>
 
             <!-- Search Bar -->
-            <form method="GET" class="mb-8 animate-in">
-                <div class="relative">
-                    <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-[var(--text-secondary)]"></i>
-                    <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>"
-                           placeholder="Search by ID, Name, NIC, or Contact" class="input-field pl-12 pr-4 py-3">
-                    <button type="submit" class="btn-primary absolute right-0 top-0 h-full px-4 rounded-l-none"><i class="fas fa-search"></i></button>
-                </div>
+            <form method="GET" class="mb-10 animate-in search-container">
+                <input type="text" name="search" id="search-input" value="<?php echo htmlspecialchars($search); ?>"
+                       placeholder="Search by ID, Name, NIC, or Contact" class="input-field">
+                <i class="ri-search-line"></i>
+                <i class="ri-close-line" id="clear-search"></i>
             </form>
 
             <?php if ($selected_member): ?>
                 <!-- Detailed Member View -->
-                <div class="card mb-6 animate-in">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-xl font-semibold text-[var(--primary-orange)]">
+                <div class="card mb-8 animate-in">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-2xl font-semibold text-[var(--primary)]">
                             Member: <?php echo htmlspecialchars($selected_member['member_id']); ?>
                         </h2>
-                        <a href="members.php" class="btn-danger"><i class="fas fa-arrow-left"></i> Back to List</a>
+                        <a href="members.php" class="btn btn-danger"><i class="ri-arrow-left-line mr-2"></i> Back to List</a>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-3">
-                            <p><strong>ID:</strong> <?php echo htmlspecialchars($selected_member['member_id']); ?></p>
-                            <p><strong>Name:</strong> <?php echo htmlspecialchars($selected_member['full_name']); ?></p>
-                            <p><strong>Date of Birth:</strong> <?php echo htmlspecialchars($selected_member['date_of_birth']); ?></p>
-                            <p><strong>Gender:</strong> <?php echo htmlspecialchars($selected_member['gender']); ?></p>
-                            <p><strong>NIC:</strong> <?php echo htmlspecialchars($selected_member['nic_number'] ?? 'N/A'); ?></p>
-                            <p><strong>Address:</strong> <?php echo htmlspecialchars($selected_member['address']); ?></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="space-y-4">
+                            <p><strong class="font-semibold">ID:</strong> <?php echo htmlspecialchars($selected_member['member_id']); ?></p>
+                            <p><strong class="font-semibold">Name:</strong> <?php echo htmlspecialchars($selected_member['full_name']); ?></p>
+                            <p><strong class="font-semibold">Date of Birth:</strong> <?php echo htmlspecialchars($selected_member['date_of_birth']); ?></p>
+                            <p><strong class="font-semibold">Gender:</strong> <?php echo htmlspecialchars($selected_member['gender']); ?></p>
+                            <p><strong class="font-semibold">NIC:</strong> <?php echo htmlspecialchars($selected_member['nic_number'] ?? 'N/A'); ?></p>
+                            <p><strong class="font-semibold">Address:</strong> <?php echo htmlspecialchars($selected_member['address']); ?></p>
                         </div>
-                        <div class="space-y-3">
-                            <p><strong>Contact:</strong> <?php echo htmlspecialchars($selected_member['contact_number']); ?></p>
-                            <p><strong>Email:</strong> <?php echo htmlspecialchars($selected_member['email'] ?? 'N/A'); ?></p>
-                            <p><strong>Join Date:</strong> <?php echo htmlspecialchars($selected_member['date_of_joining']); ?></p>
-                            <p><strong>Type:</strong> <?php echo htmlspecialchars($selected_member['membership_type']); ?></p>
-                            <p><strong>Contribution:</strong> LKR <?php echo number_format($selected_member['contribution_amount'], 2); ?></p>
-                            <p><strong>Status:</strong> <?php echo htmlspecialchars($selected_member['member_status']); ?></p>
+                        <div class="space-y-4">
+                            <p><strong class="font-semibold">Contact:</strong> <?php echo htmlspecialchars($selected_member['contact_number']); ?></p>
+                            <p><strong class="font-semibold">Email:</strong> <?php echo htmlspecialchars($selected_member['email'] ?? 'N/A'); ?></p>
+                            <p><strong class="font-semibold">Join Date:</strong> <?php echo htmlspecialchars($selected_member['date_of_joining']); ?></p>
+                            <p><strong class="font-semibold">Type:</strong> <?php echo htmlspecialchars($selected_member['membership_type']); ?></p>
+                            <p><strong class="font-semibold">Contribution:</strong> LKR <?php echo number_format($selected_member['contribution_amount'], 2); ?></p>
+                            <p><strong class="font-semibold">Status:</strong> <?php echo htmlspecialchars($selected_member['member_status']); ?></p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Accordion Sections -->
-                <div class="space-y-6">
+                <div class="space-y-8">
                     <div class="card animate-in">
-                        <div class="accordion-header" data-target="family-details">Family Details <i class="fas fa-chevron-down"></i></div>
+                        <div class="accordion-header" data-target="family-details">Family Details <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="family-details">
                             <?php if ($family_details): ?>
-                                <p><strong>Spouse:</strong> <?php echo htmlspecialchars($family_details['spouse_name'] ?? 'N/A'); ?></p>
-                                <p><strong>Children:</strong> <?php echo htmlspecialchars($family_details['children_info'] ?? 'N/A'); ?></p>
-                                <p><strong>Dependents:</strong> <?php echo htmlspecialchars($family_details['dependents_info'] ?? 'N/A'); ?></p>
+                                <div class="space-y-4">
+                                    <p><strong class="font-semibold">Spouse:</strong> <?php echo htmlspecialchars($family_details['spouse_name'] ?? 'N/A'); ?></p>
+                                    <p><strong class="font-semibold">Children:</strong> <?php echo htmlspecialchars($family_details['children_info'] ?? 'N/A'); ?></p>
+                                    <p><strong class="font-semibold">Dependents:</strong> <?php echo htmlspecialchars($family_details['dependents_info'] ?? 'N/A'); ?></p>
+                                </div>
                             <?php else: ?>
                                 <p class="text-[var(--text-secondary)]">No family details available.</p>
                             <?php endif; ?>
@@ -465,37 +721,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="card animate-in">
-                        <div class="accordion-header" data-target="financial-records">Financial Records <i class="fas fa-chevron-down"></i></div>
+                        <div class="accordion-header" data-target="financial-records">Financial Records <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="financial-records">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
                                 <div class="text-center">
-                                    <i class="fas fa-arrow-up text-2xl text-[var(--primary-orange)]"></i>
-                                    <p class="text-sm text-[var(--text-secondary)]">From Member</p>
+                                    <i class="ri-arrow-up-line text-2xl text-[var(--primary)]"></i>
+                                    <p class="text-sm text-[var(--text-secondary)] mt-2">From Member</p>
                                     <p class="text-lg font-semibold">LKR <?php echo number_format($total_from_member, 2); ?></p>
                                 </div>
                                 <div class="text-center">
-                                    <i class="fas fa-arrow-down text-2xl text-[var(--primary-orange)]"></i>
-                                    <p class="text-sm text-[var(--text-secondary)]">From Society</p>
+                                    <i class="ri-arrow-down-line text-2xl text-[var(--primary)]"></i>
+                                    <p class="text-sm text-[var(--text-secondary)] mt-2">From Society</p>
                                     <p class="text-lg font-semibold">LKR <?php echo number_format($total_from_society, 2); ?></p>
                                 </div>
                                 <div class="text-center">
-                                    <i class="fas fa-exclamation-triangle text-2xl text-[var(--primary-orange)]"></i>
-                                    <p class="text-sm text-[var(--text-secondary)]">Pending Dues</p>
+                                    <i class="ri-alert-line text-2xl text-[var(--primary)]"></i>
+                                    <p class="text-sm text-[var(--text-secondary)] mt-2">Pending Dues</p>
                                     <p class="text-lg font-semibold">LKR <?php echo number_format($pending_dues, 2); ?></p>
                                 </div>
                             </div>
-                            <div class="space-y-6">
+                            <div class="space-y-8">
                                 <?php foreach ([
                                                    ['title' => 'Society Payments', 'total' => $total_society, 'payments' => $society_payments],
                                                    ['title' => 'Membership Fees', 'total' => $total_membership, 'payments' => $membership_payments],
                                                    ['title' => 'Loan Settlements', 'total' => $total_loan_settlement, 'payments' => $loan_settlements]
                                                ] as $section): ?>
                                     <div>
-                                        <h3 class="text-lg font-semibold text-[var(--primary-orange)] mb-4">
+                                        <h3 class="text-lg font-semibold text-[var(--primary)] mb-4">
                                             <?php echo $section['title']; ?> (LKR <?php echo number_format($section['total'], 2); ?>)
                                         </h3>
                                         <div class="table-container">
-                                            <table class="w-full table">
+                                            <table class="table">
                                                 <thead>
                                                 <tr><th>Date</th><th>Amount</th><th>Mode</th><th>Receipt</th><th>Remarks</th></tr>
                                                 </thead>
@@ -522,10 +778,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="card animate-in">
-                        <div class="accordion-header" data-target="incidents">Incidents <i class="fas fa-chevron-down"></i></div>
+                        <div class="accordion-header" data-target="incidents">Incidents <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="incidents">
                             <div class="table-container">
-                                <table class="w-full table">
+                                <table class="table">
                                     <thead>
                                     <tr><th>ID</th><th>Type</th><th>Date & Time</th><th>Remarks</th></tr>
                                     </thead>
@@ -548,27 +804,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="card animate-in">
-                        <div class="accordion-header" data-target="loans">Loans <i class="fas fa-chevron-down"></i></div>
+                        <div class="accordion-header" data-target="loans">Loans <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="loans">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-8">
                                 <div class="text-center">
-                                    <i class="fas fa-hand-holding-usd text-2xl text-[var(--primary-orange)]"></i>
-                                    <p class="text-sm text-[var(--text-secondary)]">Total Amount</p>
+                                    <i class="ri-money-dollar-circle-line text-2xl text-[var(--primary)]"></i>
+                                    <p class="text-sm text-[var(--text-secondary)] mt-2">Total Amount</p>
                                     <p class="text-lg font-semibold">LKR <?php echo number_format($total_loan_amount, 2); ?></p>
                                 </div>
                                 <div class="text-center">
-                                    <i class="fas fa-exclamation-triangle text-2xl text-[var(--primary-orange)]"></i>
-                                    <p class="text-sm text-[var(--text-secondary)]">Total Dues</p>
+                                    <i class="ri-alert-line text-2xl text-[var(--primary)]"></i>
+                                    <p class="text-sm text-[var(--text-secondary)] mt-2">Total Dues</p>
                                     <p class="text-lg font-semibold">LKR <?php echo number_format($total_dues, 2); ?></p>
                                 </div>
                                 <div class="text-center">
-                                    <i class="fas fa-percentage text-2xl text-[var(--primary-orange)]"></i>
-                                    <p class="text-sm text-[var(--text-secondary)]">Total Interest</p>
+                                    <i class="ri-percent-line text-2xl text-[var(--primary)]"></i>
+                                    <p class="text-sm text-[var(--text-secondary)] mt-2">Total Interest</p>
                                     <p class="text-lg font-semibold">LKR <?php echo number_format($total_interest_amount, 2); ?></p>
                                 </div>
                             </div>
                             <div class="table-container">
-                                <table class="w-full table">
+                                <table class="table">
                                     <thead>
                                     <tr><th>Amount</th><th>Rate (%)</th><th>Duration</th><th>Monthly</th></tr>
                                     </thead>
@@ -591,10 +847,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="card animate-in">
-                        <div class="accordion-header" data-target="documents">Documents <i class="fas fa-chevron-down"></i></div>
+                        <div class="accordion-header" data-target="documents">Documents <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="documents">
                             <div class="table-container">
-                                <table class="w-full table">
+                                <table class="table">
                                     <thead>
                                     <tr><th>Type</th><th>Notes</th><th>Upload Date</th></tr>
                                     </thead>
@@ -619,25 +875,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- Members List -->
                 <div class="card animate-in">
                     <div class="table-container">
-                        <table class="w-full table">
+                        <table class="table">
                             <thead>
-                            <tr><th>ID</th><th>Name</th><th>Contact</th><th>Type</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+                            <tr>
+                                <th class="sortable">ID</th>
+                                <th class="sortable">Name</th>
+                                <th class="sortable">Contact</th>
+                                <th class="sortable">Type</th>
+                                <th class="sortable">Payment</th>
+                                <th class="sortable">Status</th>
+                                <th>Actions</th>
+                            </tr>
                             </thead>
                             <tbody>
                             <?php foreach ($members_paginated as $m): ?>
                                 <tr>
-                                    <td><a href="?member_id=<?php echo htmlspecialchars($m['member_id']); ?>" class="text-[var(--primary-orange)] hover:underline"><?php echo htmlspecialchars($m['member_id']); ?></a></td>
+                                    <td><a href="?member_id=<?php echo htmlspecialchars($m['member_id']); ?>" class="text-[var(--primary)] hover:underline font-medium"><?php echo htmlspecialchars($m['member_id']); ?></a></td>
                                     <td><?php echo htmlspecialchars($m['full_name']); ?></td>
                                     <td><?php echo htmlspecialchars($m['contact_number']); ?></td>
                                     <td><?php echo htmlspecialchars($m['membership_type']); ?></td>
                                     <td><?php echo htmlspecialchars($m['payment_status']); ?></td>
                                     <td><?php echo htmlspecialchars($m['member_status']); ?></td>
-                                    <td class="flex space-x-2">
-                                        <button class="btn-icon edit-btn" data-member='<?php echo json_encode($m); ?>' title="Edit Member"><i class="fas fa-edit"></i></button>
-                                        <form method="POST" onsubmit="return confirm('Are you sure you want to delete this member?');">
-                                            <input type="hidden" name="id" value="<?php echo $m['id']; ?>">
-                                            <button type="submit" name="delete" class="btn-icon text-red-600" title="Delete Member"><i class="fas fa-trash"></i></button>
-                                        </form>
+                                    <td class="flex space-x-3">
+                                        <button class="btn-icon edit-btn" data-member='<?php echo htmlspecialchars(json_encode($m), ENT_QUOTES); ?>' title="Edit Member"><i class="ri-edit-line"></i></button>
+                                        <button class="btn-icon delete-btn" data-id="<?php echo $m['id']; ?>" title="Delete Member"><i class="ri-delete-bin-line text-[var(--error)]"></i></button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -648,11 +909,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </table>
                     </div>
                     <?php if ($total_pages > 1): ?>
-                        <div class="mt-6 flex justify-between items-center">
+                        <div class="mt-8 flex justify-between items-center">
                             <p class="text-sm text-[var(--text-secondary)]">
                                 Showing <?php echo $offset + 1; ?>-<?php echo min($offset + $items_per_page, $total_members); ?> of <?php echo $total_members; ?>
                             </p>
-                            <div class="flex space-x-2">
+                            <div class="flex space-x-3">
                                 <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>"
                                    class="pagination-btn <?php echo $page <= 1 ? 'disabled' : ''; ?>"
                                     <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
@@ -664,8 +925,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
                 </div>
             <?php endif; ?>
-
-            <p class="text-center mt-6 animate-in"><a href="dashboard.php" class="text-[var(--primary-orange)] hover:underline">Back to Dashboard</a></p>
         </div>
     </main>
 </div>
@@ -673,37 +932,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <!-- Edit Modal -->
 <div id="edit-modal" class="modal">
     <div class="modal-content">
-        <button class="modal-close">×</button>
-        <h2 class="text-xl font-semibold text-[var(--primary-orange)] mb-6">Edit Member</h2>
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <h2 class="text-2xl font-semibold text-[var(--primary)] mb-8">Edit Member</h2>
         <form method="POST" id="edit-form">
             <input type="hidden" name="id" id="edit-id">
-            <div class="space-y-6">
-                <div>
-                    <label for="edit-full_name" class="block text-sm font-medium mb-2">Full Name</label>
+            <div class="space-y-8">
+                <div class="form-group">
+                    <label for="edit-full_name" class="block">Full Name <span class="required">*</span></label>
                     <input type="text" name="full_name" id="edit-full_name" class="input-field" required>
+                    <span class="error-text" id="edit-full_name-error">Full name is required.</span>
                 </div>
-                <div>
-                    <label for="edit-contact_number" class="block text-sm font-medium mb-2">Contact Number</label>
+                <div class="form-group">
+                    <label for="edit-contact_number" class="block">Contact Number <span class="required">*</span></label>
                     <input type="text" name="contact_number" id="edit-contact_number" class="input-field" required>
+                    <span class="error-text" id="edit-contact_number-error">Contact number is required.</span>
                 </div>
-                <div>
-                    <label for="edit-membership_type" class="block text-sm font-medium mb-2">Membership Type</label>
+                <div class="form-group">
+                    <label for="edit-membership_type" class="block">Membership Type</label>
                     <select name="membership_type" id="edit-membership_type" class="input-field">
                         <option value="Individual">Individual</option>
                         <option value="Family">Family</option>
                         <option value="Senior Citizen">Senior Citizen</option>
                     </select>
                 </div>
-                <div>
-                    <label for="edit-payment_status" class="block text-sm font-medium mb-2">Payment Status</label>
+                <div class="form-group">
+                    <label for="edit-payment_status" class="block">Payment Status</label>
                     <select name="payment_status" id="edit-payment_status" class="input-field">
                         <option value="Active">Active</option>
                         <option value="Pending">Pending</option>
                         <option value="Inactive">Inactive</option>
                     </select>
                 </div>
-                <div>
-                    <label for="edit-member_status" class="block text-sm font-medium mb-2">Member Status</label>
+                <div class="form-group">
+                    <label for="edit-member_status" class="block">Member Status</label>
                     <select name="member_status" id="edit-member_status" class="input-field">
                         <option value="Active">Active</option>
                         <option value="Deceased">Deceased</option>
@@ -711,9 +972,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </select>
                 </div>
             </div>
-            <div class="flex justify-end space-x-4 mt-6">
-                <button type="button" class="btn-danger modal-close"><i class="fas fa-times"></i> Cancel</button>
-                <button type="submit" name="update" class="btn-primary"><i class="fas fa-save"></i> Save</button>
+            <div class="flex justify-end space-x-6 mt-10">
+                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line mr-2"></i> Cancel</button>
+                <button type="submit" name="update" class="btn btn-primary"><i class="ri-save-line mr-2"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal">
+    <div class="modal-content delete-modal-content">
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <i class="ri-error-warning-fill"></i>
+        <h2 class="text-xl font-semibold text-[var(--text-primary)] mb-4">Confirm Deletion</h2>
+        <p class="text-[var(--text-secondary)] mb-8">Are you sure you want to delete this member? This action cannot be undone.</p>
+        <form method="POST" id="delete-form">
+            <input type="hidden" name="id" id="delete-id">
+            <div class="flex justify-center space-x-6">
+                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line mr-2"></i> Cancel</button>
+                <button type="submit" name="delete" class="btn btn-danger"><i class="ri-delete-bin-line mr-2"></i> Delete</button>
             </div>
         </form>
     </div>
@@ -725,11 +1003,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebar-toggle');
-        const modal = document.getElementById('edit-modal');
+        const editModal = document.getElementById('edit-modal');
+        const deleteModal = document.getElementById('delete-modal');
         const editButtons = document.querySelectorAll('.edit-btn');
+        const deleteButtons = document.querySelectorAll('.delete-btn');
         const closeButtons = document.querySelectorAll('.modal-close');
         const accordionHeaders = document.querySelectorAll('.accordion-header');
+        const searchInput = document.getElementById('search-input');
+        const clearSearch = document.getElementById('clear-search');
+        const editForm = document.getElementById('edit-form');
 
+        // Sidebar toggle
         if (sidebar && sidebarToggle) {
             sidebarToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('expanded');
@@ -743,40 +1027,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        // Edit modal
         editButtons.forEach(button => {
             button.addEventListener('click', () => {
-                const member = JSON.parse(button.getAttribute('data-member'));
-                document.getElementById('edit-id').value = member.id;
-                document.getElementById('edit-full_name').value = member.full_name;
-                document.getElementById('edit-contact_number').value = member.contact_number;
-                document.getElementById('edit-membership_type').value = member.membership_type;
-                document.getElementById('edit-payment_status').value = member.payment_status;
-                document.getElementById('edit-member_status').value = member.member_status;
-                modal.style.display = 'flex';
+                try {
+                    const member = JSON.parse(button.getAttribute('data-member'));
+                    document.getElementById('edit-id').value = member.id || '';
+                    document.getElementById('edit-full_name').value = member.full_name || '';
+                    document.getElementById('edit-contact_number').value = member.contact_number || '';
+                    document.getElementById('edit-membership_type').value = member.membership_type || 'Individual';
+                    document.getElementById('edit-payment_status').value = member.payment_status || 'Active';
+                    document.getElementById('edit-member_status').value = member.member_status || 'Active';
+                    editModal.style.display = 'flex';
+                } catch (e) {
+                    console.error('Failed to parse member data:', e);
+                    alert('Error loading member data. Please try again.');
+                }
             });
         });
 
+        // Delete modal
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                document.getElementById('delete-id').value = id;
+                deleteModal.style.display = 'flex';
+            });
+        });
+
+        // Close modals
         closeButtons.forEach(button => {
             button.addEventListener('click', () => {
-                modal.style.display = 'none';
+                editModal.style.display = 'none';
+                deleteModal.style.display = 'none';
+                editForm.reset();
+                clearErrors();
             });
         });
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
+        // Click outside to close modals
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) {
+                editModal.style.display = 'none';
+                editForm.reset();
+                clearErrors();
             }
         });
 
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                deleteModal.style.display = 'none';
+            }
+        });
+
+        // Form validation for edit
+        editForm.addEventListener('submit', (e) => {
+            let hasError = false;
+            clearErrors();
+
+            const fullName = document.getElementById('edit-full_name');
+            const contactNumber = document.getElementById('edit-contact_number');
+
+            if (!fullName.value.trim()) {
+                showError('edit-full_name-error', fullName);
+                hasError = true;
+            }
+            if (!contactNumber.value.trim()) {
+                showError('edit-contact_number-error', contactNumber);
+                hasError = true;
+            }
+
+            if (hasError) {
+                e.preventDefault();
+            }
+        });
+
+        function showError(id, input) {
+            const errorElement = document.getElementById(id);
+            if (errorElement) {
+                errorElement.classList.add('show');
+                if (input) input.classList.add('error');
+            }
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.error-text').forEach(error => error.classList.remove('show'));
+            document.querySelectorAll('.input-field').forEach(input => input.classList.remove('error'));
+        }
+
+        // Accordion
         accordionHeaders.forEach(header => {
             header.addEventListener('click', () => {
                 const content = document.getElementById(header.getAttribute('data-target'));
-                content.classList.toggle('active');
                 const icon = header.querySelector('i');
-                icon.classList.toggle('fa-chevron-down');
-                icon.classList.toggle('fa-chevron-up');
+                const isActive = content.classList.contains('active');
+
+                document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.accordion-header i').forEach(i => i.classList.replace('ri-arrow-up-s-line', 'ri-arrow-down-s-line'));
+
+                if (!isActive) {
+                    content.classList.add('active');
+                    icon.classList.replace('ri-arrow-down-s-line', 'ri-arrow-up-s-line');
+                }
             });
         });
+
+        // Clear search
+        if (clearSearch && searchInput) {
+            clearSearch.addEventListener('click', () => {
+                searchInput.value = '';
+                searchInput.focus();
+                window.location.href = 'members.php';
+            });
+        }
     });
 </script>
 </body>
