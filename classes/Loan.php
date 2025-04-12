@@ -5,7 +5,12 @@ class Loan {
     private $db;
 
     public function __construct() {
-        $this->db = new Database();
+        try {
+            $this->db = new Database();
+        } catch (Exception $e) {
+            error_log("Database initialization failed: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     public function getLoansByMemberId($member_id) {
@@ -92,7 +97,7 @@ class Loan {
         return $success;
     }
 
-    public function approveLoan($loan_id, $approved_by) {
+    public function approveLoan($loan_id) {
         $conn = $this->db->getConnection();
         if (!$conn) return false;
 
@@ -103,13 +108,14 @@ class Loan {
                 confirmed_by = ? 
             WHERE id = ? AND status = 'Applied'
         ");
-        $stmt->bind_param("si", $approved_by, $loan_id);
+        $db_username = $_SESSION['db_username'] ?? 'Unknown';
+        $stmt->bind_param("si", $db_username, $loan_id);
         $success = $stmt->execute() && $stmt->affected_rows > 0;
         $stmt->close();
         return $success;
     }
 
-    public function settleLoan($loan_id, $settled_by) {
+    public function settleLoan($loan_id) {
         $conn = $this->db->getConnection();
         if (!$conn) return false;
 
@@ -123,7 +129,8 @@ class Loan {
                 confirmed_by = ? 
             WHERE id = ? AND status = 'Pending'
         ");
-        $stmt->bind_param("si", $settled_by, $loan_id);
+        $db_username = $_SESSION['db_username'] ?? 'Unknown';
+        $stmt->bind_param("si", $db_username, $loan_id);
         $success = $stmt->execute() && $stmt->affected_rows > 0;
         $stmt->close();
         return $success;
@@ -142,6 +149,55 @@ class Loan {
             'interest' => number_format($total_interest, 2),
             'end_date' => $end_date
         ];
+    }
+
+    public function deleteLoan($id) {
+        $conn = $this->db->getConnection();
+        if (!$conn) {
+            error_log("Failed to connect to database in deleteLoan");
+            return false;
+        }
+
+        try {
+            // Begin transaction
+            $conn->begin_transaction();
+
+            // Check loan status
+            $stmt = $conn->prepare("SELECT status FROM loans WHERE id = ?");
+            if (!$stmt) {
+                throw new Exception("Failed to prepare status query: " . $conn->error);
+            }
+            $stmt->bind_param("i", $id);
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to execute status query: " . $stmt->error);
+            }
+            $result = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$result || $result['status'] !== 'Applied') {
+                throw new Exception("Loan not found or not in 'Applied' status");
+            }
+
+            // Delete loan
+            $stmt = $conn->prepare("DELETE FROM loans WHERE id = ?");
+            if (!$stmt) {
+                throw new Exception("Failed to prepare delete query: " . $conn->error);
+            }
+            $stmt->bind_param("i", $id);
+            if (!$stmt->execute()) {
+                throw new Exception("Failed to delete loan: " . $stmt->error);
+            }
+            $success = $stmt->affected_rows > 0;
+            $stmt->close();
+
+            // Commit transaction
+            $conn->commit();
+            return $success;
+        } catch (Exception $e) {
+            $conn->rollback();
+            error_log("Error deleting loan ID $id: " . $e->getMessage());
+            return false;
+        }
     }
 
     private function getLoanById($loan_id) {
