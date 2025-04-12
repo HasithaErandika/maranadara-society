@@ -2,76 +2,129 @@
 define('APP_START', true);
 session_start();
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
+// Enable error reporting for debugging (remove in production)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Log session state
+error_log("add_member.php: Session: " . print_r($_SESSION, true));
+
+// Redirect if not admin or credentials missing
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin' ||
+    !isset($_SESSION['db_username']) || !isset($_SESSION['db_password'])) {
+    error_log("add_member.php: Missing session variables, redirecting to admin-login.php");
+    header("Location: /admin-login.php");
     exit;
 }
 
-require_once '../../includes/header.php';
-require_once '../../classes/Member.php';
-require_once '../../classes/Family.php';
-require_once '../../classes/Database.php';
+require_once __DIR__ . '/../../includes/header.php';
+require_once __DIR__ . '/../../classes/Member.php';
+require_once __DIR__ . '/../../classes/Family.php';
+require_once __DIR__ . '/../../classes/Database.php';
 
 $member = new Member();
 $family = new Family();
 $error = $success = '';
 
 // Auto-generate member ID
-$last_member = $member->getLastMember();
-$last_id = $last_member ? (int)substr($last_member['member_id'], 3) : 0;
-$next_id = sprintf("MS-%03d", $last_id + 1);
+try {
+    $last_member = $member->getLastMember();
+    $last_id = $last_member ? (int)$last_member['member_id'] : 0;
+    $next_id = $last_id + 1;
+} catch (Exception $e) {
+    error_log("add_member.php: Error generating member ID: " . $e->getMessage());
+    $next_id = 1; // Fallback
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $member_id = trim($_POST['member_id']);
-    $full_name = trim($_POST['full_name']);
-    $date_of_birth = $_POST['date_of_birth'];
-    $gender = $_POST['gender'];
-    $nic_number = trim($_POST['nic_number']);
-    $address = trim($_POST['address']);
-    $contact_number = trim($_POST['contact_number']);
-    $email = trim($_POST['email']) ?: null;
-    $occupation = trim($_POST['occupation']) ?: null;
-    $date_of_joining = $_POST['date_of_joining'];
-    $membership_type = $_POST['membership_type'];
-    $contribution_amount = (float)$_POST['contribution_amount'];
-    $payment_status = $_POST['payment_status'];
-    $member_status = $_POST['member_status'];
-    $spouse_name = trim($_POST['spouse_name']) ?: null;
-    $children_info = trim($_POST['children_info']) ?: null;
-    $dependents_info = trim($_POST['dependents_info']) ?: null;
+    error_log("add_member.php: POST received: " . print_r($_POST, true));
+    try {
+        $member_id = trim($_POST['member_id'] ?? '');
+        $full_name = trim($_POST['full_name'] ?? '');
+        $date_of_birth = $_POST['date_of_birth'] ?? '';
+        $gender = $_POST['gender'] ?? '';
+        $nic_number = trim($_POST['nic_number'] ?? '');
+        $address = trim($_POST['address'] ?? '');
+        $contact_number = trim($_POST['contact_number'] ?? '');
+        $email = trim($_POST['email'] ?? '') ?: null;
+        $occupation = trim($_POST['occupation'] ?? '') ?: null;
+        $date_of_joining = $_POST['date_of_joining'] ?? '';
+        $membership_type = $_POST['membership_type'] ?? '';
+        $contribution_amount = (float)($_POST['contribution_amount'] ?? 0);
+        $payment_status = $_POST['payment_status'] ?? '';
+        $member_status = $_POST['member_status'] ?? '';
+        $spouse_name = trim($_POST['spouse_name'] ?? '') ?: null;
+        $children_info = trim($_POST['children_info'] ?? '') ?: null;
+        $dependents_info = trim($_POST['dependents_info'] ?? '') ?: null;
 
-    $conn = (new Database())->getConnection();
-    $stmt = $conn->prepare("SELECT COUNT(*) FROM members WHERE member_id = ?");
-    $stmt->bind_param("s", $member_id);
-    $stmt->execute();
-    $member_exists = $stmt->get_result()->fetch_row()[0] > 0;
-
-    if (!preg_match("/^MS-\d{3,}$/", $member_id)) {
-        $error = "Membership ID must be in the format 'MS-' followed by at least 3 digits (e.g., MS-001).";
-    } elseif ($member_exists) {
-        $error = "Membership ID '$member_id' already exists.";
-    } elseif (strlen($nic_number) < 9) {
-        $error = "NIC number must be at least 9 characters.";
-    } elseif (!preg_match("/^\+94\d{9}$/", $contact_number)) {
-        $error = "Contact number must be in the format +94XXXXXXXXX.";
-    } elseif (empty($full_name) || empty($address) || !$contribution_amount) {
-        $error = "Required fields (Name, Address, Contribution) cannot be empty.";
-    } else {
-        if ($member->addMember($member_id, $full_name, $date_of_birth, $gender, $nic_number, $address, $contact_number, $email, $occupation, $date_of_joining, $membership_type, $contribution_amount, $payment_status, $member_status)) {
-            $stmt = $conn->prepare("SELECT id FROM members WHERE member_id = ?");
-            $stmt->bind_param("s", $member_id);
-            $stmt->execute();
-            $new_member_id = $stmt->get_result()->fetch_assoc()['id'];
-
-            if ($spouse_name || $children_info || $dependents_info) {
-                $family->addFamilyDetails($new_member_id, $spouse_name, $children_info, $dependents_info);
-            }
-
-            $success = "Member '$full_name' added successfully! Redirecting in <span id='countdown'>2</span> seconds...";
-            header("Refresh: 2; url=dashboard.php");
-        } else {
-            $error = "Failed to add member. Please try again.";
+        // Validate inputs
+        if (!ctype_digit($member_id) || (int)$member_id <= 0) {
+            throw new Exception("Membership ID must be a positive number.");
         }
+        if (strlen($nic_number) < 9) {
+            throw new Exception("NIC number must be at least 9 characters.");
+        }
+        if (!preg_match("/^\+94\d{9}$/", $contact_number)) {
+            throw new Exception("Contact number must be in the format +94XXXXXXXXX.");
+        }
+        if (empty($full_name) || empty($address) || !$contribution_amount) {
+            throw new Exception("Required fields (Name, Address, Contribution) cannot be empty.");
+        }
+        if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new Exception("Invalid email format.");
+        }
+        if (empty($date_of_birth) || empty($gender) || empty($date_of_joining) ||
+            empty($membership_type) || empty($payment_status) || empty($member_status)) {
+            throw new Exception("All required fields must be filled.");
+        }
+
+        // Check member_id uniqueness
+        $conn = (new Database())->getConnection();
+        $stmt = $conn->prepare("SELECT COUNT(*) FROM members WHERE member_id = ?");
+        if (!$stmt) {
+            throw new Exception("Failed to check member ID uniqueness: " . $conn->error);
+        }
+        $stmt->bind_param("s", $member_id);
+        $stmt->execute();
+        if ($stmt->get_result()->fetch_row()[0] > 0) {
+            $stmt->close();
+            throw new Exception("Membership ID '$member_id' already exists.");
+        }
+        $stmt->close();
+
+        // Add member
+        if (!$member->addMember($member_id, $full_name, $date_of_birth, $gender, $nic_number, $address, $contact_number, $email, $occupation, $date_of_joining, $membership_type, $contribution_amount, $payment_status, $member_status)) {
+            throw new Exception("Failed to add member to database.");
+        }
+
+        // Get new member's ID
+        $stmt = $conn->prepare("SELECT id FROM members WHERE member_id = ?");
+        if (!$stmt) {
+            throw new Exception("Failed to retrieve new member ID: " . $conn->error);
+        }
+        $stmt->bind_param("s", $member_id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        if (!$result) {
+            $stmt->close();
+            throw new Exception("New member not found after insertion.");
+        }
+        $new_member_id = $result['id'];
+        $stmt->close();
+
+        // Add family details if provided
+        if ($spouse_name || $children_info || $dependents_info) {
+            if (!$family->addFamilyDetails($new_member_id, $spouse_name, $children_info, $dependents_info)) {
+                throw new Exception("Failed to add family details.");
+            }
+        }
+
+        $success = "Member '$full_name' added successfully!";
+        error_log("add_member.php: Success: $success");
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+        error_log("add_member.php: Error: $error");
     }
 }
 ?>
@@ -89,7 +142,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         :root {
             --primary-orange: #F97316;
             --orange-dark: #C2410C;
-            --orange-light: #FED7AA;
             --gray-bg: #F9FAFB;
             --card-bg: #FFFFFF;
             --text-primary: #111827;
@@ -121,11 +173,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 8px;
             padding: 20px;
             box-shadow: var(--shadow);
-            transition: transform 0.2s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
         }
 
         .btn-primary {
@@ -139,7 +186,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .btn-primary:hover {
             background: var(--orange-dark);
-            transform: translateY(-1px);
         }
 
         .btn-cancel {
@@ -153,7 +199,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .btn-cancel:hover {
             background: #4b5563;
-            transform: translateY(-1px);
         }
 
         .input-field {
@@ -168,10 +213,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-color: var(--primary-orange);
             outline: none;
             box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
-        }
-
-        .input-field:valid {
-            border-color: #10b981;
         }
 
         .section-header {
@@ -211,14 +252,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 400px;
+            width: 90%;
+            animation: popupFadeIn 0.3s ease-out;
+        }
+
+        .popup.show {
+            display: block;
+        }
+
+        .popup-success {
+            border-left: 4px solid #10b981;
+        }
+
+        .popup-error {
+            border-left: 4px solid #dc2626;
+        }
+
+        .popup-cancel {
+            border-left: 4px solid #6B7280;
+        }
+
+        .popup-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .popup-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .popup-message {
+            color: #4B5563;
+        }
+
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .popup-overlay.show {
+            display: block;
+        }
+
+        @keyframes popupFadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
         }
 
         @media (max-width: 768px) {
@@ -228,27 +330,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .sidebar.expanded ~ .main-content {
                 margin-left: calc(var(--sidebar-expanded) + 16px);
             }
+            .popup {
+                width: 95%;
+            }
         }
     </style>
 </head>
 <body>
-<?php include '../../includes/header.php'; ?>
+<?php include __DIR__ . '/../../includes/header.php'; ?>
 <div class="flex min-h-screen pt-20">
-    <?php include '../../includes/sidepanel.php'; ?>
+    <?php include __DIR__ . '/../../includes/sidepanel.php'; ?>
 
     <main class="main-content p-6 flex-1">
         <div class="max-w-4xl mx-auto">
             <h1 class="text-3xl font-semibold text-gray-900 mb-6 animate-in">Add New Member</h1>
-            <?php if ($error): ?>
-                <div class="bg-red-100 text-red-700 p-4 rounded-lg mb-6 flex items-center animate-in">
-                    <i class="fas fa-exclamation-circle mr-2"></i> <?php echo htmlspecialchars($error); ?>
-                </div>
-            <?php endif; ?>
-            <?php if ($success): ?>
-                <div class="bg-green-100 text-green-700 p-4 rounded-lg mb-6 flex items-center animate-in">
-                    <i class="fas fa-check-circle mr-2"></i> <?php echo $success; ?>
-                </div>
-            <?php endif; ?>
 
             <form method="POST" class="card space-y-6 animate-in" id="add-member-form">
                 <div>
@@ -258,7 +353,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label for="member_id" class="block text-sm font-medium mb-1">Membership ID <span class="text-red-500">*</span></label>
                             <input type="text" id="member_id" name="member_id" value="<?php echo htmlspecialchars($next_id); ?>" class="input-field" required aria-describedby="member_id-error">
                             <i class="fas fa-check"></i>
-                            <span class="error-text" id="member_id-error">Format: MS- followed by 3+ digits.</span>
+                            <span class="error-text" id="member_id-error">Must be a positive number.</span>
                         </div>
                         <div class="form-group">
                             <label for="full_name" class="block text-sm font-medium mb-1">Full Name <span class="text-red-500">*</span></label>
@@ -380,7 +475,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="flex justify-center space-x-4">
                     <button type="submit" class="btn-primary">Add Member</button>
-                    <a href="dashboard.php" class="btn-cancel">Cancel</a>
+                    <a href="#" class="btn-cancel" id="cancel-button">Cancel</a>
                 </div>
             </form>
 
@@ -389,13 +484,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </main>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<!-- Popup Overlay -->
+<div class="popup-overlay" id="popup-overlay"></div>
+
+<!-- Success Popup -->
+<div class="popup popup-success" id="success-popup">
+    <div class="flex justify-center">
+        <i class="fas fa-check-circle popup-icon text-green-500"></i>
+    </div>
+    <h3 class="popup-title text-center">Success!</h3>
+    <p class="popup-message text-center"><?php echo htmlspecialchars($success); ?></p>
+    <p class="text-center text-sm text-gray-500 mt-2">Redirecting in <span id="success-countdown">3</span> seconds...</p>
+</div>
+
+<!-- Error Popup -->
+<div class="popup popup-error" id="error-popup">
+    <div class="flex justify-center">
+        <i class="fas fa-exclamation-circle popup-icon text-red-500"></i>
+    </div>
+    <h3 class="popup-title text-center">Error</h3>
+    <p class="popup-message text-center"><?php echo htmlspecialchars($error); ?></p>
+    <p class="text-center text-sm text-gray-500 mt-2">Redirecting in <span id="error-countdown">3</span> seconds...</p>
+</div>
+
+<!-- Cancel Popup -->
+<div class="popup popup-cancel" id="cancel-popup">
+    <div class="flex justify-center">
+        <i class="fas fa-times-circle popup-icon text-gray-500"></i>
+    </div>
+    <h3 class="popup-title text-center">Cancelled</h3>
+    <p class="popup-message text-center">The operation has been cancelled.</p>
+    <p class="text-center text-sm text-gray-500 mt-2">Redirecting in <span id="cancel-countdown">3</span> seconds...</p>
+</div>
+
+<?php include __DIR__ . '/../../includes/footer.php'; ?>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.getElementById('sidebar');
         const sidebarToggle = document.getElementById('sidebar-toggle');
+        const cancelButton = document.getElementById('cancel-button');
+        const popupOverlay = document.getElementById('popup-overlay');
+        const successPopup = document.getElementById('success-popup');
+        const errorPopup = document.getElementById('error-popup');
+        const cancelPopup = document.getElementById('cancel-popup');
 
+        // Sidebar toggle
         if (sidebar && sidebarToggle) {
             sidebarToggle.addEventListener('click', () => {
                 sidebar.classList.toggle('expanded');
@@ -409,6 +543,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         }
 
+        // Form validation
         const form = document.getElementById('add-member-form');
         const inputs = form.querySelectorAll('.input-field');
 
@@ -417,7 +552,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const group = input.closest('.form-group');
                 const error = group.querySelector('.error-text');
 
-                if (input.id === 'member_id' && !/^MS-\d{3,}$/.test(input.value)) {
+                if (input.id === 'member_id' && (!/^\d+$/.test(input.value) || parseInt(input.value) <= 0)) {
                     error.style.display = 'block';
                     group.classList.remove('valid');
                 } else if (input.id === 'full_name' && !input.value.trim()) {
@@ -427,6 +562,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     error.style.display = 'block';
                     group.classList.remove('valid');
                 } else if (input.id === 'contact_number' && !/^\+94\d{9}$/.test(input.value)) {
+                    error.style.display = 'block';
+                    group.classList.remove('valid');
+                } else if (input.id === 'email' && input.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)) {
                     error.style.display = 'block';
                     group.classList.remove('valid');
                 } else if (input.required && !input.value) {
@@ -439,28 +577,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         });
 
-        form.addEventListener('submit', (e) => {
-            let valid = true;
-            inputs.forEach(input => {
-                const group = input.closest('.form-group');
-                const error = group.querySelector('.error-text');
+        // Show popups if messages exist
+        <?php if ($success): ?>
+        showPopup(successPopup);
+        startCountdown('success-countdown');
+        setTimeout(() => { window.location.href = 'add_member.php'; }, 3000);
+        <?php elseif ($error): ?>
+        showPopup(errorPopup);
+        startCountdown('error-countdown');
+        setTimeout(() => { window.location.href = 'add_member.php'; }, 3000);
+        <?php endif; ?>
 
-                if (input.required && !input.value) {
-                    error.style.display = 'block';
-                    group.classList.remove('valid');
-                    valid = false;
-                }
+        // Cancel button
+        if (cancelButton) {
+            cancelButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                showPopup(cancelPopup);
+                startCountdown('cancel-countdown');
+                setTimeout(() => { window.location.href = 'add_member.php'; }, 3000);
             });
+        }
 
-            if (!valid) e.preventDefault();
-        });
+        function showPopup(popup) {
+            popupOverlay.classList.add('show');
+            popup.classList.add('show');
+        }
 
-        if (document.getElementById('countdown')) {
-            let timeLeft = 2;
-            const countdown = document.getElementById('countdown');
-            setInterval(() => {
+        function startCountdown(elementId) {
+            let timeLeft = 3;
+            const countdown = document.getElementById(elementId);
+            const interval = setInterval(() => {
                 timeLeft--;
                 countdown.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                }
             }, 1000);
         }
     });

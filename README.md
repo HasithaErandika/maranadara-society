@@ -169,9 +169,9 @@ maranadara-society/
     - Edit `config/db_config.php` with HostGator’s credentials:
       ```php
       <?php
-      define('DB_HOST', 'localhost'); // Usually 'localhost' on HostGator
-      define('DB_USER', 'your_mysql_username');
-      define('DB_PASS', 'your_mysql_password');
+      if (!defined('APP_START')) {
+      exit('No direct script access allowed');}
+      define('DB_HOST', 'localhost'); // HostGator typically uses 'localhost'
       define('DB_NAME', 'suramalr_maranadaraDB');
       ?>
       ```

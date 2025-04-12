@@ -4,36 +4,36 @@ require_once __DIR__ . '/Database.php';
 class Member {
     private $db;
 
-    /**
-     * Member constructor.
-     * Initializes the database connection.
-     */
     public function __construct() {
-        $this->db = new Database();
+        try {
+            $this->db = new Database();
+        } catch (Exception $e) {
+            error_log("Database initialization failed: " . $e->getMessage());
+            throw $e;
+        }
     }
 
-    /**
-     * Add a new member to the database.
-     *
-     * @param string $member_id Unique member ID (e.g., MS-001)
-     * @param string $full_name Full name of the member
-     * @param string $date_of_birth Date of birth (YYYY-MM-DD)
-     * @param string $gender Gender (Male, Female, Other)
-     * @param string $nic_number National ID number
-     * @param string $address Member's address
-     * @param string $contact_number Contact number (e.g., +94771234567)
-     * @param string|null $email Email address (optional)
-     * @param string|null $occupation Occupation (optional)
-     * @param string $date_of_joining Date of joining (YYYY-MM-DD)
-     * @param string $membership_type Membership type (Individual, Family, Senior Citizen)
-     * @param float $contribution_amount Monthly contribution amount
-     * @param string $payment_status Payment status (Active, Pending, Inactive)
-     * @param string $member_status Member status (Active, Deceased, Resigned)
-     * @return bool True on success, false on failure
-     * @throws Exception If database operation fails
-     */
     public function addMember($member_id, $full_name, $date_of_birth, $gender, $nic_number, $address, $contact_number, $email, $occupation, $date_of_joining, $membership_type, $contribution_amount, $payment_status, $member_status) {
         try {
+            if (strlen($member_id) > 10) {
+                throw new Exception("Member ID exceeds 10 characters.");
+            }
+            if (strlen($full_name) > 100) {
+                throw new Exception("Full name exceeds 100 characters.");
+            }
+            if (strlen($nic_number) > 20) {
+                throw new Exception("NIC number exceeds 20 characters.");
+            }
+            if (strlen($contact_number) > 15) {
+                throw new Exception("Contact number exceeds 15 characters.");
+            }
+            if ($email && strlen($email) > 100) {
+                throw new Exception("Email exceeds 100 characters.");
+            }
+            if ($occupation && strlen($occupation) > 100) {
+                throw new Exception("Occupation exceeds 100 characters.");
+            }
+
             $conn = $this->db->getConnection();
             $stmt = $conn->prepare(
                 "INSERT INTO members (member_id, full_name, date_of_birth, gender, nic_number, address, contact_number, email, occupation, date_of_joining, membership_type, contribution_amount, payment_status, member_status) 
@@ -44,7 +44,7 @@ class Member {
             }
 
             $stmt->bind_param(
-                "sssssssssssdds",
+                "sssssssssssds",
                 $member_id,
                 $full_name,
                 $date_of_birth,
@@ -69,21 +69,15 @@ class Member {
             $stmt->close();
             return true;
         } catch (Exception $e) {
-            error_log("Error adding member: " . $e->getMessage());
+            error_log("Error adding member: " . $e->getMessage() . " | Input: member_id=$member_id, full_name=$full_name");
             return false;
         }
     }
 
-    /**
-     * Retrieve all members from the database.
-     *
-     * @return array Array of member records
-     * @throws Exception If query fails
-     */
     public function getAllMembers() {
         try {
             $conn = $this->db->getConnection();
-            $result = $conn->query("SELECT * FROM members ORDER BY member_id ASC");
+            $result = $conn->query("SELECT * FROM members ORDER BY CAST(member_id AS UNSIGNED) ASC");
             if (!$result) {
                 throw new Exception("Query failed: " . $conn->error);
             }
@@ -94,13 +88,6 @@ class Member {
         }
     }
 
-    /**
-     * Get a member by their ID.
-     *
-     * @param int $id Member's database ID
-     * @return array|null Member data or null if not found
-     * @throws Exception If query fails
-     */
     public function getMemberById($id) {
         try {
             if (!is_int($id) || $id <= 0) {
@@ -125,13 +112,6 @@ class Member {
         }
     }
 
-    /**
-     * Get a member by their associated username.
-     *
-     * @param string $username User's username
-     * @return array|null Member data or null if not found
-     * @throws Exception If query fails
-     */
     public function getMemberByUsername($username) {
         try {
             if (empty($username)) {
@@ -160,36 +140,47 @@ class Member {
         }
     }
 
-    /**
-     * Generate a unique member ID (e.g., MS-001).
-     *
-     * @return string Generated member ID
-     * @throws Exception If query fails
-     */
     public function generateMemberId() {
         try {
             $conn = $this->db->getConnection();
-            $result = $conn->query("SELECT member_id FROM members ORDER BY id DESC LIMIT 1");
+            $result = $conn->query("SELECT member_id FROM members ORDER BY CAST(member_id AS UNSIGNED) DESC LIMIT 1");
             if (!$result) {
                 throw new Exception("Query failed: " . $conn->error);
             }
 
             $last_member = $result->fetch_assoc();
-            $last_num = $last_member ? (int)substr($last_member['member_id'], 3) : 0;
-            return 'MS-' . str_pad($last_num + 1, 3, '0', STR_PAD_LEFT);
+            $last_num = $last_member ? (int)$last_member['member_id'] : 0;
+            return (string)($last_num + 1);
         } catch (Exception $e) {
             error_log("Error generating member ID: " . $e->getMessage());
-            return 'MS-001'; // Fallback to first ID
+            return '1';
         }
     }
 
-    /**
-     * Check if an NIC number is unique.
-     *
-     * @param string $nic_number National ID number to check
-     * @return bool True if unique, false if already exists
-     * @throws Exception If query fails
-     */
+    public function isMemberIdUnique($member_id) {
+        try {
+            if (empty($member_id)) {
+                throw new Exception("Member ID cannot be empty");
+            }
+
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare("SELECT COUNT(*) FROM members WHERE member_id = ?");
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+
+            $stmt->bind_param("s", $member_id);
+            $stmt->execute();
+            $count = $stmt->get_result()->fetch_row()[0];
+            $stmt->close();
+
+            return $count == 0;
+        } catch (Exception $e) {
+            error_log("Error checking member ID uniqueness: " . $e->getMessage());
+            return false;
+        }
+    }
+
     public function isNicUnique($nic_number) {
         try {
             if (empty($nic_number)) {
@@ -214,14 +205,6 @@ class Member {
         }
     }
 
-    /**
-     * Update an existing member's details.
-     *
-     * @param int $id Member's database ID
-     * @param array $data Associative array of fields to update
-     * @return bool True on success, false on failure
-     * @throws Exception If update fails
-     */
     public function updateMember($id, $data) {
         try {
             if (!is_int($id) || $id <= 0) {
@@ -239,9 +222,9 @@ class Member {
             }
 
             $set_clause = implode(', ', array_map(fn($k) => "$k = ?", array_keys($fields)));
-            $types = str_repeat('s', count($fields) - 1) . 'd'; // All strings except contribution_amount (double)
+            $types = str_repeat('s', count($fields) - 1) . 'd';
             $values = array_values($fields);
-            $values[] = $id; // Append ID for WHERE clause
+            $values[] = $id;
 
             $conn = $this->db->getConnection();
             $stmt = $conn->prepare("UPDATE members SET $set_clause WHERE id = ?");
@@ -263,13 +246,6 @@ class Member {
         }
     }
 
-    /**
-     * Delete a member from the database.
-     *
-     * @param int $id Member's database ID
-     * @return bool True on success, false on failure
-     * @throws Exception If deletion fails
-     */
     public function deleteMember($id) {
         try {
             if (!is_int($id) || $id <= 0) {
@@ -296,12 +272,6 @@ class Member {
         }
     }
 
-    /**
-     * Get the last member added to the database.
-     *
-     * @return array|null Last member's data or null if none exist
-     * @throws Exception If query fails
-     */
     public function getLastMember() {
         try {
             $conn = $this->db->getConnection();
