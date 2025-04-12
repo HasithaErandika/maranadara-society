@@ -28,10 +28,8 @@ CREATE TABLE incidents (
                            member_id INT NOT NULL,
                            incident_type VARCHAR(50) NOT NULL,
                            incident_datetime DATETIME NOT NULL,
-                           reporter_name VARCHAR(100) NOT NULL,
-                           reporter_member_id VARCHAR(10) NOT NULL,
                            remarks TEXT,
-                           FOREIGN KEY (member_id) REFERENCES members(id)
+                           FOREIGN KEY (member_id) REFERENCES members(member_id)
 );
 
 -- Table: documents

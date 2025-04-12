@@ -47,7 +47,6 @@ class Member {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
 
-            // Corrected bind_param with 14 parameters
             $stmt->bind_param(
                 "ssssssssssssss",
                 $member_id,
@@ -76,7 +75,7 @@ class Member {
             return true;
         } catch (Exception $e) {
             error_log("Error adding member: " . $e->getMessage() . " | Input: member_id=$member_id, full_name=$full_name");
-            throw $e; // Re-throw to let add_member.php handle the error
+            throw $e;
         }
     }
 
@@ -96,7 +95,8 @@ class Member {
 
     public function getMemberById($id) {
         try {
-            if (!is_int($id) || $id <= 0) {
+            // Allow string IDs but ensure it's numeric and positive
+            if (!is_numeric($id) || (int)$id <= 0) {
                 throw new Exception("Invalid member ID: $id");
             }
 
@@ -106,14 +106,52 @@ class Member {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
 
+            // Bind as integer after casting
+            $id = (int)$id;
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
             $stmt->close();
 
-            return $result ?: null;
+            if (!$result) {
+                error_log("No member found for ID: $id");
+                return null;
+            }
+
+            error_log("Fetched member for ID: $id, Name: " . ($result['full_name'] ?? 'N/A'));
+            return $result;
         } catch (Exception $e) {
-            error_log("Error fetching member by ID: " . $e->getMessage());
+            error_log("Error fetching member by ID: $id, Message: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function getMemberByMemberId($member_id) {
+        try {
+            if (empty($member_id)) {
+                throw new Exception("Invalid member ID: $member_id");
+            }
+
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare("SELECT * FROM members WHERE member_id = ?");
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+
+            $stmt->bind_param("s", $member_id);
+            $stmt->execute();
+            $result = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$result) {
+                error_log("No member found for member_id: $member_id");
+                return null;
+            }
+
+            error_log("Fetched member for member_id: $member_id, Name: " . ($result['full_name'] ?? 'N/A'));
+            return $result;
+        } catch (Exception $e) {
+            error_log("Error fetching member by member_id: $member_id, Message: " . $e->getMessage());
             return null;
         }
     }
