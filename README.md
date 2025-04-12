@@ -68,6 +68,8 @@ maranadara-society/
 ├── .gitignore
 ├── .htaccess             # URL rewriting and security
 ├── index.php             # Landing page / route handler
+├── login.php             # for users 
+├── admin-login.php             # Only for admins 
 ├── README.md             # Project documentation
 └── LICENSE               # MIT License
 ```

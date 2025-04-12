@@ -15,6 +15,7 @@ class Member {
 
     public function addMember($member_id, $full_name, $date_of_birth, $gender, $nic_number, $address, $contact_number, $email, $occupation, $date_of_joining, $membership_type, $contribution_amount, $payment_status, $member_status) {
         try {
+            // Input validation
             if (strlen($member_id) > 10) {
                 throw new Exception("Member ID exceeds 10 characters.");
             }
@@ -33,6 +34,9 @@ class Member {
             if ($occupation && strlen($occupation) > 100) {
                 throw new Exception("Occupation exceeds 100 characters.");
             }
+            if (!is_numeric($contribution_amount) || $contribution_amount < 0) {
+                throw new Exception("Contribution amount must be a non-negative number.");
+            }
 
             $conn = $this->db->getConnection();
             $stmt = $conn->prepare(
@@ -43,8 +47,9 @@ class Member {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
 
+            // Corrected bind_param with 14 parameters
             $stmt->bind_param(
-                "sssssssssssds",
+                "ssssssssssssss",
                 $member_id,
                 $full_name,
                 $date_of_birth,
@@ -67,10 +72,11 @@ class Member {
             }
 
             $stmt->close();
+            error_log("Member added successfully: member_id=$member_id, full_name=$full_name");
             return true;
         } catch (Exception $e) {
             error_log("Error adding member: " . $e->getMessage() . " | Input: member_id=$member_id, full_name=$full_name");
-            return false;
+            throw $e; // Re-throw to let add_member.php handle the error
         }
     }
 
