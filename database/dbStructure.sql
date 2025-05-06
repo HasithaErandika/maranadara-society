@@ -1,5 +1,5 @@
 -- Create the database
-CREATE DATABASE IF NOT EXISTS maranadara_db;
+CREATE DATABASE IF NOT EXISTS maranadaraDB;
 USE maranadara_db;
 
 -- Table: members
@@ -28,10 +28,8 @@ CREATE TABLE incidents (
                            member_id INT NOT NULL,
                            incident_type VARCHAR(50) NOT NULL,
                            incident_datetime DATETIME NOT NULL,
-                           reporter_name VARCHAR(100) NOT NULL,
-                           reporter_member_id VARCHAR(10) NOT NULL,
                            remarks TEXT,
-                           FOREIGN KEY (member_id) REFERENCES members(id)
+                           FOREIGN KEY (member_id) REFERENCES members(member_id)
 );
 
 -- Table: documents
@@ -79,7 +77,7 @@ CREATE TABLE users (
                        member_id INT,
                        username VARCHAR(50) UNIQUE NOT NULL,
                        password VARCHAR(255) NOT NULL, -- Hashed password
-                       role VARCHAR(20) NOT NULL, -- e.g., admin, user
+                       role VARCHAR(20) NOT NULL, -- user
                        FOREIGN KEY (member_id) REFERENCES members(id)
 );
 

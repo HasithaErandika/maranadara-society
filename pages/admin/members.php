@@ -124,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Invalid member status.";
         } else {
             try {
+<<<<<<< HEAD
                 $data = [
                     'full_name' => $full_name,
                     'contact_number' => $contact_number,
@@ -139,6 +140,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Exception $e) {
                 $error = "Error updating member: " . $e->getMessage();
+=======
+                $stmt = $conn->prepare("UPDATE members SET full_name = ?, contact_number = ?, membership_type = ?, payment_status = ?, member_status = ? WHERE id = ?");
+                $stmt->bind_param("sssssi", $full_name, $contact_number, $membership_type, $payment_status, $member_status, $id);
+                if ($stmt->execute()) {
+                    $success = "Member updated successfully.";
+                } else {
+                    $error = "Error updating member: " . $conn->error;
+                }
+                $stmt->close();
+            } catch (Exception $e) {
+                $error = "Database error: " . $e->getMessage();
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
         }
     }
@@ -167,7 +180,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --text-secondary: #6B7280; /* Lighter gray for secondary text */
             --error: #EF4444; /* Red for errors */
             --success: #22C55E; /* Green for success */
+<<<<<<< HEAD
             --warning: #F59E0B;
+=======
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             --shadow: 0 6px 20px rgba(0, 0, 0, 0.05); /* Softer shadow */
             --border: #E5E7EB; /* Light border color */
             --sidebar-width: 64px;
@@ -1006,6 +1022,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include '../../includes/footer.php'; ?>
 
 <script>
+<<<<<<< HEAD
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -1029,10 +1046,84 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
                 !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
                 sidebar.classList.remove('expanded');
+=======
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const editModal = document.getElementById('edit-modal');
+        const deleteModal = document.getElementById('delete-modal');
+        const editButtons = document.querySelectorAll('.edit-btn');
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        const closeButtons = document.querySelectorAll('.modal-close');
+        const accordionHeaders = document.querySelectorAll('.accordion-header');
+        const searchInput = document.getElementById('search-input');
+        const clearSearch = document.getElementById('clear-search');
+        const editForm = document.getElementById('edit-form');
+
+        // Sidebar toggle
+        if (sidebar && sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('expanded');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
+                    !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    sidebar.classList.remove('expanded');
+                }
+            });
+        }
+
+        // Edit modal
+        editButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                try {
+                    const member = JSON.parse(button.getAttribute('data-member'));
+                    document.getElementById('edit-id').value = member.id || '';
+                    document.getElementById('edit-full_name').value = member.full_name || '';
+                    document.getElementById('edit-contact_number').value = member.contact_number || '';
+                    document.getElementById('edit-membership_type').value = member.membership_type || 'Individual';
+                    document.getElementById('edit-payment_status').value = member.payment_status || 'Active';
+                    document.getElementById('edit-member_status').value = member.member_status || 'Active';
+                    editModal.style.display = 'flex';
+                } catch (e) {
+                    console.error('Failed to parse member data:', e);
+                    alert('Error loading member data. Please try again.');
+                }
+            });
+        });
+
+        // Delete modal
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                document.getElementById('delete-id').value = id;
+                deleteModal.style.display = 'flex';
+            });
+        });
+
+        // Close modals
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                editModal.style.display = 'none';
+                deleteModal.style.display = 'none';
+                editForm.reset();
+                clearErrors();
+            });
+        });
+
+        // Click outside to close modals
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) {
+                editModal.style.display = 'none';
+                editForm.reset();
+                clearErrors();
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
         });
     }
 
+<<<<<<< HEAD
     // Edit modal
     editButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -1049,7 +1140,74 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to parse member data:', e);
                 alert('Error loading member data. Please try again.');
             }
+=======
+        deleteModal.addEventListener('click', (e) => {
+            if (e.target === deleteModal) {
+                deleteModal.style.display = 'none';
+            }
         });
+
+        // Form validation for edit
+        editForm.addEventListener('submit', (e) => {
+            let hasError = false;
+            clearErrors();
+
+            const fullName = document.getElementById('edit-full_name');
+            const contactNumber = document.getElementById('edit-contact_number');
+
+            if (!fullName.value.trim()) {
+                showError('edit-full_name-error', fullName);
+                hasError = true;
+            }
+            if (!contactNumber.value.trim()) {
+                showError('edit-contact_number-error', contactNumber);
+                hasError = true;
+            }
+
+            if (hasError) {
+                e.preventDefault();
+            }
+        });
+
+        function showError(id, input) {
+            const errorElement = document.getElementById(id);
+            if (errorElement) {
+                errorElement.classList.add('show');
+                if (input) input.classList.add('error');
+            }
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.error-text').forEach(error => error.classList.remove('show'));
+            document.querySelectorAll('.input-field').forEach(input => input.classList.remove('error'));
+        }
+
+        // Accordion
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const content = document.getElementById(header.getAttribute('data-target'));
+                const icon = header.querySelector('i');
+                const isActive = content.classList.contains('active');
+
+                document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.accordion-header i').forEach(i => i.classList.replace('ri-arrow-up-s-line', 'ri-arrow-down-s-line'));
+
+                if (!isActive) {
+                    content.classList.add('active');
+                    icon.classList.replace('ri-arrow-down-s-line', 'ri-arrow-up-s-line');
+                }
+            });
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
+        });
+
+        // Clear search
+        if (clearSearch && searchInput) {
+            clearSearch.addEventListener('click', () => {
+                searchInput.value = '';
+                searchInput.focus();
+                window.location.href = 'members.php';
+            });
+        }
     });
 
     // Delete modal

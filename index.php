@@ -143,6 +143,7 @@ session_start();
 </head>
 <body class="font-sans">
 <!-- Navbar -->
+<<<<<<< HEAD
 <nav class="navbar fixed w-full z-50 transition-all duration-300">
     <div class="container mx-auto px-6 py-4">
         <div class="flex justify-between items-center">
@@ -155,12 +156,28 @@ session_start();
                     <i class="fas fa-sign-in-alt"></i>
                     <span>Enter System</span>
                 </a>
+=======
+<nav class="shadow-lg fixed w-full z-10 top-0">
+    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+        <a href="index.php" class="text-2xl font-bold text-orange-600 flex items-center">
+            <i class="fas fa-hands-helping mr-2"></i>Maranadhara Samithi
+        </a>
+        <div class="flex items-center">
+            <div class="dropdown">
+                <button class="text-white px-5 py-2 rounded-lg hover:bg-orange-700 transition-colors duration-300 flex items-center hero-cta">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Enter the System
+                </button>
+                <div class="dropdown-menu">
+                    <a href="login.php">Enter the System</a>
+                </div>
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             </div>
         </div>
     </div>
 </nav>
 
 <!-- Hero Section -->
+<<<<<<< HEAD
 <header class="hero-section text-white pt-32 pb-24 relative">
     <div class="container mx-auto px-6">
         <div class="max-w-4xl mx-auto text-center">
@@ -175,6 +192,13 @@ session_start();
                 </a>
             </div>
         </div>
+=======
+<header class="hero-section text-white text-center py-24 mt-16">
+    <h1 class="text-4xl md:text-5xl font-bold mb-4 animate-fade-in">මරණාධාර සමිතිය</h1>
+    <p class="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">Supporting our community in times of need with funeral aid and solidarity.</p>
+    <div class="mt-8 flex justify-center space-x-4">
+        <a href="login.php" class="text-white px-6 py-3 rounded-lg font-semibold hero-cta shadow-md">Enter the System</a>
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
     </div>
 </header>
 

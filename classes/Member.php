@@ -16,6 +16,7 @@ class Member {
     public function addMember($member_id, $full_name, $date_of_birth, $gender, $nic_number, $address, $contact_number, $email, $occupation, $date_of_joining, $membership_type, $contribution_amount, $payment_status, $member_status) {
         try {
             // Input validation
+<<<<<<< HEAD
             $this->validateMemberData([
                 'member_id' => $member_id,
                 'full_name' => $full_name,
@@ -32,6 +33,28 @@ class Member {
             }
             if (!$this->isNicUnique($nic_number)) {
                 throw new Exception("NIC number already registered.");
+=======
+            if (strlen($member_id) > 10) {
+                throw new Exception("Member ID exceeds 10 characters.");
+            }
+            if (strlen($full_name) > 100) {
+                throw new Exception("Full name exceeds 100 characters.");
+            }
+            if (strlen($nic_number) > 20) {
+                throw new Exception("NIC number exceeds 20 characters.");
+            }
+            if (strlen($contact_number) > 15) {
+                throw new Exception("Contact number exceeds 15 characters.");
+            }
+            if ($email && strlen($email) > 100) {
+                throw new Exception("Email exceeds 100 characters.");
+            }
+            if ($occupation && strlen($occupation) > 100) {
+                throw new Exception("Occupation exceeds 100 characters.");
+            }
+            if (!is_numeric($contribution_amount) || $contribution_amount < 0) {
+                throw new Exception("Contribution amount must be a non-negative number.");
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
 
             $conn = $this->db->getConnection();
@@ -68,15 +91,21 @@ class Member {
 
             $member_id = $stmt->insert_id;
             $stmt->close();
+<<<<<<< HEAD
 
             error_log("Member added successfully: member_id=$member_id, full_name=$full_name");
             return $member_id;
+=======
+            error_log("Member added successfully: member_id=$member_id, full_name=$full_name");
+            return true;
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
         } catch (Exception $e) {
             error_log("Error adding member: " . $e->getMessage() . " | Input: member_id=$member_id, full_name=$full_name");
             throw $e;
         }
     }
 
+<<<<<<< HEAD
     public function updateMember($id, $data) {
         try {
             if (!is_numeric($id) || $id <= 0) {
@@ -217,6 +246,12 @@ class Member {
                 $result = $conn->query($query);
             }
             
+=======
+    public function getAllMembers() {
+        try {
+            $conn = $this->db->getConnection();
+            $result = $conn->query("SELECT * FROM members ORDER BY CAST(member_id AS UNSIGNED) ASC");
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             if (!$result) {
                 throw new Exception("Query failed: " . $conn->error);
             }
@@ -230,8 +265,14 @@ class Member {
 
     public function getMemberById($id) {
         try {
+<<<<<<< HEAD
             if (!is_numeric($id) || $id <= 0) {
                 throw new Exception("Invalid member ID.");
+=======
+            // Allow string IDs but ensure it's numeric and positive
+            if (!is_numeric($id) || (int)$id <= 0) {
+                throw new Exception("Invalid member ID: $id");
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
 
             $conn = $this->db->getConnection();
@@ -240,6 +281,8 @@ class Member {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
 
+            // Bind as integer after casting
+            $id = (int)$id;
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
@@ -261,7 +304,11 @@ class Member {
     public function getMemberByMemberId($member_id) {
         try {
             if (empty($member_id)) {
+<<<<<<< HEAD
                 throw new Exception("Invalid member ID.");
+=======
+                throw new Exception("Invalid member ID: $member_id");
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
 
             $conn = $this->db->getConnection();
@@ -381,6 +428,7 @@ class Member {
         }
     }
 
+<<<<<<< HEAD
     private function validateMemberData($data) {
         $validations = [
             'member_id' => ['max' => 10, 'required' => true],
@@ -391,6 +439,13 @@ class Member {
             'occupation' => ['max' => 100, 'required' => false],
             'contribution_amount' => ['numeric' => true, 'min' => 0, 'required' => true]
         ];
+=======
+    public function updateMember($id, $data) {
+        try {
+            if (!is_int($id) || $id <= 0) {
+                throw new Exception("Invalid member ID: $id");
+            }
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
 
         foreach ($validations as $field => $rules) {
             if (isset($data[$field])) {
@@ -442,16 +497,74 @@ class Member {
             while ($row = $result->fetch_assoc()) {
                 $stats[strtolower($row['payment_status'])] = $row['count'];
             }
+<<<<<<< HEAD
             
             // Get members by type
             $result = $conn->query("SELECT membership_type, COUNT(*) as count FROM members GROUP BY membership_type");
             while ($row = $result->fetch_assoc()) {
                 $stats['by_type'][$row['membership_type']] = $row['count'];
+=======
+
+            $set_clause = implode(', ', array_map(fn($k) => "$k = ?", array_keys($fields)));
+            $types = str_repeat('s', count($fields) - 1) . 'd';
+            $values = array_values($fields);
+            $values[] = $id;
+
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare("UPDATE members SET $set_clause WHERE id = ?");
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
             
             return $stats;
         } catch (Exception $e) {
+<<<<<<< HEAD
             error_log("Error getting member stats: " . $e->getMessage());
+=======
+            error_log("Error updating member: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function deleteMember($id) {
+        try {
+            if (!is_int($id) || $id <= 0) {
+                throw new Exception("Invalid member ID: $id");
+            }
+
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare("DELETE FROM members WHERE id = ?");
+            if (!$stmt) {
+                throw new Exception("Prepare failed: " . $conn->error);
+            }
+
+            $stmt->bind_param("i", $id);
+            $result = $stmt->execute();
+            if (!$result) {
+                throw new Exception("Execute failed: " . $stmt->error);
+            }
+
+            $stmt->close();
+            return true;
+        } catch (Exception $e) {
+            error_log("Error deleting member: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function getLastMember() {
+        try {
+            $conn = $this->db->getConnection();
+            $result = $conn->query("SELECT * FROM members ORDER BY id DESC LIMIT 1");
+            if (!$result) {
+                throw new Exception("Query failed: " . $conn->error);
+            }
+
+            return $result->fetch_assoc() ?: null;
+        } catch (Exception $e) {
+            error_log("Error fetching last member: " . $e->getMessage());
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             return null;
         }
     }

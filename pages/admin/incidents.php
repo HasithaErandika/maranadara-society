@@ -566,7 +566,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             align-items: center;
             animation: fadeIn 0.4s ease-out;
+<<<<<<< HEAD
        Topics and replies
+=======
+            Topics and replies
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
         }
 
         .modal-content {
@@ -942,6 +946,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php include '../../includes/footer.php'; ?>
 
 <script>
+<<<<<<< HEAD
 document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
@@ -1226,6 +1231,306 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.location.href = redirectUrl;
                 }
             }, 1000);
+=======
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const editModal = document.getElementById('edit-modal');
+        const editButtons = document.querySelectorAll('.edit-btn');
+        const deleteButtons = document.querySelectorAll('.delete-btn');
+        const closeButtons = document.querySelectorAll('.modal-close');
+        const addForm = document.getElementById('add-form');
+        const editForm = document.getElementById('edit-form');
+        const searchInput = document.getElementById('search-input');
+        const dateFrom = document.getElementById('date-from');
+        const dateTo = document.getElementById('date-to');
+        const tableBody = document.getElementById('incident-table-body');
+        const downloadCsvButton = document.getElementById('download-csv');
+        const cancelButton = document.getElementById('cancel-button');
+        const popupOverlay = document.getElementById('popup-overlay');
+        const cancelPopup = document.getElementById('cancel-popup');
+        const successPopup = document.getElementById('success-popup');
+        const deletePopup = document.getElementById('delete-popup');
+        const deleteCancel = document.getElementById('delete-cancel');
+
+        // Sidebar toggle
+        if (sidebar && sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                sidebarawley.classList.toggle('expanded');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
+                    !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                    sidebar.classList.remove('expanded');
+                }
+            });
+        }
+
+        // Edit modal
+        editButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                const type = button.getAttribute('data-type');
+                let datetime = button.getAttribute('data-datetime');
+                const remarks = button.getAttribute('data-remarks');
+
+                try {
+                    const date = new Date(datetime);
+                    if (!isNaN(date)) {
+                        datetime = date.toISOString().slice(0, 16);
+                    } else {
+                        datetime = '';
+                    }
+                } catch (e) {
+                    datetime = '';
+                }
+
+                document.getElementById('edit-id').value = id;
+                document.getElementById('edit-incident-type').value = type;
+                document.getElementById('edit-incident-datetime').value = datetime;
+                document.getElementById('edit-remarks').value = remarks === 'N/A' ? '' : remarks;
+
+                editModal.style.display = 'flex';
+            });
+        });
+
+        // Delete popup
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const id = button.getAttribute('data-id');
+                document.getElementById('delete-id').value = id;
+                showPopup(deletePopup);
+            });
+        });
+
+        // Cancel delete
+        if (deleteCancel) {
+            deleteCancel.addEventListener('click', () => {
+                hidePopup(deletePopup);
+            });
+        }
+
+        // Close edit modal
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                editModal.style.display = 'none';
+                clearErrors();
+            });
+        });
+
+        // Click outside to close edit modal
+        if (editModal) {
+            editModal.addEventListener('click', (e) => {
+                if (e.target === editModal) {
+                    editModal.style.display = 'none';
+                    clearErrors();
+                }
+            });
+        }
+
+        // Form validation for add
+        if (addForm) {
+            addForm.addEventListener('submit', (e) => {
+                let hasError = false;
+                clearErrors();
+
+                const memberId = document.getElementById('member_id');
+                const incidentType = document.getElementById('incident_type');
+                const incidentDatetime = document.getElementById('incident_datetime');
+
+                if (!memberId.value) {
+                    showError('member_id-error', memberId);
+                    hasError = true;
+                }
+                if (!incidentType.value) {
+                    showError('incident_type-error', incidentType);
+                    hasError = true;
+                }
+                if (!incidentDatetime.value) {
+                    showError('incident_datetime-error', incidentDatetime);
+                    hasError = true;
+                }
+
+                if (hasError) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // Form validation for edit
+        if (editForm) {
+            editForm.addEventListener('submit', (e) => {
+                let hasError = false;
+                clearErrors();
+
+                const incidentType = document.getElementById('edit-incident-type');
+                const incidentDatetime = document.getElementById('edit-incident-datetime');
+
+                if (!incidentType.value) {
+                    showError('edit-incident-type-error', incidentType);
+                    hasError = true;
+                }
+                if (!incidentDatetime.value) {
+                    showError('edit-incident-datetime-error', incidentDatetime);
+                    hasError = true;
+                }
+
+                if (hasError) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // Search and Date Filter
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const fromDate = dateFrom.value ? new Date(dateFrom.value) : null;
+            const toDate = dateTo.value ? new Date(dateTo.value + 'T23:59:59') : null;
+            const rows = tableBody.querySelectorAll('tr');
+
+            rows.forEach(row => {
+                if (row.querySelector('td[colspan="6"]')) {
+                    return;
+                }
+
+                const cells = row.querySelectorAll('td');
+                let matchesSearch = false;
+                let matchesDate = true;
+
+                // Search filter
+                for (let i = 0; i < cells.length - 1; i++) {
+                    const cellText = cells[i].textContent.toLowerCase();
+                    if (cellText.includes(searchTerm)) {
+                        matchesSearch = true;
+                        break;
+                    }
+                }
+
+                // Date filter (only Date & Time column)
+                if (fromDate || toDate) {
+                    const dateCell = cells[3].textContent; // Date & Time column
+                    const rowDate = new Date(dateCell);
+                    matchesDate = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
+                }
+
+                row.style.display = (matchesSearch || searchTerm === '') && matchesDate ? '' : 'none';
+            });
+
+            // Handle empty table
+            const noResultsRow = tableBody.querySelector('tr td[colspan="6"]');
+            if (noResultsRow) {
+                noResultsRow.style.display = (searchTerm === '' && !fromDate && !toDate) ? '' : 'none';
+                if ((searchTerm !== '' || fromDate || toDate) && Array.from(rows).every(row => row.style.display === 'none')) {
+                    if (!tableBody.querySelector('.no-results')) {
+                        const noResults = document.createElement('tr');
+                        noResults.className = 'no-results';
+                        noResults.innerHTML = '<td colspan="6" class="text-center text-[var(--text-secondary)]">No incidents match your criteria.</td>';
+                        tableBody.appendChild(noResults);
+                    }
+                } else {
+                    const existingNoResults = tableBody.querySelector('.no-results');
+                    if (existingNoResults) {
+                        existingNoResults.remove();
+                    }
+                }
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterTable);
+        }
+
+        if (dateFrom && dateTo) {
+            dateFrom.addEventListener('change', filterTable);
+            dateTo.addEventListener('change', filterTable);
+        }
+
+        // CSV Download
+        if (downloadCsvButton) {
+            downloadCsvButton.addEventListener('click', () => {
+                const rows = tableBody.querySelectorAll('tr');
+                let csvContent = 'Incident ID,Member,Type,Date & Time,Remarks\n';
+
+                rows.forEach(row => {
+                    if (row.style.display !== 'none' && !row.querySelector('td[colspan="6"]')) {
+                        const cells = row.querySelectorAll('td');
+                        const rowData = [
+                            cells[0].textContent,
+                            cells[1].textContent,
+                            cells[2].textContent,
+                            cells[3].textContent,
+                            cells[4].textContent === 'N/A' ? '' : cells[4].textContent
+                        ].map(cell => `"${cell.replace(/"/g, '""')}"`).join(',');
+                        csvContent += rowData + '\n';
+                    }
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'incidents.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        // Cancel Popup
+        if (cancelButton) {
+            cancelButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                showPopup(cancelPopup);
+                startCountdown('cancel-countdown', 'incidents.php');
+            });
+        }
+
+        // Success Popup
+        if (successPopup) {
+            showPopup(successPopup);
+            startCountdown('success-countdown', 'incidents.php');
+        }
+
+        function showPopup(popup) {
+            popupOverlay.classList.add('show');
+            popup.classList.add('show');
+        }
+
+        function hidePopup(popup) {
+            popupOverlay.classList.remove('show');
+            popup.classList.remove('show');
+        }
+
+        function startCountdown(elementId, redirectUrl) {
+            let timeLeft = 3;
+            const countdown = document.getElementById(elementId);
+            if (countdown) {
+                const interval = setInterval(() => {
+                    timeLeft--;
+                    countdown.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(interval);
+                        window.location.href = redirectUrl;
+                    }
+                }, 1000);
+            }
+        }
+
+        function showError(id, input) {
+            const errorElement = document.getElementById(id);
+            if (errorElement) {
+                errorElement.classList.add('show');
+                if (input) input.classList.add('error');
+            }
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.error-text').forEach(error => error.classList.remove('show'));
+            document.querySelectorAll('.input-field').forEach(input => input.classList.remove('error'));
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
         }
     }
 

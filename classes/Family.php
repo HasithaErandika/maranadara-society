@@ -15,6 +15,7 @@ class Family {
 
     public function addFamilyDetails($member_id, $spouse_name, $children_info, $dependents_info) {
         try {
+<<<<<<< HEAD
             if (!is_numeric($member_id) || $member_id <= 0) {
                 throw new Exception("Invalid member ID.");
             }
@@ -50,12 +51,24 @@ class Family {
                 VALUES (?, ?, ?, ?)"
             );
             
+=======
+            if (!is_int($member_id) || $member_id <= 0) {
+                throw new Exception("Invalid member ID: $member_id");
+            }
+            if ($spouse_name && strlen($spouse_name) > 100) {
+                throw new Exception("Spouse name exceeds 100 characters.");
+            }
+
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare("INSERT INTO family_details (member_id, spouse_name, children_info, dependents_info) VALUES (?, ?, ?, ?)");
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             if (!$stmt) {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
 
             $stmt->bind_param("isss", $member_id, $spouse_name, $children_info, $dependents_info);
             $result = $stmt->execute();
+<<<<<<< HEAD
             
             if (!$result) {
                 throw new Exception("Execute failed: " . $stmt->error);
@@ -113,23 +126,37 @@ class Family {
             $stmt->bind_param($types, ...$values);
             $result = $stmt->execute();
             
+=======
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             if (!$result) {
                 throw new Exception("Execute failed: " . $stmt->error);
             }
 
             $stmt->close();
+<<<<<<< HEAD
             error_log("Family details updated successfully: member_id=$member_id");
             return true;
         } catch (Exception $e) {
             error_log("Error updating family details: " . $e->getMessage() . " | member_id=$member_id");
             throw $e;
+=======
+            return true;
+        } catch (Exception $e) {
+            error_log("Error adding family details for member_id=$member_id: " . $e->getMessage());
+            return false;
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
         }
     }
 
     public function getFamilyDetailsByMemberId($member_id) {
         try {
+<<<<<<< HEAD
             if (!is_numeric($member_id) || $member_id <= 0) {
                 throw new Exception("Invalid member ID.");
+=======
+            if (!is_int($member_id) || $member_id <= 0) {
+                throw new Exception("Invalid member ID: $member_id");
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             }
 
             $conn = $this->db->getConnection();
@@ -143,6 +170,7 @@ class Family {
             $result = $stmt->get_result()->fetch_assoc();
             $stmt->close();
 
+<<<<<<< HEAD
             if (!$result) {
                 error_log("No family details found for member_id: $member_id");
                 return null;
@@ -378,6 +406,13 @@ class Family {
         if (!$dob) {
             throw new Exception("Invalid date of birth format.");
         }
+=======
+            return $result ?: null;
+        } catch (Exception $e) {
+            error_log("Error fetching family details: " . $e->getMessage());
+            return null;
+        }
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
     }
 }
 ?>

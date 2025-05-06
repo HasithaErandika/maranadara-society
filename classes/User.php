@@ -20,7 +20,11 @@ class User {
             $stmt->bind_param('s', $username);
             $stmt->execute();
             $result = $stmt->get_result();
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             if ($result->num_rows === 1) {
                 $user = $result->fetch_assoc();
                 if (password_verify($password, $user['password'])) {
@@ -28,7 +32,11 @@ class User {
                     return true;
                 }
             }
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             $stmt->close();
             return false;
         } catch (Exception $e) {
