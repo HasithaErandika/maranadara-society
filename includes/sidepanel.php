@@ -7,75 +7,104 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 ?>
-<aside class="sidebar">
-    <nav class="nav-container">
-        <!-- Dashboard -->
-        <a href="dashboard.php" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : ''; ?>" title="Dashboard">
-            <i class="ri-dashboard-line"></i><span>Dashboard</span>
-        </a>
 
-        <!-- Member Management -->
-        <div class="sidebar-group">
-            <a href="javascript:void(0);" class="sidebar-toggle" onclick="toggleMenu('membersMenu')" title="Member Management">
-                <i class="ri-group-line"></i><span>Member Management</span>
-                <i class="ri-arrow-down-s-line submenu-icon"></i>
-            </a>
-            <div id="membersMenu" class="submenu">
-                <a href="add_member.php" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'add_member.php' ? 'active' : ''; ?>" title="Add Member">
-                    <i class="ri-user-add-line"></i><span>Add Member</span>
-                </a>
-                <a href="members.php" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'members.php' ? 'active' : ''; ?>" title="Manage Members">
-                    <i class="ri-user-settings-line"></i><span>Manage Members</span>
-                </a>
-            </div>
+<!-- Include Remix Icon CDN -->
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <i class="ri-hand-heart-line"></i>
+        </div>
+        <div class="sidebar-title">Maranadara Society</div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-title">Main Menu</div>
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="dashboard.php" class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
+                        <i class="ri-dashboard-line"></i>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+            </ul>
         </div>
 
-        <!-- Financial Management -->
-        <div class="sidebar-group">
-            <a href="javascript:void(0);" class="sidebar-toggle" onclick="toggleMenu('financeMenu')" title="Financial Management">
-                <i class="ri-wallet-line"></i><span>Financial Management</span>
-                <i class="ri-arrow-down-s-line submenu-icon"></i>
-            </a>
-            <div id="financeMenu" class="submenu">
-                <a href="payments.php" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'payments.php' ? 'active' : ''; ?>" title="Manage Payments">
-                    <i class="ri-money-dollar-circle-line"></i><span>Manage Payments</span>
-                </a>
-                <a href="loans.php?action=add" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'loans.php' && isset($_GET['action']) && $_GET['action'] === 'add' ? 'active' : ''; ?>" title="Add Loan">
-                    <i class="ri-hand-coin-line"></i><span>Add Loan</span>
-                </a>
-                <a href="loans.php" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'loans.php' && !isset($_GET['action']) ? 'active' : ''; ?>" title="Manage Loans">
-                    <i class="ri-bank-line"></i><span>Manage Loans</span>
-                </a>
-            </div>
-        </div>
+        <div class="nav-section">
+            <div class="nav-title">Management</div>
+            <ul class="nav-list">
+                <li class="nav-item <?php echo in_array($currentPage, ['members', 'add_member', 'edit_member']) ? 'active' : ''; ?>">
+                    <a href="#" class="nav-link">
+                        <i class="ri-group-line"></i>
+                        <span class="nav-text">Member Management</span>
+                        <i class="ri-arrow-down-s-line nav-arrow"></i>
+                    </a>
+                    <div class="submenu">
+                        <a href="members.php" class="submenu-link <?php echo $currentPage === 'members' ? 'active' : ''; ?>">
+                            <i class="ri-user-settings-line"></i>
+                            All Members
+                        </a>
+                        <a href="add_member.php" class="submenu-link <?php echo $currentPage === 'add_member' ? 'active' : ''; ?>">
+                            <i class="ri-user-add-line"></i>
+                            Add Member
+                        </a>
+                    </div>
+                </li>
 
-        <!-- Incident Management -->
-        <div class="sidebar-group">
-            <a href="javascript:void(0);" class="sidebar-toggle" onclick="toggleMenu('incidentsMenu')" title="Incident Management">
-                <i class="ri-alert-line"></i><span>Incident Management</span>
-                <i class="ri-arrow-down-s-line submenu-icon"></i>
-            </a>
-            <div id="incidentsMenu" class="submenu">
-                <a href="incidents.php?action=add" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'incidents.php' && isset($_GET['action']) && $_GET['action'] === 'add' ? 'active' : ''; ?>" title="Record Incident">
-                    <i class="ri-file-add-line"></i><span>Record Incident</span>
-                </a>
-                <a href="incidents.php" class="sidebar-item <?php echo basename($_SERVER['PHP_SELF']) === 'incidents.php' && !isset($_GET['action']) ? 'active' : ''; ?>" title="Manage Incidents">
-                    <i class="ri-file-list-line"></i><span>Manage Incidents</span>
-                </a>
-            </div>
+                <li class="nav-item <?php echo in_array($currentPage, ['finances', 'transactions', 'reports']) ? 'active' : ''; ?>">
+                    <a href="#" class="nav-link">
+                        <i class="ri-wallet-line"></i>
+                        <span class="nav-text">Financial Management</span>
+                        <i class="ri-arrow-down-s-line nav-arrow"></i>
+                    </a>
+                    <div class="submenu">
+                        <a href="finances.php" class="submenu-link <?php echo $currentPage === 'finances' ? 'active' : ''; ?>">
+                            <i class="ri-line-chart-line"></i>
+                            Overview
+                        </a>
+                        <a href="transactions.php" class="submenu-link <?php echo $currentPage === 'transactions' ? 'active' : ''; ?>">
+                            <i class="ri-exchange-dollar-line"></i>
+                            Transactions
+                        </a>
+                        <a href="reports.php" class="submenu-link <?php echo $currentPage === 'reports' ? 'active' : ''; ?>">
+                            <i class="ri-file-chart-line"></i>
+                            Reports
+                        </a>
+                    </div>
+                </li>
+
+                <li class="nav-item <?php echo in_array($currentPage, ['incidents', 'add_incident']) ? 'active' : ''; ?>">
+                    <a href="#" class="nav-link">
+                        <i class="ri-alert-line"></i>
+                        <span class="nav-text">Incident Management</span>
+                        <i class="ri-arrow-down-s-line nav-arrow"></i>
+                    </a>
+                    <div class="submenu">
+                        <a href="incidents.php" class="submenu-link <?php echo $currentPage === 'incidents' ? 'active' : ''; ?>">
+                            <i class="ri-file-list-line"></i>
+                            All Incidents
+                        </a>
+                        <a href="add_incident.php" class="submenu-link <?php echo $currentPage === 'add_incident' ? 'active' : ''; ?>">
+                            <i class="ri-file-add-line"></i>
+                            Report Incident
+                        </a>
+                    </div>
+                </li>
+            </ul>
         </div>
     </nav>
-</aside>
 
-<!-- JavaScript for Toggle Function -->
-<script>
-    function toggleMenu(menuId) {
-        const menu = document.getElementById(menuId);
-        const icon = menu.previousElementSibling.querySelector('.submenu-icon');
-        menu.classList.toggle('active');
-        icon.classList.toggle('rotate');
-    }
-</script>
+    <div class="sidebar-footer">
+        <div class="sidebar-version">
+            <i class="ri-code-s-slash-line"></i>
+            <span>Version 1.0.0</span>
+        </div>
+    </div>
+</div>
+
+<div class="sidebar-overlay"></div>
 
 <style>
     :root {
@@ -290,48 +319,6 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         color: var(--primary-color);
     }
 
-    .user-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        border-radius: 12px;
-        background: var(--card-bg);
-        box-shadow: var(--shadow);
-    }
-
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: var(--primary-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #FFFFFF;
-        font-size: 18px;
-    }
-
-    .user-details {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .user-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 2px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .user-role {
-        font-size: 12px;
-        color: var(--text-secondary);
-    }
-
     .sidebar-overlay {
         position: fixed;
         top: var(--header-height);
@@ -390,25 +377,8 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         .nav-text {
             font-size: 13px;
         }
-
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            font-size: 16px;
-        }
-
-        .user-name {
-            font-size: 13px;
-        }
-
-        .user-role {
-            font-size: 11px;
-        }
     }
 </style>
-
-<!-- Include Remix Icon CDN -->
-<link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -455,98 +425,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-
-<div class="sidebar">
-    <div class="sidebar-header">
-        <div class="sidebar-logo">
-            <i class="ri-hand-heart-line"></i>
-        </div>
-        <div class="sidebar-title">Maranadara Society</div>
-    </div>
-
-    <nav class="sidebar-nav">
-        <div class="nav-section">
-            <div class="nav-title">Main Menu</div>
-            <ul class="nav-list">
-                <li class="nav-item">
-                    <a href="dashboard.php" class="nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
-                        <i class="ri-dashboard-line"></i>
-                        <span class="nav-text">Dashboard</span>
-                    </a>
-                </li>
-            </ul>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-title">Management</div>
-            <ul class="nav-list">
-                <li class="nav-item <?php echo in_array($currentPage, ['members', 'add_member', 'edit_member']) ? 'active' : ''; ?>">
-                    <a href="#" class="nav-link">
-                        <i class="ri-group-line"></i>
-                        <span class="nav-text">Member Management</span>
-                        <i class="ri-arrow-down-s-line nav-arrow"></i>
-                    </a>
-                    <div class="submenu">
-                        <a href="members.php" class="submenu-link <?php echo $currentPage === 'members' ? 'active' : ''; ?>">
-                            <i class="ri-user-settings-line"></i>
-                            All Members
-                        </a>
-                        <a href="add_member.php" class="submenu-link <?php echo $currentPage === 'add_member' ? 'active' : ''; ?>">
-                            <i class="ri-user-add-line"></i>
-                            Add Member
-                        </a>
-                    </div>
-                </li>
-
-                <li class="nav-item <?php echo in_array($currentPage, ['finances', 'transactions', 'reports']) ? 'active' : ''; ?>">
-                    <a href="#" class="nav-link">
-                        <i class="ri-wallet-line"></i>
-                        <span class="nav-text">Financial Management</span>
-                        <i class="ri-arrow-down-s-line nav-arrow"></i>
-                    </a>
-                    <div class="submenu">
-                        <a href="finances.php" class="submenu-link <?php echo $currentPage === 'finances' ? 'active' : ''; ?>">
-                            <i class="ri-line-chart-line"></i>
-                            Overview
-                        </a>
-                        <a href="transactions.php" class="submenu-link <?php echo $currentPage === 'transactions' ? 'active' : ''; ?>">
-                            <i class="ri-exchange-dollar-line"></i>
-                            Transactions
-                        </a>
-                        <a href="reports.php" class="submenu-link <?php echo $currentPage === 'reports' ? 'active' : ''; ?>">
-                            <i class="ri-file-chart-line"></i>
-                            Reports
-                        </a>
-                    </div>
-                </li>
-
-                <li class="nav-item <?php echo in_array($currentPage, ['incidents', 'add_incident']) ? 'active' : ''; ?>">
-                    <a href="#" class="nav-link">
-                        <i class="ri-alert-line"></i>
-                        <span class="nav-text">Incident Management</span>
-                        <i class="ri-arrow-down-s-line nav-arrow"></i>
-                    </a>
-                    <div class="submenu">
-                        <a href="incidents.php" class="submenu-link <?php echo $currentPage === 'incidents' ? 'active' : ''; ?>">
-                            <i class="ri-file-list-line"></i>
-                            All Incidents
-                        </a>
-                        <a href="add_incident.php" class="submenu-link <?php echo $currentPage === 'add_incident' ? 'active' : ''; ?>">
-                            <i class="ri-file-add-line"></i>
-                            Report Incident
-                        </a>
-                    </div>
-                </li>
-            </ul>
-        </div>
-    </nav>
-
-    <div class="sidebar-footer">
-        <div class="sidebar-version">
-            <i class="ri-code-s-slash-line"></i>
-            <span>Version 1.0.0</span>
-        </div>
-    </div>
-</div>
-
-<div class="sidebar-overlay"></div>

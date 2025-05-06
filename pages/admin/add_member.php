@@ -258,10 +258,11 @@ error_log("JS Error: $js_error");
             background-color: #f5f6f5;
             color: #333;
             line-height: 1.6;
+            padding-top: 50px; /* Add 50px top padding to the body */
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1250px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -496,6 +497,7 @@ error_log("JS Error: $js_error");
         .animate-slide-in {
             animation: slideIn 0.5s ease-out;
         }
+
     </style>
 </head>
 <body>
@@ -733,7 +735,6 @@ error_log("JS Error: $js_error");
     </div>
 </div>
 
-<?php include __DIR__ . '/../../includes/footer.php'; ?>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
