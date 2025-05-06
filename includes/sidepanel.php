@@ -86,7 +86,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
                             <i class="ri-file-list-line"></i>
                             All Incidents
                         </a>
-                        <a href="add_incident.php" class="submenu-link <?php echo $currentPage === 'add_incident' ? 'active' : ''; ?>">
+                        <a href="incidents.php" class="submenu-link <?php echo $currentPage === 'incidents' ? 'active' : ''; ?>">
                             <i class="ri-file-add-line"></i>
                             Report Incident
                         </a>
