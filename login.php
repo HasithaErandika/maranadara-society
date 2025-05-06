@@ -3,25 +3,39 @@ define('APP_START', true);
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
-require_once '../classes/User.php';
-$user = new User();
+require_once 'classes/User.php';
+require_once 'config/db_config.php';
 
-$role = isset($_GET['role']) && $_GET['role'] === 'admin' ? 'admin' : 'user';
+$error = '';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $login_role = $user->login($_POST['username'], $_POST['password']);
-    if ($login_role) {
-        $_SESSION['role'] = $login_role;
-        $_SESSION['user'] = $_POST['username'];
-        header("Location: " . ($login_role == 'admin' ? 'admin/dashboard.php' : 'user/dashboard.php'));
-        exit;
-    } else {
-        $error = "Invalid username or password!";
+if (!isset($_SESSION['db_username']) || !isset($_SESSION['db_password'])) {
+    $error = 'System not initialized. Please contact an administrator.';
+} else {
+    $user = new User($_SESSION['db_username'], $_SESSION['db_password']);
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $username = trim($_POST['username'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+
+        if (empty($username) || empty($password)) {
+            $error = 'Please fill in all fields.';
+        } else {
+            if ($user->verifyUser($username, $password)) {
+                $_SESSION['role'] = 'user';
+                $_SESSION['username'] = $username;
+                header('Location: pages/user/dashboard.php');
+                exit;
+            } else {
+                $error = 'Invalid username or password.';
+            }
+        }
     }
 }
+
 if (isset($_GET['logout'])) {
-    $user->logout();
-    header("Location: ../index.php");
+    unset($_SESSION['role']);
+    unset($_SESSION['username']);
+    header('Location: index.php');
     exit;
 }
 ?>
@@ -30,126 +44,109 @@ if (isset($_GET['logout'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Maranadhara Samithi</title>
+    <title>User Login - Maranadhara Samithi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-orange: #f97316;    /* Vibrant Orange */
-            --secondary-orange: #fb923c;  /* Light Orange */
-            --dark-orange: #ea580c;      /* Deep Orange */
-            --bg-color: #fff7ed;         /* Warm Off-White */
-            --text-color: #1e293b;       /* Slate Gray */
+            --primary-orange: #f97316;
+            --secondary-orange: #fb923c;
+            --dark-orange: #ea580c;
+            --bg-color: #fff7ed;
+            --text-color: #1e293b;
             --card-bg: #ffffff;
-            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --card-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }
-
         body {
             background: linear-gradient(135deg, var(--bg-color) 0%, #fef3c7 100%);
             color: var(--text-color);
             font-family: 'Poppins', sans-serif;
             min-height: 100vh;
-            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
+            margin: 0;
         }
-
         .card {
             background: var(--card-bg);
             box-shadow: var(--card-shadow);
             border-radius: 1.5rem;
-            padding: 2.5rem;
+            padding: 2rem;
             width: 100%;
-            max-width: 480px;
-            transition: all 0.3s ease;
+            max-width: 400px;
+            transition: transform 0.3s ease;
         }
-
         .card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-
         .btn-login {
             background: var(--primary-orange);
             color: white;
-            padding: 1rem;
+            padding: 0.75rem;
             border-radius: 0.75rem;
             font-weight: 600;
             transition: all 0.3s ease;
+            width: 100%;
         }
-
         .btn-login:hover {
             background: var(--dark-orange);
             transform: scale(1.02);
         }
-
         .input-field {
-            border: 2px solid #e5e7eb;
-            background: #fafafa;
-            padding: 1rem 1rem 1rem 3rem;
-            border-radius: 0.75rem;
+            border: 1px solid #d1d5db;
+            background: #f9fafb;
+            padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+            border-radius: 0.5rem;
             width: 100%;
             transition: all 0.3s ease;
         }
-
         .input-field:focus {
             border-color: var(--primary-orange);
-            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.1);
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
             outline: none;
         }
-
         .input-wrapper {
             position: relative;
-            margin-bottom: 1.75rem;
+            margin-bottom: 1.5rem;
         }
-
         .input-wrapper i {
             position: absolute;
-            left: 1rem;
+            left: 0.75rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #64748b;
+            color: #6b7280;
             transition: color 0.3s ease;
         }
-
         .input-field:focus + i {
             color: var(--primary-orange);
         }
-
         .error-message {
             background: #fef2f2;
             color: #dc2626;
-            padding: 0.75rem 1rem;
+            padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             border-left: 4px solid #dc2626;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
         }
-
         .back-link {
             color: var(--primary-orange);
             font-weight: 500;
             transition: all 0.3s ease;
         }
-
         .back-link:hover {
             color: var(--dark-orange);
             text-decoration: underline;
         }
-
-        .header-icon {
-            background: var(--secondary-orange);
-            padding: 1rem;
-            border-radius: 50%;
-            color: white;
+        .logo {
+            max-width: 100px;
+            margin-bottom: 1rem;
         }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out;
         }
@@ -157,23 +154,17 @@ if (isset($_GET['logout'])) {
 </head>
 <body>
 <div class="card animate-fade-in">
-    <div class="flex justify-center mb-8">
-        <?php if ($role === 'admin'): ?>
-            <i class="fas fa-shield-alt text-2xl header-icon"></i>
-        <?php else: ?>
-            <i class="fas fa-hands-helping text-2xl header-icon"></i>
-        <?php endif; ?>
+    <div class="flex flex-col items-center mb-6">
+        <img src="assets/images/logo.png" alt="Maranadhara Logo" class="logo">
+        <h2 class="text-2xl font-bold text-center">Member Portal</h2>
+        <p class="text-center text-gray-500 text-sm mt-1">Maranadhara Samithi</p>
     </div>
-    <h2 class="text-3xl font-bold text-center mb-2">
-        <?php echo $role === 'admin' ? 'Admin Portal' : 'Member Portal'; ?>
-    </h2>
-    <p class="text-center text-gray-600 mb-8">Maranadhara Samithi</p>
 
-    <?php if (isset($error)): ?>
-        <div class="error-message"><?php echo $error; ?></div>
+    <?php if (!empty($error)): ?>
+        <div class="error-message"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
 
-    <form method="POST" class="space-y-6">
+    <form method="POST" class="space-y-4">
         <div class="input-wrapper">
             <input type="text" id="username" name="username" placeholder="Username" class="input-field" required>
             <i class="fas fa-user"></i>
@@ -182,10 +173,10 @@ if (isset($_GET['logout'])) {
             <input type="password" id="password" name="password" placeholder="Password" class="input-field" required>
             <i class="fas fa-lock"></i>
         </div>
-        <button type="submit" class="btn-login w-full">Sign In</button>
+        <button type="submit" class="btn-login">Sign In</button>
     </form>
-    <p class="text-center mt-6 text-sm">
-        <a href="../index.php" class="back-link">Return to Home</a>
+    <p class="text-center mt-4 text-sm">
+        <a href="index.php" class="back-link">Return to Home</a>
     </p>
 </div>
 </body>

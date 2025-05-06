@@ -2,31 +2,28 @@
 if (!defined('APP_START')) {
     die('No direct script access allowed');
 }
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
 ?>
-<nav class="fixed w-full z-20 top-0">
-    <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-        <a href="../../index.php" class="text-2xl font-bold text-[var(--primary-orange)] flex items-center" aria-label="Home">
-            <i class="fas fa-hands-helping mr-2"></i> Maranadhara Samithi
+<nav class="header-nav">
+    <div class="header-container">
+        <a href="../../index.php" class="header-logo" aria-label="Home">
+            <i class="ri-hand-heart-line"></i> Maranadhara Samithi
         </a>
-        <div class="flex items-center space-x-4">
-            <?php if (isset($_SESSION['user'])): ?>
-                <span class="text-[var(--text-primary)] hidden md:inline">Welcome, <?php echo htmlspecialchars($_SESSION['user']); ?></span>
-                <a href="../login.php?logout=1" class="nav-btn px-4 py-2 rounded-lg" aria-label="Logout">Logout</a>
+        <div class="header-actions">
+            <?php if (isset($_SESSION['role'])): ?>
+                <span class="header-user">Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></span>
+                <a href="../../login.php?logout=1" class="header-btn" aria-label="Logout">Logout</a>
             <?php else: ?>
-                <div class="relative group">
-                    <button class="nav-btn px-4 py-2 rounded-lg flex items-center" id="login-toggle">
-                        <i class="fas fa-user mr-2"></i> Login
+                <div class="header-dropdown">
+                    <button class="header-btn" id="login-toggle" aria-expanded="false">
+                        <i class="ri-login-box-line"></i> Login
                     </button>
-                    <div class="dropdown-menu absolute top-full right-0 mt-2 hidden group-hover:block md:group-hover:block">
-                        <a href="../login.php?role=user" class="dropdown-item block px-4 py-2 text-[var(--text-primary)]">Member Login</a>
-                        <a href="../login.php?role=admin" class="dropdown-item block px-4 py-2 text-[var(--text-primary)]">Admin Login</a>
+                    <div class="dropdown-menu" id="login-menu">
+                        <a href="../../login.php" class="dropdown-item">Member Login</a>
                     </div>
                 </div>
-            <?php endif; ?>
-            <?php if (isset($_SESSION['user']) && $_SESSION['role'] === 'admin'): ?>
-                <button id="sidebar-toggle" class="text-[var(--primary-orange)]" aria-label="Toggle Sidebar">
-                    <i class="fas fa-bars text-2xl"></i>
-                </button>
             <?php endif; ?>
         </div>
     </div>
@@ -34,57 +31,191 @@ if (!defined('APP_START')) {
 
 <style>
     :root {
-        --primary-orange: #F97316;
-        --orange-dark: #C2410C;
-        --orange-light: #FED7AA;
-        --gray-bg: #F9FAFB;
+        --primary-color: #F97316;
+        --primary-hover: #C2410C;
+        --bg-color: #F9FAFB;
         --card-bg: #FFFFFF;
-        --text-primary: #111827;
+        --text-primary: #1F2A44;
         --text-secondary: #6B7280;
-        --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        --transition: all 0.3s ease;
     }
 
-    nav {
+    .header-nav {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 1000;
         background: var(--card-bg);
         box-shadow: var(--shadow);
+        padding: 16px 0;
+        font-family: 'Inter', sans-serif;
     }
 
-    .nav-btn {
-        background: var(--primary-orange);
-        color: white;
-        transition: all 0.3s ease;
+    .header-container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 
-    .nav-btn:hover {
-        background: var(--orange-dark);
+    .header-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--primary-color);
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .header-logo:hover {
+        color: var(--primary-hover);
+    }
+
+    .header-logo i {
+        font-size: 36px;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .header-user {
+        color: var(--text-primary);
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .header-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: var(--primary-color);
+        color: #FFFFFF;
+        font-size: 15px;
+        font-weight: 500;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: var(--transition);
+    }
+
+    .header-btn:hover {
+        background: var(--primary-hover);
+    }
+
+    .header-btn i {
+        font-size: 20px;
+    }
+
+    .header-dropdown {
+        position: relative;
     }
 
     .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
         background: var(--card-bg);
         box-shadow: var(--shadow);
-        border-radius: 0.75rem;
-        transition: all 0.3s ease;
+        border-radius: 8px;
+        min-width: 180px;
+        display: none;
+        animation: slideDown 0.3s ease;
+    }
+
+    .dropdown-menu.active {
+        display: block;
     }
 
     .dropdown-item {
-        transition: all 0.3s ease;
+        display: block;
+        padding: 12px 16px;
+        color: var(--text-primary);
+        font-size: 14px;
+        text-decoration: none;
+        transition: var(--transition);
     }
 
     .dropdown-item:hover {
-        background: var(--orange-light);
-        color: var(--text-primary);
+        background: var(--primary-color);
+        color: #FFFFFF;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @media (min-width: 768px) {
+        .dropdown-menu {
+            display: none;
+        }
+
+        .header-dropdown:hover .dropdown-menu {
+            display: block;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .header-nav {
+            padding: 12px 0;
+        }
+
+        .header-logo {
+            font-size: 24px;
+        }
+
+        .header-logo i {
+            font-size: 30px;
+        }
+
+        .header-user {
+            font-size: 14px;
+        }
+
+        .header-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .header-btn i {
+            font-size: 18px;
+        }
     }
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const loginToggle = document.getElementById('login-toggle');
-        const loginMenu = document.querySelector('.dropdown-menu');
+        const loginMenu = document.getElementById('login-menu');
+
         if (loginToggle && loginMenu) {
-            loginToggle.addEventListener('click', (e) => {
-                if (window.innerWidth < 768) {
-                    e.preventDefault();
-                    loginMenu.classList.toggle('hidden');
+            loginToggle.addEventListener('click', () => {
+                if (window.innerWidth < 768px) {
+                    loginMenu.classList.toggle('active');
+                    const isExpanded = loginMenu.classList.contains('active');
+                    loginToggle.setAttribute('aria-expanded', isExpanded);
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!loginToggle.contains(e.target) && !loginMenu.contains(e.target)) {
+                    loginMenu.classList.remove('active');
+                    loginToggle.setAttribute('aria-expanded', 'false');
                 }
             });
         }
