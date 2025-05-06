@@ -199,20 +199,20 @@ if (session_status() == PHP_SESSION_NONE) {
 </style>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const loginToggle = document.getElementById('login-toggle');
-        const loginMenu = document.getElementById('login-menu');
+    document.addEventListener('DOMContentLoaded', function() {
+        var loginToggle = document.getElementById('login-toggle');
+        var loginMenu = document.getElementById('login-menu');
 
         if (loginToggle && loginMenu) {
-            loginToggle.addEventListener('click', () => {
-                if (window.innerWidth < 768px) {
+            loginToggle.addEventListener('click', function() {
+                if (window.innerWidth < 768) {
                     loginMenu.classList.toggle('active');
-                    const isExpanded = loginMenu.classList.contains('active');
+                    var isExpanded = loginMenu.classList.contains('active');
                     loginToggle.setAttribute('aria-expanded', isExpanded);
                 }
             });
 
-            document.addEventListener('click', (e) => {
+            document.addEventListener('click', function(e) {
                 if (!loginToggle.contains(e.target) && !loginMenu.contains(e.target)) {
                     loginMenu.classList.remove('active');
                     loginToggle.setAttribute('aria-expanded', 'false');

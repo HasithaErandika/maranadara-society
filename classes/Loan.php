@@ -11,7 +11,6 @@ class Loan {
             error_log("Database initialization failed: " . $e->getMessage());
             throw $e;
         }
-<<<<<<< HEAD
     }
 
     /**
@@ -40,8 +39,6 @@ class Loan {
         $loans = $result->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
         return $loans;
-=======
->>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
     }
 
     public function getLoansByMemberId($member_id) {
@@ -189,15 +186,8 @@ class Loan {
         }
 
         try {
-<<<<<<< HEAD
             $conn->begin_transaction();
 
-=======
-            // Begin transaction
-            $conn->begin_transaction();
-
-            // Check loan status
->>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             $stmt = $conn->prepare("SELECT status FROM loans WHERE id = ?");
             if (!$stmt) {
                 throw new Exception("Failed to prepare status query: " . $conn->error);
@@ -213,10 +203,6 @@ class Loan {
                 throw new Exception("Loan not found or not in 'Applied' status");
             }
 
-<<<<<<< HEAD
-=======
-            // Delete loan
->>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             $stmt = $conn->prepare("DELETE FROM loans WHERE id = ?");
             if (!$stmt) {
                 throw new Exception("Failed to prepare delete query: " . $conn->error);
@@ -228,10 +214,6 @@ class Loan {
             $success = $stmt->affected_rows > 0;
             $stmt->close();
 
-<<<<<<< HEAD
-=======
-            // Commit transaction
->>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
             $conn->commit();
             return $success;
         } catch (Exception $e) {
