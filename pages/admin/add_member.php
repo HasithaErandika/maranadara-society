@@ -280,255 +280,255 @@ ob_end_flush();
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f5f6f5;
-            color: #333;
-            line-height: 1.6;
-            padding-top: 50px;
-        }
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f5f6f5;
+    color: #333;
+    line-height: 1.6;
+    padding-top: 50px;
+}
 
-        .container {
-            max-width: 1250px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+.container {
+    max-width: 1250px;
+    margin: 0 auto;
+    padding: 20px;
+}
 
-        .form-section {
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
+.form-section {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
-        .form-section h2 {
-            font-size: 1.5rem;
-            color: #e67e22;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
+.form-section h2 {
+    font-size: 1.5rem;
+    color: #e67e22;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
 
-        .form-group {
-            margin-bottom: 15px;
-        }
+.form-group {
+    margin-bottom: 15px;
+}
 
-        .form-label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
+.form-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
 
-        .required-mark {
-            color: #e74c3c;
-        }
+.required-mark {
+    color: #e74c3c;
+}
 
-        .input-field {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            transition: border-color 0.3s;
-        }
+.input-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
+}
 
-        .input-field:focus {
-            outline: none;
-            border-color: #e67e22;
-            box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
-        }
+.input-field:focus {
+    outline: none;
+    border-color: #e67e22;
+    box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
+}
 
-        .input-field:invalid:not(:placeholder-shown) {
-            border-color: #e74c3c;
-        }
+.input-field:invalid:not(:placeholder-shown) {
+    border-color: #e74c3c;
+}
 
-        .input-field.valid {
-            border-color: #2ecc71;
-        }
+.input-field.valid {
+    border-color: #2ecc71;
+}
 
-        .error-text {
-            display: none;
-            color: #e74c3c;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
+.error-text {
+    display: none;
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
 
-        .error-text.show {
-            display: block;
-        }
+.error-text.show {
+    display: block;
+}
 
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
 
-        .btn-primary {
-            background-color: #e67e22;
-            color: #fff;
-        }
+.btn-primary {
+    background-color: #e67e22;
+    color: #fff;
+}
 
-        .btn-primary:hover {
-            background-color: #d35400;
-        }
+.btn-primary:hover {
+    background-color: #d35400;
+}
 
-        .btn-secondary {
-            background-color: #7f8c8d;
-            color: #fff;
-        }
+.btn-secondary {
+    background-color: #7f8c8d;
+    color: #fff;
+}
 
-        .btn-secondary:hover {
-            background-color: #6c7a89;
-        }
+.btn-secondary:hover {
+    background-color: #6c7a89;
+}
 
-        .btn-danger {
-            color: #e74c3c;
-            background: none;
-        }
+.btn-danger {
+    color: #e74c3c;
+    background: none;
+}
 
-        .btn-danger:hover {
-            color: #c0392b;
-        }
+.btn-danger:hover {
+    color: #c0392b;
+}
 
-        .family-section {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
+.family-section {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
 
-        .family-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
+.family-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
 
-        .family-content {
-            margin-top: 20px;
-        }
+.family-content {
+    margin-top: 20px;
+}
 
-        .entry-card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            position: relative;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
+.entry-card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    position: relative;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
 
-        .remove-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: #e74c3c;
-            cursor: pointer;
-        }
+.remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+}
 
-        .popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.95);
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
-            width: 90%;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s;
-            z-index: 50;
-        }
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    z-index: 50;
+}
 
-        .popup.show {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translate(-50%, -50%) scale(1);
-        }
+.popup.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
 
-        .popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 40;
-        }
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 40;
+}
 
-        .popup-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+.popup-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
 
-        .progress-bar {
-            position: sticky;
-            top: 0;
-            height: 4px;
-            background: #e67e22;
-            border-radius: 2px;
-            width: 0;
-            transition: width 0.5s;
-            z-index: 50;
-        }
+.progress-bar {
+    position: sticky;
+    top: 0;
+    height: 4px;
+    background: #e67e22;
+    border-radius: 2px;
+    width: 0;
+    transition: width 0.5s;
+    z-index: 50;
+}
 
-        .flex {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 30px;
-        }
+.flex {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 30px;
+}
 
-        .main {
-            flex: 1;
-            padding: 20px;
-            margin-left: 240px;
-        }
+.main {
+    flex: 1;
+    padding: 20px;
+    margin-left: 240px;
+}
 
-        @media (max-width: 768px) {
-            .main {
-                margin-left: 0;
-            }
+@media (max-width: 768px) {
+    .main {
+        margin-left: 0;
+    }
 
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-        .animate-slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
+.animate-slide-in {
+    animation: slideIn 0.5s ease-out;
+}
     </style>
 </head>
 <body>

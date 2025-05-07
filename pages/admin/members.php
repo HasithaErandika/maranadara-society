@@ -44,28 +44,16 @@ try {
     $offset = ($page - 1) * $items_per_page;
 
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-    $search_type = isset($_GET['search_type']) ? trim($_GET['search_type']) : 'all';
     $members = $member->getAllMembers();
     $total_members = count($members);
 
     if ($search) {
-        $members = array_filter($members, function ($m) use ($search, $search_type) {
+        $members = array_filter($members, function ($m) use ($search) {
             $search = strtolower($search);
-            if ($search_type === 'all') {
-                return stripos(strtolower($m['member_id']), $search) !== false ||
-                    stripos(strtolower($m['full_name']), $search) !== false ||
-                    stripos(strtolower($m['nic_number'] ?? ''), $search) !== false ||
-                    stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
-            } elseif ($search_type === 'member_id') {
-                return stripos(strtolower($m['member_id']), $search) !== false;
-            } elseif ($search_type === 'full_name') {
-                return stripos(strtolower($m['full_name']), $search) !== false;
-            } elseif ($search_type === 'nic_number') {
-                return stripos(strtolower($m['nic_number'] ?? ''), $search) !== false;
-            } elseif ($search_type === 'contact_number') {
-                return stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
-            }
-            return false;
+            return stripos(strtolower($m['member_id']), $search) !== false ||
+                   stripos(strtolower($m['full_name']), $search) !== false ||
+                   stripos(strtolower($m['nic_number'] ?? ''), $search) !== false ||
+                   stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
         });
     }
 
@@ -171,6 +159,100 @@ try {
                 } else {
                     throw new Exception("Failed to update member.");
                 }
+            } elseif (isset($_POST['update_details'])) {
+                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+                $full_name = trim($_POST['full_name'] ?? '');
+                $date_of_birth = trim($_POST['date_of_birth'] ?? '');
+                $gender = trim($_POST['gender'] ?? '');
+                $nic_number = trim($_POST['nic_number'] ?? '');
+                $address = trim($_POST['address'] ?? '');
+                $contact_number = trim($_POST['contact_number'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+                $date_of_joining = trim($_POST['date_of_joining'] ?? '');
+                $membership_type = trim($_POST['membership_type'] ?? '');
+                $payment_status = trim($_POST['payment_status'] ?? '');
+                $member_status = trim($_POST['member_status'] ?? '');
+
+                if (empty($full_name)) {
+                    throw new Exception("Full name is required.");
+                }
+                if (empty($date_of_birth) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_of_birth)) {
+                    throw new Exception("Valid date of birth is required (format: YYYY-MM-DD).");
+                }
+                if (!in_array($gender, ['Male', 'Female', 'Other'])) {
+                    throw new Exception("Invalid gender.");
+                }
+                if (empty($nic_number) || !preg_match('/^\d{9}[vVxX]|\d{12}$/', $nic_number)) {
+                    throw new Exception("Valid NIC number is required.");
+                }
+                if (empty($address)) {
+                    throw new Exception("Address is required.");
+                }
+                if (empty($contact_number) || !preg_match('/^\+94\d{9}$/', $contact_number)) {
+                    throw new Exception("Valid contact number is required (format: +94XXXXXXXXX).");
+                }
+                if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    throw new Exception("Valid email is required.");
+                }
+                if (empty($date_of_joining) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_of_joining)) {
+                    throw new Exception("Valid join date is required (format: YYYY-MM-DD).");
+                }
+                if (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
+                    throw new Exception("Invalid membership type.");
+                }
+                if (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
+                    throw new Exception("Invalid payment status.");
+                }
+                if (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
+                    throw new Exception("Invalid member status.");
+                }
+
+                $data = [
+                    'full_name' => $full_name,
+                    'date_of_birth' => $date_of_birth,
+                    'gender' => $gender,
+                    'nic_number' => $nic_number,
+                    'address' => $address,
+                    'contact_number' => $contact_number,
+                    'email' => $email,
+                    'date_of_joining' => $date_of_joining,
+                    'membership_type' => $membership_type,
+                    'payment_status' => $payment_status,
+                    'member_status' => $member_status
+                ];
+
+                if ($member->updateMember($id, $data)) {
+                    ob_end_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Member details updated successfully.']);
+                    exit;
+                } else {
+                    throw new Exception("Failed to update member details.");
+                }
+            } elseif (isset($_POST['update_family'])) {
+                $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
+                $spouse_name = trim($_POST['spouse_name'] ?? '');
+                $children_info = isset($_POST['children']) ? array_filter(array_map('trim', $_POST['children'])) : [];
+                $dependents_info = isset($_POST['dependents']) ? array_filter(array_map('trim', $_POST['dependents'])) : [];
+
+                if (!$member_id) {
+                    throw new Exception("Invalid member ID.");
+                }
+
+                $data = [
+                    'spouse_name' => $spouse_name,
+                    'children_info' => implode(', ', $children_info),
+                    'dependents_info' => implode(', ', $dependents_info)
+                ];
+
+                if ($family->updateFamilyDetails($member_id, $data)) {
+                    ob_end_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
+                    exit;
+                } else {
+                    throw new Exception("Failed to update family details.");
+                }
             }
         } catch (Exception $e) {
             ob_end_clean();
@@ -205,497 +287,480 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- External CSS -->
     <style>
         * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f5f6f5;
-            color: #333;
-            line-height: 1.6;
-            padding-top: 50px;
-        }
-
-        .container {
-            max-width: 1250px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .form-section, .card {
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .form-section h2, .card h2 {
-            font-size: 1.5rem;
-            color: #e67e22;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
-
-        .required-mark {
-            color: #e74c3c;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            transition: border-color 0.3s;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #e67e22;
-            box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
-        }
-
-        .input-field:invalid:not(:placeholder-shown) {
-            border-color: #e74c3c;
-        }
-
-        .input-field.valid {
-            border-color: #2ecc71;
-        }
-
-        .error-text {
-            display: none;
-            color: #e74c3c;
-            font-size: 0.8rem;
-            margin-top: 5px;
-        }
-
-        .error-text.show {
-            display: block;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-primary {
-            background-color: #e67e22;
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            background-color: #d35400;
-        }
-
-        .btn-secondary {
-            background-color: #7f8c8d;
-            color: #fff;
-        }
-
-        .btn-secondary:hover {
-            background-color: #6c7a89;
-        }
-
-        .btn-danger {
-            color: #e74c3c;
-            background: none;
-        }
-
-        .btn-danger:hover {
-            color: #c0392b;
-        }
-
-        .btn-icon {
-            background: none;
-            color: #7f8c8d;
-            padding: 8px;
-            position: relative;
-        }
-
-        .btn-icon:hover {
-            color: #e67e22;
-        }
-
-        .btn-icon:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .tooltip {
-            visibility: hidden;
-            background: #333;
-            color: #fff;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 10;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            background: #fff;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-        }
-
-        .table th, .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table th {
-            background: #f9f9f9;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #333;
-        }
-
-        .table th.sortable:hover {
-            background: #eee;
-            color: #e67e22;
-            cursor: pointer;
-        }
-
-        .table tbody tr:hover {
-            background: #f9f9f9;
-        }
-
-        .search-container {
-            position: relative;
-            max-width: 500px;
-            margin-bottom: 24px;
-        }
-
-        .search-container .ri-search-line {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #7f8c8d;
-            font-size: 1.25rem;
-        }
-
-        .search-container .ri-close-line {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #7f8c8d;
-            cursor: pointer;
-            font-size: 1.25rem;
-            transition: color 0.2s;
-        }
-
-        .search-container .ri-close-line:hover {
-            color: #e67e22;
-        }
-
-        .search-container .input-field {
-            padding: 12px 40px;
-            border-radius: 4px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        .search-options {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-            display: none;
-            margin-top: 4px;
-        }
-
-        .search-options.show {
-            display: block;
-        }
-
-        .search-option {
-            padding: 12px;
-            font-size: 0.9rem;
-            color: #333;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .search-option:hover {
-            background: #f9f9f9;
-        }
-
-        .search-option.active {
-            background: #e67e22;
-            color: #fff;
-        }
-
-        .search-loading {
-            display: none;
-            position: absolute;
-            right: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .search-loading.show {
-            display: block;
-        }
-
-        .accordion-header {
-            background: #e67e22;
-            color: #fff;
-            padding: 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
-        }
-
-        .accordion-header:hover {
-            background: #d35400;
-        }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            padding: 0;
-            background: #fff;
-            transition: max-height 0.3s ease, padding 0.3s ease;
-        }
-
-        .accordion-content.active {
-            max-height: 2000px;
-            padding: 20px;
-        }
-
-        .family-section {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 20px;
-        }
-
-        .popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.95);
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
-            width: 90%;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s;
-            z-index: 50;
-        }
-
-        .popup.show {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 40;
-        }
-
-        .popup-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: #fff;
-            padding: 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            max-width: 600px;
-            width: 90%;
-            position: relative;
-            animation: modalFadeIn 0.3s ease;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: none;
-            border: none;
-            color: #7f8c8d;
-            font-size: 1.25rem;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .modal-close:hover {
-            color: #e67e22;
-        }
-
-        .pagination-btn {
-            padding: 8px 16px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            color: #333;
-            background: #fff;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .pagination-btn:hover:not(.disabled) {
-            background: #e67e22;
-            color: #fff;
-            border-color: #e67e22;
-        }
-
-        .pagination-btn.disabled {
-            background: #eee;
-            color: #7f8c8d;
-            cursor: not-allowed;
-        }
-
-        .flex {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .main {
-            flex: 1;
-            padding: 20px;
-            margin-left: 240px;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 24px;
-            color: #7f8c8d;
-            font-size: 1rem;
-        }
-
-        .no-results i {
-            font-size: 2rem;
-            color: #e67e22;
-            margin-bottom: 12px;
-        }
-
-        @media (max-width: 768px) {
-            .main {
-                margin-left: 0;
-            }
-
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
-            .search-container {
-                max-width: 100%;
-            }
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .animate-slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
-
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid #e67e22;
-            border-top: 3px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f5f6f5;
+    color: #333;
+    line-height: 1.6;
+    padding-top: 100px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.member-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.member-header .header-buttons {
+    position: absolute;
+    top: 200px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+}
+
+.form-section, .card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-section h2, .card h2 {
+    font-size: 1.5rem;
+    color: #e67e22;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.required-mark {
+    color: #e74c3c;
+}
+
+.input-field {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #e67e22;
+    box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
+}
+
+.input-field:invalid:not(:placeholder-shown) {
+    border-color: #e74c3c;
+}
+
+.input-field.valid {
+    border-color: #2ecc71;
+}
+
+.error-text {
+    display: none;
+    color: #e74c3c;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+.error-text.show {
+    display: block;
+}
+
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background: #e67e22;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #d35400;
+}
+
+.btn-secondary {
+    background: #7f8c8d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #6c757d;
+}
+
+.btn-danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c0392b;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    position: relative;
+}
+
+.btn-icon i {
+    font-size: 1.2rem;
+    color: #e67e22;
+}
+
+.btn-icon:hover i {
+    color: #d35400;
+}
+
+.tooltip {
+    visibility: hidden;
+    background: #333;
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.table th, .table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+.table th {
+    background: #f9f9f9;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.table th.sortable:hover {
+    background: #eee;
+    color: #e67e22;
+    cursor: pointer;
+}
+
+.table tbody tr:hover {
+    background: #f9f9f9;
+}
+
+.search-container {
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.search-container i {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7f8c8d;
+    font-size: 1.2rem;
+}
+
+.search-container .ri-search-line {
+    left: 12px;
+}
+
+.search-container .ri-close-line {
+    right: 12px;
+    cursor: pointer;
+}
+
+
+.search-loading {
+    display: none;
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.search-loading.show {
+    display: block;
+}
+
+.accordion-header {
+    background: #e67e22;
+    color: #fff;
+    padding: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+}
+
+.accordion-header:hover {
+    background: #d35400;
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0;
+    background: #fff;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.accordion-content.active {
+    max-height: 2000px;
+    padding: 20px;
+}
+
+.family-section {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    z-index: 50;
+}
+
+.popup.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 40;
+}
+
+.popup-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1001;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #7f8c8d;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #e74c3c;
+}
+
+#edit-details-modal .modal-content,
+#edit-family-modal .modal-content {
+    max-width: 600px;
+    padding: 24px;
+}
+
+
+.pagination-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    color: #333;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(.disabled) {
+    background: #e67e22;
+    color: #fff;
+    border-color: #e67e22;
+}
+
+.pagination-btn.disabled {
+    background: #eee;
+    color: #7f8c8d;
+    cursor: not-allowed;
+}
+
+.flex {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.main {
+    flex: 1;
+    padding: 20px;
+    margin-left: 240px;
+}
+
+.no-results {
+    text-align: center;
+    padding: 24px;
+    color: #7f8c8d;
+    font-size: 1rem;
+}
+
+.no-results i {
+    font-size: 2rem;
+    color: #e67e22;
+    margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+    .main {
+        margin-left: 0;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .search-container {
+        max-width: 100%;
+    }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.animate-slide-in {
+    animation: slideIn 0.5s ease-out;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid #e67e22;
+    border-top: 3px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
     </style>
 </head>
 <body>
@@ -726,21 +791,13 @@ try {
                     <div class="search-loading" id="search-loading">
                         <div class="spinner"></div>
                     </div>
-                    <div class="search-options" id="search-options">
-                        <div class="search-option <?php echo $search_type === 'all' ? 'active' : ''; ?>" data-type="all">All Fields</div>
-                        <div class="search-option <?php echo $search_type === 'member_id' ? 'active' : ''; ?>" data-type="member_id">Member ID</div>
-                        <div class="search-option <?php echo $search_type === 'full_name' ? 'active' : ''; ?>" data-type="full_name">Name</div>
-                        <div class="search-option <?php echo $search_type === 'nic_number' ? 'active' : ''; ?>" data-type="nic_number">NIC</div>
-                        <div class="search-option <?php echo $search_type === 'contact_number' ? 'active' : ''; ?>" data-type="contact_number">Contact</div>
-                    </div>
-                    <input type="hidden" name="search_type" id="search-type" value="<?php echo htmlspecialchars($search_type); ?>">
                 </form>
             <?php endif; ?>
 
             <?php if ($selected_member): ?>
                 <!-- Detailed Member View -->
                 <div class="card animate-slide-in">
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="member-header">
                         <div class="flex items-center gap-4">
                             <div style="background: #e67e22; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                                 <i class="ri-user-line" style="color: white; font-size: 24px;"></i>
@@ -752,8 +809,8 @@ try {
                                 <p style="color: #7f8c8d; font-size: 0.9rem;">Member ID: <?php echo htmlspecialchars($selected_member['member_id']); ?></p>
                             </div>
                         </div>
-                        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
-                            <button class="btn btn-primary edit-btn" data-member='<?php echo htmlspecialchars(json_encode($selected_member), ENT_QUOTES); ?>' title="Edit Member" aria-label="Edit Member">
+                        <div class="header-buttons">
+                            <button class="btn btn-primary edit-details-btn" data-member='<?php echo htmlspecialchars(json_encode($selected_member), ENT_QUOTES); ?>' title="Edit Member Details" aria-label="Edit Member Details">
                                 <i class="ri-edit-line"></i> Edit
                             </button>
                             <button class="btn btn-danger" onclick="window.location.href='members.php';">
@@ -861,32 +918,28 @@ try {
                     <div class="card animate-slide-in">
                         <div class="accordion-header" data-target="family-details">Family Details <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="family-details">
-                            <?php if ($family_details): ?>
-                                <div class="family-details-container" style="display: grid; gap: 20px; margin: 20px 0;">
+                            <?php if (!empty($family_details)): ?>
+                                <div class="family-details-container">
                                     <!-- Spouse Section -->
-                                    <?php if ($family_details['spouse_name']): ?>
+                                    <?php if (!empty($family_details['spouse_name'])): ?>
                                         <div class="family-section">
-                                            <h3 style="color: #e67e22; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                                <i class="ri-user-heart-line"></i> Spouse
-                                            </h3>
-                                            <p style="font-size: 1.1rem; color: #333;"><?php echo htmlspecialchars($family_details['spouse_name']); ?></p>
+                                            <h3><i class="ri-user-heart-line"></i> Spouse</h3>
+                                            <p><?php echo htmlspecialchars($family_details['spouse_name']); ?></p>
                                         </div>
                                     <?php endif; ?>
 
                                     <!-- Children Section -->
-                                    <?php if ($family_details['children_info']): ?>
+                                    <?php if (!empty($family_details['children_info'])): ?>
                                         <div class="family-section">
-                                            <h3 style="color: #e67e22; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                                <i class="ri-parent-line"></i> Children
-                                            </h3>
-                                            <div style="display: grid; gap: 12px;">
+                                            <h3><i class="ri-parent-line"></i> Children</h3>
+                                            <div class="family-list">
                                                 <?php 
                                                 $children = explode(', ', $family_details['children_info']);
                                                 foreach ($children as $child): 
                                                 ?>
-                                                    <div style="background: #f9f9f9; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
-                                                        <i class="ri-user-smile-line" style="color: #e67e22; font-size: 1.2rem;"></i>
-                                                        <span style="color: #333;"><?php echo htmlspecialchars($child); ?></span>
+                                                    <div class="family-item">
+                                                        <i class="ri-user-smile-line"></i>
+                                                        <span><?php echo htmlspecialchars($child); ?></span>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -894,29 +947,32 @@ try {
                                     <?php endif; ?>
 
                                     <!-- Dependents Section -->
-                                    <?php if ($family_details['dependents_info']): ?>
+                                    <?php if (!empty($family_details['dependents_info'])): ?>
                                         <div class="family-section">
-                                            <h3 style="color: #e67e22; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                                <i class="ri-group-line"></i> Dependents
-                                            </h3>
-                                            <div style="display: grid; gap: 12px;">
+                                            <h3><i class="ri-group-line"></i> Dependents</h3>
+                                            <div class="family-list">
                                                 <?php 
                                                 $dependents = explode(', ', $family_details['dependents_info']);
                                                 foreach ($dependents as $dependent): 
                                                 ?>
-                                                    <div style="background: #f9f9f9; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
-                                                        <i class="ri-user-line" style="color: #e67e22; font-size: 1.2rem;"></i>
-                                                        <span style="color: #333;"><?php echo htmlspecialchars($dependent); ?></span>
+                                                    <div class="family-item">
+                                                        <i class="ri-user-line"></i>
+                                                        <span><?php echo htmlspecialchars($dependent); ?></span>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
                                         </div>
                                     <?php endif; ?>
                                 </div>
+                                <div class="family-actions">
+                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family_details), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
+                                        <i class="ri-user-add-line"></i> Update Family Details
+                                    </button>
+                                </div>
                             <?php else: ?>
-                                <div style="text-align: center; padding: 20px;">
-                                    <p style="color: #7f8c8d; margin-bottom: 20px;">No family details available.</p>
-                                    <button class="btn btn-primary" onclick="window.location.href='add_family.php?member_id=<?php echo htmlspecialchars($selected_member['member_id']); ?>'">
+                                <div class="family-actions">
+                                    <p style="color: #7f8c8d; margin-bottom: 10px;">No family details available.</p>
+                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode([]), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
                                         <i class="ri-user-add-line"></i> Add Family Details
                                     </button>
                                 </div>
@@ -1127,10 +1183,10 @@ try {
                                 Showing <?php echo $offset + 1; ?>-<?php echo min($offset + $items_per_page, $total_members); ?> of <?php echo $total_members; ?>
                             </p>
                             <div class="flex" style="gap: 10px;">
-                                <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&search_type=<?php echo urlencode($search_type); ?>"
+                                <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>"
                                    class="pagination-btn <?php echo $page <= 1 ? 'disabled' : ''; ?>"
                                     <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
-                                <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&search_type=<?php echo urlencode($search_type); ?>"
+                                <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>"
                                    class="pagination-btn <?php echo $page >= $total_pages ? 'disabled' : ''; ?>"
                                     <?php echo $page >= $total_pages ? 'onclick="return false;"' : ''; ?>>Next</a>
                             </div>
@@ -1178,7 +1234,7 @@ try {
     </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- Edit Modal (Manage Members) -->
 <div id="edit-modal" class="modal">
     <div class="modal-content">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
@@ -1229,6 +1285,141 @@ try {
     </div>
 </div>
 
+<!-- Edit Details Modal (Member Details) -->
+<div id="edit-details-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Member Details</h2>
+        <form id="edit-details-form">
+            <input type="hidden" name="id" id="edit-details-id">
+            <div class="form-section">
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Personal Information</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="edit-details-full_name" class="form-label">Full Name <span class="required-mark">*</span></label>
+                        <input type="text" name="full_name" id="edit-details-full_name" class="input-field" required aria-describedby="edit-details-full_name-error">
+                        <span class="error-text" id="edit-details-full_name-error">Full name is required.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-date_of_birth" class="form-label">Date of Birth <span class="required-mark">*</span></label>
+                        <input type="date" name="date_of_birth" id="edit-details-date_of_birth" class="input-field" required aria-describedby="edit-details-date_of_birth-error">
+                        <span class="error-text" id="edit-details-date_of_birth-error">Valid date of birth is required.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-gender" class="form-label">Gender <span class="required-mark">*</span></label>
+                        <select name="gender" id="edit-details-gender" class="input-field" required aria-describedby="edit-details-gender-error">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <span class="error-text" id="edit-details-gender-error">Gender is required.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-nic_number" class="form-label">NIC <span class="required-mark">*</span></label>
+                        <input type="text" name="nic_number" id="edit-details-nic_number" class="input-field" required aria-describedby="edit-details-nic_number-error">
+                        <span class="error-text" id="edit-details-nic_number-error">Valid NIC number is required.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-address" class="form-label">Address <span class="required-mark">*</span></label>
+                        <input type="text" name="address" id="edit-details-address" class="input-field" required aria-describedby="edit-details-address-error">
+                        <span class="error-text" id="edit-details-address-error">Address is required.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Contact Information</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="edit-details-contact_number" class="form-label">Contact Number <span class="required-mark">*</span></label>
+                        <input type="text" name="contact_number" id="edit-details-contact_number" class="input-field" required aria-describedby="edit-details-contact_number-error">
+                        <span class="error-text" id="edit-details-contact_number-error">Valid contact number is required (format: +94XXXXXXXXX).</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-email" class="form-label">Email</label>
+                        <input type="email" name="email" id="edit-details-email" class="input-field" aria-describedby="edit-details-email-error">
+                        <span class="error-text" id="edit-details-email-error">Valid email is required.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Membership Information</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="edit-details-date_of_joining" class="form-label">Join Date <span class="required-mark">*</span></label>
+                        <input type="date" name="date_of_joining" id="edit-details-date_of_joining" class="input-field" required aria-describedby="edit-details-date_of_joining-error">
+                        <span class="error-text" id="edit-details-date_of_joining-error">Valid join date is required.</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-membership_type" class="form-label">Membership Type</label>
+                        <select name="membership_type" id="edit-details-membership_type" class="input-field" aria-label="Membership Type">
+                            <option value="Individual">Individual</option>
+                            <option value="Family">Family</option>
+                            <option value="Senior Citizen">Senior Citizen</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-payment_status" class="form-label">Payment Status</label>
+                        <select name="payment_status" id="edit-details-payment_status" class="input-field" aria-label="Payment Status">
+                            <option value="Active">Active</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-details-member_status" class="form-label">Member Status</label>
+                        <select name="member_status" id="edit-details-member_status" class="input-field" aria-label="Member Status">
+                            <option value="Active">Active</option>
+                            <option value="Deceased">Deceased</option>
+                            <option value="Resigned">Resigned</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Family Modal -->
+<div id="edit-family-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Family Details</h2>
+        <form id="edit-family-form">
+            <input type="hidden" name="member_id" id="edit-family-member-id">
+            <div class="form-section">
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Spouse</h3>
+                <div class="form-group">
+                    <label for="edit-spouse-name" class="form-label">Spouse Name</label>
+                    <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field" aria-describedby="edit-spouse-name-error">
+                    <span class="error-text" id="edit-spouse-name-error">Invalid spouse name.</span>
+                </div>
+            </div>
+            <div class="form-section">
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Children</h3>
+                <div id="children-container" class="dynamic-fields">
+                    <!-- Dynamic children inputs will be added here -->
+                </div>
+                <button type="button" class="btn btn-secondary add-field" id="add-child"><i class="ri-add-line"></i> Add Child</button>
+            </div>
+            <div class="form-section">
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Dependents</h3>
+                <div id="dependents-container" class="dynamic-fields">
+                    <!-- Dynamic dependents inputs will be added here -->
+                </div>
+                <button type="button" class="btn btn-secondary add-field" id="add-dependent"><i class="ri-add-line"></i> Add Dependent</button>
+            </div>
+            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Delete Confirmation Modal -->
 <div id="delete-modal" class="modal">
     <div class="modal-content">
@@ -1251,19 +1442,23 @@ try {
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const editModal = document.getElementById('edit-modal');
+    const editDetailsModal = document.getElementById('edit-details-modal');
+    const editFamilyModal = document.getElementById('edit-family-modal');
     const deleteModal = document.getElementById('delete-modal');
     const modalOverlay = document.querySelector('.modal-overlay');
     const editButtons = document.querySelectorAll('.edit-btn');
+    const editDetailsButtons = document.querySelectorAll('.edit-details-btn');
+    const editFamilyButtons = document.querySelectorAll('.edit-family-btn');
     const deleteButtons = document.querySelectorAll('.delete-btn');
     const closeButtons = document.querySelectorAll('.modal-close');
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     const searchInput = document.getElementById('search-input');
     const clearSearch = document.getElementById('clear-search');
     const editForm = document.getElementById('edit-form');
+    const editDetailsForm = document.getElementById('edit-details-form');
+    const editFamilyForm = document.getElementById('edit-family-form');
     const deleteForm = document.getElementById('delete-form');
     const searchForm = document.getElementById('search-form');
-    const searchOptions = document.getElementById('search-options');
-    const searchTypeInput = document.getElementById('search-type');
     const searchLoading = document.getElementById('search-loading');
     const popupOverlay = document.getElementById('popup-overlay');
     const successPopup = document.getElementById('success-popup');
@@ -1313,7 +1508,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Edit modal
+    function showModal(modal) {
+        modal.classList.add('show');
+        modalOverlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hideModal(modal) {
+        modal.classList.remove('show');
+        modalOverlay.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    // Edit modal (Manage Members)
     editButtons.forEach(button => {
         button.addEventListener('click', () => {
             try {
@@ -1324,9 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('edit-membership_type').value = member.membership_type || 'Individual';
                 document.getElementById('edit-payment_status').value = member.payment_status || 'Active';
                 document.getElementById('edit-member_status').value = member.member_status || 'Active';
-                editModal.classList.add('show');
-                modalOverlay.classList.add('show');
-                document.body.style.overflow = 'hidden';
+                showModal(editModal);
             } catch (e) {
                 console.error('Failed to parse member data:', e);
                 errorMessage.textContent = 'Error loading member data. Please try again.';
@@ -1336,268 +1541,277 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Edit details modal (Member Details)
+    editDetailsButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            try {
+                const member = JSON.parse(button.getAttribute('data-member'));
+                document.getElementById('edit-details-id').value = member.id || '';
+                document.getElementById('edit-details-full_name').value = member.full_name || '';
+                document.getElementById('edit-details-date_of_birth').value = member.date_of_birth || '';
+                document.getElementById('edit-details-gender').value = member.gender || 'Male';
+                document.getElementById('edit-details-nic_number').value = member.nic_number || '';
+                document.getElementById('edit-details-address').value = member.address || '';
+                document.getElementById('edit-details-contact_number').value = member.contact_number || '';
+                document.getElementById('edit-details-email').value = member.email || '';
+                document.getElementById('edit-details-date_of_joining').value = member.date_of_joining || '';
+                document.getElementById('edit-details-membership_type').value = member.membership_type || 'Individual';
+                document.getElementById('edit-details-payment_status').value = member.payment_status || 'Active';
+                document.getElementById('edit-details-member_status').value = member.member_status || 'Active';
+                showModal(editDetailsModal);
+            } catch (e) {
+                console.error('Failed to parse member data:', e);
+                errorMessage.textContent = 'Error loading member data. Please try again.';
+                showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
+            }
+        });
+    });
+
+    // Edit family modal
+    editFamilyButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            try {
+                const family = JSON.parse(button.getAttribute('data-family'));
+                const memberId = button.getAttribute('data-member-id');
+                document.getElementById('edit-family-member-id').value = memberId || '';
+                document.getElementById('edit-spouse-name').value = family.spouse_name || '';
+
+                // Clear existing children and dependents
+                const childrenContainer = document.getElementById('children-container');
+                const dependentsContainer = document.getElementById('dependents-container');
+                childrenContainer.innerHTML = '';
+                dependentsContainer.innerHTML = '';
+
+                // Populate children
+                const children = family.children_info ? family.children_info.split(', ') : [];
+                children.forEach(child => {
+                    if (child) addDynamicField(childrenContainer, 'children[]', child);
+                });
+                if (children.length === 0) addDynamicField(childrenContainer, 'children[]', '');
+
+                // Populate dependents
+                const dependents = family.dependents_info ? family.dependents_info.split(', ') : [];
+                dependents.forEach(dependent => {
+                    if (dependent) addDynamicField(dependentsContainer, 'dependents[]', dependent);
+                });
+                if (dependents.length === 0) addDynamicField(dependentsContainer, 'dependents[]', '');
+
+                showModal(editFamilyModal);
+            } catch (e) {
+                console.error('Failed to parse family data:', e);
+                errorMessage.textContent = 'Error loading family data. Please try again.';
+                showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
+            }
+        });
+    });
+
+    // Dynamic field addition
+    function addDynamicField(container, name, value = '') {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'form-group dynamic-field';
+        fieldDiv.innerHTML = `
+            <input type="text" name="${name}" class="input-field" value="${value}" aria-label="${name}">
+            <button type="button" class="btn-icon remove-field"><i class="ri-delete-bin-line"></i></button>
+        `;
+        container.appendChild(fieldDiv);
+
+        // Add remove event
+        fieldDiv.querySelector('.remove-field').addEventListener('click', () => {
+            if (container.children.length > 1) {
+                fieldDiv.remove();
+            }
+        });
+    }
+
+    // Add child and dependent buttons
+    document.getElementById('add-child').addEventListener('click', () => {
+        addDynamicField(document.getElementById('children-container'), 'children[]', '');
+    });
+
+    document.getElementById('add-dependent').addEventListener('click', () => {
+        addDynamicField(document.getElementById('dependents-container'), 'dependents[]', '');
+    });
+
     // Delete modal
     deleteButtons.forEach(button => {
         button.addEventListener('click', () => {
             const id = button.getAttribute('data-id');
             document.getElementById('delete-id').value = id;
-            deleteModal.classList.add('show');
-            modalOverlay.classList.add('show');
-            document.body.style.overflow = 'hidden';
+            showModal(deleteModal);
         });
     });
 
     // Close modals
     closeButtons.forEach(button => {
         button.addEventListener('click', () => {
-            editModal.classList.remove('show');
-            deleteModal.classList.remove('show');
-            modalOverlay.classList.remove('show');
-            document.body.style.overflow = '';
-            editForm.reset();
-            clearErrors();
+            hideModal(editModal);
+            hideModal(editDetailsModal);
+            hideModal(editFamilyModal);
+            hideModal(deleteModal);
             showPopup(cancelPopup);
             startCountdown('cancel-countdown', window.location.href);
         });
     });
 
-    // Click outside to close modals
-    editModal.addEventListener('click', (e) => {
-        if (e.target === editModal) {
-            editModal.classList.remove('show');
-            modalOverlay.classList.remove('show');
-            document.body.style.overflow = '';
-            editForm.reset();
-            clearErrors();
-            showPopup(cancelPopup);
-            startCountdown('cancel-countdown', window.location.href);
-        }
+    // Accordion toggle
+    accordionHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const targetId = header.getAttribute('data-target');
+            const content = document.getElementById(targetId);
+            const isActive = content.classList.contains('active');
+            document.querySelectorAll('.accordion-content').forEach(c => {
+                c.classList.remove('active');
+            });
+            if (!isActive) {
+                content.classList.add('active');
+            }
+        });
     });
 
-    deleteModal.addEventListener('click', (e) => {
-        if (e.target === deleteModal) {
-            deleteModal.classList.remove('show');
-            modalOverlay.classList.remove('show');
-            document.body.style.overflow = '';
-            showPopup(cancelPopup);
-            startCountdown('cancel-countdown', window.location.href);
-        }
-    });
-
-    // Form validation for edit
+    // Edit form submission
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        clearErrors();
-
-        if (!validateEditForm()) {
-            errorMessage.textContent = 'Please fill out all required fields correctly.';
-            showPopup(errorPopup);
-            return;
-        }
+        const formData = new FormData(editForm);
+        formData.append('update', 'true');
 
         try {
-            const formData = new FormData(editForm);
-            formData.append('update', 'true');
-            const response = await fetch('members.php', {
+            const response = await fetch('', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
             const result = await response.json();
             if (result.success) {
                 successMessage.textContent = result.message;
                 showPopup(successPopup);
                 startCountdown('success-countdown', window.location.href);
-                editModal.classList.remove('show');
-                modalOverlay.classList.remove('show');
-                document.body.style.overflow = '';
-                editForm.reset();
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
             }
         } catch (error) {
-            console.error('Submission error:', error);
-            errorMessage.textContent = 'An unexpected error occurred: ' + error.message;
+            console.error('Error submitting edit form:', error);
+            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
+            startCountdown('error-countdown', window.location.href);
+        }
+    });
+
+    // Edit details form submission
+    editDetailsForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(editDetailsForm);
+        formData.append('update_details', 'true');
+
+        try {
+            const response = await fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const result = await response.json();
+            if (result.success) {
+                successMessage.textContent = result.message;
+                showPopup(successPopup);
+                startCountdown('success-countdown', window.location.href);
+            } else {
+                errorMessage.textContent = result.message;
+                showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
+            }
+        } catch (error) {
+            console.error('Error submitting edit details form:', error);
+            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
+            showPopup(errorPopup);
+            startCountdown('error-countdown', window.location.href);
+        }
+    });
+
+    // Edit family form submission
+    editFamilyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(editFamilyForm);
+        formData.append('update_family', 'true');
+
+        try {
+            const response = await fetch('', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            const result = await response.json();
+            if (result.success) {
+                successMessage.textContent = result.message;
+                showPopup(successPopup);
+                startCountdown('success-countdown', window.location.href);
+            } else {
+                errorMessage.textContent = result.message;
+                showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
+            }
+        } catch (error) {
+            console.error('Error submitting family form:', error);
+            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
+            showPopup(errorPopup);
+            startCountdown('error-countdown', window.location.href);
         }
     });
 
     // Delete form submission
     deleteForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const formData = new FormData(deleteForm);
+        formData.append('delete', 'true');
 
         try {
-            const formData = new FormData(deleteForm);
-            formData.append('delete', 'true');
-            const response = await fetch('members.php', {
+            const response = await fetch('', {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
             const result = await response.json();
             if (result.success) {
                 successMessage.textContent = result.message;
                 showPopup(successPopup);
                 startCountdown('success-countdown', 'members.php');
-                deleteModal.classList.remove('show');
-                modalOverlay.classList.remove('show');
-                document.body.style.overflow = '';
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
             }
         } catch (error) {
-            console.error('Submission error:', error);
-            errorMessage.textContent = 'An unexpected error occurred: ' + error.message;
+            console.error('Error submitting delete form:', error);
+            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
+            startCountdown('error-countdown', window.location.href);
         }
     });
 
-    function validateEditForm() {
-        let isValid = true;
-        clearErrors();
-
-        const fullName = document.getElementById('edit-full_name');
-        const contactNumber = document.getElementById('edit-contact_number');
-
-        if (!fullName.value.trim()) {
-            showError('edit-full_name-error', fullName);
-            isValid = false;
-        }
-        if (!contactNumber.value.trim() || !/^\+94\d{9}$/.test(contactNumber.value)) {
-            showError('edit-contact_number-error', contactNumber);
-            isValid = false;
-        }
-
-        return isValid;
-    }
-
-    function showError(id, input) {
-        const errorElement = document.getElementById(id);
-        if (errorElement) {
-            errorElement.classList.add('show');
-            if (input) input.classList.add('error');
-        }
-    }
-
-    function clearErrors() {
-        document.querySelectorAll('.error-text').forEach(error => error.classList.remove('show'));
-        document.querySelectorAll('.input-field').forEach(input => input.classList.remove('error'));
-    }
-
-    // Accordion
-    accordionHeaders.forEach(header => {
-        header.addEventListener('click', () => {
-            const content = document.getElementById(header.getAttribute('data-target'));
-            const icon = header.querySelector('i');
-            const isActive = content.classList.contains('active');
-
-            document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.accordion-header i').forEach(i => i.classList.replace('ri-arrow-up-s-line', 'ri-arrow-down-s-line'));
-
-            if (!isActive) {
-                content.classList.add('active');
-                icon.classList.replace('ri-arrow-down-s-line', 'ri-arrow-up-s-line');
-            }
-        });
-    });
-
-    // Search functionality
-    if (searchInput && clearSearch && searchForm) {
-        let debounceTimer;
-        const debounce = (callback, delay) => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(callback, delay);
-        };
-
-        // Toggle search options
-        searchInput.addEventListener('focus', () => {
-            searchOptions.classList.add('show');
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!searchForm.contains(e.target)) {
-                searchOptions.classList.remove('show');
-            }
-        });
-
-        // Handle search option selection
-        searchOptions.querySelectorAll('.search-option').forEach(option => {
-            option.addEventListener('click', () => {
-                searchOptions.querySelectorAll('.search-option').forEach(opt => opt.classList.remove('active'));
-                option.classList.add('active');
-                searchTypeInput.value = option.getAttribute('data-type');
-                if (searchInput.value.trim()) {
-                    searchLoading.classList.add('show');
-                    searchForm.submit();
-                }
-            });
-        });
-
-        // Debounced search
+    // Search functionality with debouncing
+    if (searchInput && clearSearch) {
+        let searchTimeout;
         searchInput.addEventListener('input', () => {
-            debounce(() => {
-                if (searchInput.value.trim()) {
-                    searchLoading.classList.add('show');
-                    searchForm.submit();
-                }
+            clearTimeout(searchTimeout);
+            searchLoading.classList.add('show');
+            searchTimeout = setTimeout(() => {
+                searchForm.submit();
             }, 500);
         });
 
-        // Clear search
         clearSearch.addEventListener('click', () => {
             searchInput.value = '';
-            searchTypeInput.value = 'all';
-            searchOptions.querySelectorAll('.search-option').forEach(opt => opt.classList.remove('active'));
-            searchOptions.querySelector('.search-option[data-type="all"]').classList.add('active');
-            searchInput.focus();
             searchForm.submit();
-        });
-
-        // Prevent empty search submission
-        searchForm.addEventListener('submit', (e) => {
-            if (!searchInput.value.trim() && searchTypeInput.value !== 'all') {
-                e.preventDefault();
-                searchInput.focus();
-                searchInput.classList.add('error');
-                setTimeout(() => searchInput.classList.remove('error'), 2000);
-            } else {
-                searchLoading.classList.add('show');
-            }
-        });
-
-        // Keyboard navigation for search options
-        searchOptions.querySelectorAll('.search-option').forEach((option, index) => {
-            option.setAttribute('tabindex', '0');
-            option.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    option.click();
-                } else if (e.key === 'ArrowDown') {
-                    e.preventDefault();
-                    const next = searchOptions.querySelectorAll('.search-option')[index + 1];
-                    if (next) next.focus();
-                } else if (e.key === 'ArrowUp') {
-                    e.preventDefault();
-                    const prev = searchOptions.querySelectorAll('.search-option')[index - 1];
-                    if (prev) prev.focus();
-                }
-            });
         });
     }
 });
