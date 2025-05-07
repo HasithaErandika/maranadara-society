@@ -8,85 +8,60 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 require_once '../../includes/header.php';
-require_once '../../classes/Member.php';
 require_once '../../classes/Incident.php';
+require_once '../../classes/Member.php';
 require_once '../../classes/Database.php';
 
-try {
-    $member = new Member();
-    $incident = new Incident();
-} catch (Exception $e) {
-    error_log("Initialization failed: " . $e->getMessage());
-    $error = "System error: Unable to connect to database. Please try again later.";
-}
+$incident = new Incident();
+$member = new Member();
 
 $error = $success = '';
-$action = isset($_GET['action']) ? $_GET['action'] : 'view';
 
 $items_per_page = 10;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $items_per_page;
 
-$members = $member->getAllMembers();
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$search_type = isset($_GET['search_type']) ? trim($_GET['search_type']) : 'all';
 $incidents = $incident->getAllIncidents();
 $total_incidents = count($incidents);
+
+if ($search) {
+    $incidents = array_filter($incidents, function ($i) use ($search, $search_type) {
+        $search = strtolower($search);
+        if ($search_type === 'all') {
+            return stripos(strtolower($i['incident_id']), $search) !== false ||
+                stripos(strtolower($i['incident_type']), $search) !== false ||
+                stripos(strtolower($i['member_name'] ?? ''), $search) !== false;
+        } elseif ($search_type === 'incident_id') {
+            return stripos(strtolower($i['incident_id']), $search) !== false;
+        } elseif ($search_type === 'incident_type') {
+            return stripos(strtolower($i['incident_type']), $search) !== false;
+        } elseif ($search_type === 'member_name') {
+            return stripos(strtolower($i['member_name'] ?? ''), $search) !== false;
+        }
+        return false;
+    });
+}
+
 $incidents_paginated = array_slice($incidents, $offset, $items_per_page);
 $total_pages = ceil($total_incidents / $items_per_page);
 
+// Fetch all members for the add incident modal
+$all_members = $member->getAllMembers();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $db = new Database();
-    $conn = $db->getConnection();
-
-    if (isset($_POST['add'])) {
-        $incident_id = $incident->generateIncidentId();
-        $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT); // Expecting members.id (integer)
-        $incident_type = trim($_POST['incident_type'] ?? '');
-        $incident_datetime = trim($_POST['incident_datetime'] ?? '');
-        $remarks = trim($_POST['remarks'] ?? '') ?: null;
-
-        if (!$member_id || $member_id <= 0 || !$incident_type || !$incident_datetime) {
-            $error = "All required fields must be filled.";
-        } elseif (strlen($incident_type) > 50) {
-            $error = "Incident type must be 50 characters or less.";
-        } elseif (strtotime($incident_datetime) > time()) {
-            $error = "Incident date cannot be in the future.";
-        } else {
-            try {
-                // Verify member_id exists in members table (using members.id)
-                $member_data = $member->getMemberById($member_id);
-                if (!$member_data) {
-                    $error = "Invalid member selected.";
-                } else {
-                    if ($incident->addIncident($incident_id, $member_id, $incident_type, $incident_datetime, $remarks)) {
-                        $success = "Incident '$incident_id' recorded successfully!";
-                    } else {
-                        $error = "Error recording incident. Please try again.";
-                    }
-                }
-            } catch (Exception $e) {
-                $error = "Database error: " . htmlspecialchars($e->getMessage());
-                if (strpos($e->getMessage(), 'foreign key constraint')) {
-                    $error = "Invalid member selected.";
-                }
-            }
-        }
-    } elseif (isset($_POST['delete'])) {
+    if (isset($_POST['delete'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         if ($id) {
             try {
-                $stmt = $conn->prepare("DELETE FROM incidents WHERE id = ?");
-                $stmt->bind_param("i", $id);
-                if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    $success = "Incident deleted successfully!";
-                    $incidents = $incident->getAllIncidents();
-                    $total_incidents = count($incidents);
-                    $incidents_paginated = array_slice($incidents, $offset, $items_per_page);
-                    $total_pages = ceil($total_incidents / $items_per_page);
+                if ($incident->deleteIncident($id)) {
+                    $success = "Incident deleted successfully.";
                 } else {
-                    $error = "Incident not found or already deleted.";
+                    $error = "Failed to delete incident. Please try again.";
                 }
             } catch (Exception $e) {
-                $error = "Database error: " . htmlspecialchars($e->getMessage());
+                $error = "Error deleting incident: " . $e->getMessage();
             }
         } else {
             $error = "Invalid incident ID.";
@@ -94,30 +69,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['update'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         $incident_type = trim($_POST['incident_type'] ?? '');
-        $incident_datetime = trim($_POST['incident_datetime'] ?? '');
-        $remarks = trim($_POST['remarks'] ?? '') ?: null;
+        $remarks = trim($_POST['remarks'] ?? '');
+        $status = trim($_POST['status'] ?? '');
 
-        if (!$id || !$incident_type || !$incident_datetime) {
-            $error = "All required fields must be filled.";
-        } elseif (strlen($incident_type) > 50) {
-            $error = "Incident type must be 50 characters or less.";
-        } elseif (strtotime($incident_datetime) > time()) {
-            $error = "Incident date cannot be in the future.";
+        if (empty($incident_type)) {
+            $error = "Incident type is required.";
+        } elseif (!in_array($status, ['Open', 'In Progress', 'Resolved', 'Closed'])) {
+            $error = "Invalid status.";
         } else {
             try {
-                $stmt = $conn->prepare("UPDATE incidents SET incident_type = ?, incident_datetime = ?, remarks = ? WHERE id = ?");
-                $stmt->bind_param("sssi", $incident_type, $incident_datetime, $remarks, $id);
-                if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    $success = "Incident updated successfully!";
-                    $incidents = $incident->getAllIncidents();
-                    $total_incidents = count($incidents);
-                    $incidents_paginated = array_slice($incidents, $offset, $items_per_page);
-                    $total_pages = ceil($total_incidents / $items_per_page);
+                $data = [
+                    'incident_type' => $incident_type,
+                    'remarks' => $remarks,
+                    'status' => $status
+                ];
+                
+                if ($incident->updateIncident($id, $data)) {
+                    $success = "Incident updated successfully.";
                 } else {
-                    $error = "Incident not found or no changes made.";
+                    $error = "Failed to update incident. Please try again.";
                 }
             } catch (Exception $e) {
-                $error = "Database error: " . htmlspecialchars($e->getMessage());
+                $error = "Error updating incident: " . $e->getMessage();
+            }
+        }
+    } elseif (isset($_POST['add'])) {
+        $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
+        $incident_type = trim($_POST['incident_type'] ?? '');
+        $incident_datetime = trim($_POST['incident_datetime'] ?? '');
+        $remarks = trim($_POST['remarks'] ?? '');
+
+        if (!$member_id) {
+            $error = "Please select a valid member.";
+        } elseif (empty($incident_type)) {
+            $error = "Incident type is required.";
+        } elseif (empty($incident_datetime)) {
+            $error = "Incident date and time are required.";
+        } else {
+            try {
+                $incident_id = $incident->generateIncidentId();
+                if ($incident->addIncident($incident_id, $member_id, $incident_type, $incident_datetime, $remarks)) {
+                    $success = "Incident reported successfully.";
+                } else {
+                    $error = "Failed to report incident. Please try again.";
+                }
+            } catch (Exception $e) {
+                $error = "Error reporting incident: " . $e->getMessage();
             }
         }
     }
@@ -129,30 +126,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo $action == 'add' ? 'Add Incident' : 'Manage Incidents'; ?> - Maranadhara Samithi</title>
+    <title>Manage Incidents - Maranadhara Samithi</title>
     <!-- Remix Icons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <!-- Inter Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #F97316;
-            --primary-dark: #EA580C;
-            --primary-light: #FDBA74;
-            --secondary: #4B5563;
-            --background: #F9FAFB;
-            --card-bg: #FFFFFF;
-            --text-primary: #1F2937;
-            --text-secondary: #6B7280;
-            --error: #EF4444;
-            --success: #22C55E;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            --border: #E5E7EB;
-            --sidebar-width: 64px;
-            --sidebar-expanded: 256px;
-            --header-height: 80px;
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -161,398 +140,168 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--background);
-            color: var(--text-primary);
+            background-color: #f7f9fc;
+            color: #2d3748;
             line-height: 1.6;
-            overflow-x: hidden;
         }
 
         .container {
             max-width: 1280px;
             margin: 0 auto;
-            padding: 0 1.5rem;
+            padding: 20px;
+            padding-top: 80px;
         }
 
-        .main-content {
-            margin-left: calc(var(--sidebar-width) + 2rem);
-            padding: calc(var(--header-height) + 2rem) 2rem 2rem;
-            transition: margin-left 0.3s ease;
-            min-height: calc(100vh - var(--header-height));
-        }
-
-        .sidebar.expanded ~ .main-content {
-            margin-left: calc(var(--sidebar-expanded) + 2rem);
-        }
-
-        /* Header Section */
-        .header-section {
-            margin-bottom: 2rem;
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        .header-section h1 {
-            font-size: 2.25rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .header-section p {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-            max-width: 600px;
-        }
-
-        /* Controls Section */
-        .controls-section {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            align-items: center;
-            background: var(--card-bg);
-            padding: 1.5rem;
+        .form-section, .card {
+            background: #fff;
+            padding: 24px;
             border-radius: 12px;
-            box-shadow: var(--shadow);
-            animation: fadeIn 0.6s ease-out;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-top: 50px;
         }
 
-        .search-container {
-            flex: 1;
-            min-width: 250px;
-            max-width: 400px;
+        .form-section h2, .card h2 {
+            font-size: 1.5rem;
+            color: #f97316;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 8px;
         }
 
-        .search-input {
-            width: 100%;
-            padding: 0.8rem 1.2rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
         }
 
-        .search-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
+        .form-group {
+            margin-bottom: 16px;
         }
 
-        .search-input::placeholder {
-            color: var(--text-secondary);
-        }
-
-        .date-filter {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .date-input {
-            padding: 0.8rem 1.2rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            background: #FFFFFF;
-            transition: all 0.3s ease;
-            max-width: 180px;
-        }
-
-        .date-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            padding: 2rem;
-            animation: fadeIn 0.6s ease-out;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 10px;
-            background: var(--card-bg);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .table th, .table td {
-            padding: 1rem 1.25rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .table th {
-            background: var(--card-bg);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-        }
-
-        .table tbody tr:hover {
-            background: rgba(249, 115, 22, 0.05);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
             font-weight: 500;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: none;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 6px;
+            color: #4a5568;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: #FFFFFF;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
-        }
-
-        .btn-danger {
-            background: var(--error);
-            color: #FFFFFF;
-        }
-
-        .btn-danger:hover {
-            background: #DC2626;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--secondary);
-            color: #FFFFFF;
-        }
-
-        .btn-secondary:hover {
-            background: #374151;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(75, 85, 99, 0.2);
-        }
-
-        .btn-download {
-            background: #10B981;
-            color: #FFFFFF;
-        }
-
-        .btn-download:hover {
-            background: #059669;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-icon {
-            background: none;
-            color: var(--text-secondary);
-            padding: 0.5rem;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            box-shadow: none;
-        }
-
-        .btn-icon:hover {
-            background: var(--primary-light);
-            color: var(--primary);
-        }
-
-        .btn::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            transition: width 0.4s ease, height 0.4s ease;
-        }
-
-        .btn:active::after {
-            width: 100px;
-            height: 100px;
+        .required-mark, .required {
+            color: #e53e3e;
         }
 
         .input-field {
             width: 100%;
-            padding: 0.9rem 1.25rem;
-            border: 1px solid var(--border);
+            padding: 12px;
+            border: 1px solid #e2e8f0;
             border-radius: 8px;
-            font-size: 0.9rem;
-            background: #FFFFFF;
-            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: #fff;
         }
 
         .input-field:focus {
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
-            background: #FFF7ED;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
         }
 
-        .input-field.error {
-            border-color: var(--error);
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        .input-field:invalid:not(:placeholder-shown) {
+            border-color: #e53e3e;
         }
 
-        .alert {
-            display: flex;
-            align-items: center;
-            padding: 1.25rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-            animation: fadeIn 0.6s ease-out;
+        .input-field.valid {
+            border-color: #48bb78;
         }
 
-        .alert-success {
-            background: #DCFCE7;
-            color: var(--success);
-            border-left: 5px solid var(--success);
+        .error-text {
+            display: none;
+            color: #e53e3e;
+            font-size: 0.75rem;
+            margin-top: 4px;
         }
 
-        .alert-error {
-            background: #FEE2E2;
-            color: var(--error);
-            border-left: 5px solid var(--error);
+        .error-text.show {
+            display: block;
         }
 
-        .pagination-btn {
-            padding: 0.6rem 1.25rem;
+        .btn {
+            padding: 10px 20px;
+            border: none;
             border-radius: 8px;
+            font-size: 0.875rem;
             font-weight: 500;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            background: var(--card-bg);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .pagination-btn:hover:not(.disabled) {
-            background: var(--primary);
-            color: #FFFFFF;
-            border-color: var(--primary);
-            transform: translateY(-1px);
+        .btn-primary {
+            background-color: #f97316;
+            color: #fff;
         }
 
-        .pagination-btn.disabled {
-            background: #F3F4F6;
-            color: #9CA3AF;
-            cursor: not-allowed;
-            border-color: #D1D5DB;
+        .btn-primary:hover {
+            background-color: #ed8936;
         }
 
-        /* Popup Styles */
-        .popup-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 2000;
-            animation: fadeIn 0.3s ease-out;
+        .btn-secondary {
+            background-color: #a0aec0;
+            color: #fff;
         }
 
-        .popup-overlay.show {
-            display: block;
+        .btn-secondary:hover {
+            background-color: #718096;
         }
 
-        .popup {
-            display: none;
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-            position: fixed;
-            top: 50%;
+        .btn-danger {
+            color: #e53e3e;
+            background: none;
+            border: 1px solid transparent;
+        }
+
+        .btn-danger:hover {
+            background-color: #fde2e2;
+            border-color: #e53e3e;
+            color: #c53030;
+        }
+
+        .btn-icon {
+            background: none;
+            color: #718096;
+            padding: 8px;
+            position: relative;
+        }
+
+        .btn-icon:hover {
+            color: #f97316;
+        }
+
+        .btn-icon:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            background: #2d3748;
+            color: #fff;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            position: absolute;
+            top: -30px;
             left: 50%;
-            transform: translate(-50%, -50%) scale(0.8);
-            animation: popupIn 0.3s ease-out forwards;
-            z-index: 2001;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
         }
 
-        .popup.show {
-            display: block;
-        }
-
-        .popup-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-
-        .popup-success .popup-icon {
-            color: var(--success);
-        }
-
-        .popup-error .popup-icon {
-            color: var(--error);
-        }
-
-        .popup-cancel .popup-icon {
-            color: var(--secondary);
-        }
-
-        .popup-delete .popup-icon {
-            color: var(--error);
-        }
-
-        .popup h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .popup p {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-        }
-
-        .popup span {
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .popup-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        /* Modal Styles (for Edit) */
         .modal {
             display: none;
             position: fixed;
@@ -560,158 +309,288 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(5px);
             z-index: 1000;
+            background: rgba(0, 0, 0, 0.5);
             justify-content: center;
             align-items: center;
-            animation: fadeIn 0.4s ease-out;
-            Topics and replies
+        }
+
+        .modal.show {
+            display: flex;
         }
 
         .modal-content {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 650px;
-            box-shadow: var(--shadow);
-            animation: slideIn 0.4s ease-out;
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 90%;
             position: relative;
-            overflow: hidden;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .modal-overlay.show {
+            display: block;
         }
 
         .modal-close {
             position: absolute;
-            top: 1rem;
-            right: 1rem;
+            top: 12px;
+            right: 12px;
             background: none;
             border: none;
-            color: var(--text-secondary);
-            font-size: 1.5rem;
+            color: #718096;
+            font-size: 1.25rem;
             cursor: pointer;
-            transition: color 0.2s ease, transform 0.2s ease;
+            transition: color 0.2s;
         }
 
         .modal-close:hover {
-            color: var(--primary);
-            transform: scale(1.1);
+            color: #f97316;
         }
 
-        .error-text {
-            display: none;
-            color: var(--error);
-            font-size: 0.8rem;
-            margin-top: 0.3rem;
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            background: #fff;
         }
 
-        .error-text.show {
-            display: block;
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
         }
 
-        .form-group {
-            position: relative;
-            margin-bottom: 1.5rem;
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #edf2f7;
         }
 
-        .form-group label {
-            font-weight: 500;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            margin-bottom: 0.6rem;
-            display: block;
-        }
-
-        .form-group .required {
-            color: var(--error);
+        .table th {
+            background: #f7fafc;
             font-weight: 600;
+            font-size: 0.875rem;
+            color: #2d3748;
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+        .table th.sortable:hover {
+            background: #edf2f7;
+            color: #f97316;
+            cursor: pointer;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .table tbody tr:hover {
+            background: #f7fafc;
         }
 
-        @keyframes popupIn {
-            from { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
-            to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        .search-container {
+            position: relative;
+            max-width: 500px;
+            margin-bottom: 24px;
+        }
+
+        .search-container .ri-search-line {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+            font-size: 1.25rem;
+        }
+
+        .search-container .ri-close-line {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #718096;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: color 0.2s;
+        }
+
+        .search-container .ri-close-line:hover {
+            color: #f97316;
+        }
+
+        .search-container .input-field {
+            padding: 12px 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            display: none;
+            margin-top: 4px;
+        }
+
+        .search-options.show {
+            display: block;
+        }
+
+        .search-option {
+            padding: 12px;
+            font-size: 0.875rem;
+            color: #2d3748;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-option:hover {
+            background: #f7fafc;
+        }
+
+        .search-option.active {
+            background: #f97316;
+            color: #fff;
+        }
+
+        .search-loading {
+            display: none;
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .search-loading.show {
+            display: block;
+        }
+
+        .alert {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-success {
+            background: #f0fff4;
+            color: #48bb78;
+        }
+
+        .alert-error {
+            background: #fff5f5;
+            color: #e53e3e;
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #2d3748;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(.disabled) {
+            background: #f97316;
+            color: #fff;
+            border-color: #f97316;
+        }
+
+        .pagination-btn.disabled {
+            background: #edf2f7;
+            color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .flex {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .main {
+            flex: 1;
+            padding: 24px;
+            margin-left: 240px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 24px;
+            color: #718096;
+            font-size: 1rem;
+        }
+
+        .no-results i {
+            font-size: 2rem;
+            color: #f97316;
+            margin-bottom: 12px;
         }
 
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 1rem;
-                padding: calc(var(--header-height) + 1.5rem) 1.5rem 1.5rem;
+            .main {
+                margin-left: 0;
+                padding: 16px;
             }
 
-            .sidebar.expanded ~ .main-content {
-                margin-left: calc(var(--sidebar-expanded) + 1rem);
+            .grid {
+                grid-template-columns: 1fr;
             }
 
-            .header-section h1 {
-                font-size: 1.75rem;
-            }
-
-            .controls-section {
-                flex-direction: column;
-                align-items: stretch;
+            .container {
+                padding: 16px;
             }
 
             .search-container {
                 max-width: 100%;
             }
-
-            .date-input {
-                max-width: 100%;
-            }
-
-            .table th, .table td {
-                padding: 0.75rem;
-                font-size: 0.85rem;
-            }
-
-            .modal-content {
-                width: 95%;
-                padding: 1.5rem;
-            }
-
-            .popup {
-                width: 90%;
-                padding: 1.5rem;
-            }
-
-            .btn {
-                padding: 0.65rem 1.2rem;
-                font-size: 0.85rem;
-            }
         }
 
-        @media (max-width: 480px) {
-            .header-section h1 {
-                font-size: 1.5rem;
-            }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-            .table th, .table td {
-                padding: 0.5rem;
-                font-size: 0.8rem;
-            }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
 
-            .btn {
-                padding: 0.55rem 1rem;
-                font-size: 0.8rem;
-            }
+        .animate-slide-in {
+            animation: slideIn 0.5s ease-out;
+        }
 
-            .popup-icon {
-                font-size: 2.5rem;
-            }
+        /* Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f97316;
+            border-top: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
 
-            .popup h2 {
-                font-size: 1.25rem;
-            }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -720,528 +599,478 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="flex min-h-screen">
     <?php include '../../includes/sidepanel.php'; ?>
 
-    <main class="main-content">
+    <main class="main">
         <div class="container">
-            <?php if ($action == 'add'): ?>
-                <div class="header-section">
-                    <h1>Add Incident</h1>
-                    <p>Record a new incident for a member to track important events.</p>
+            <div class="flex justify-between items-center mb-6 animate-slide-in">
+                <div>
+                    <h1 style="font-size: 2rem; font-weight: 700;">Manage Incidents</h1>
+                    <p style="font-size: 0.9rem; color: #718096;">Track and manage incident reports efficiently.</p>
                 </div>
+                <button class="btn btn-primary" id="add-incident-btn">
+                    <i class="ri-add-line"></i> Report New Incident
+                </button>
+            </div>
 
-                <?php if ($error): ?>
-                    <div class="alert alert-error animate-in">
-                        <i class="ri-error-warning-fill mr-2 text-lg"></i> <?php echo htmlspecialchars($error); ?>
-                    </div>
-                <?php endif; ?>
-
-                <form method="POST" id="add-form" class="card animate-in">
-                    <div class="space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="form-group">
-                                <label for="member_id" class="block">Member <span class="required">*</span></label>
-                                <select id="member_id" name="member_id" class="input-field" required>
-                                    <option value="" disabled selected>Select Member</option>
-                                    <?php foreach ($members as $m): ?>
-                                        <option value="<?php echo htmlspecialchars($m['id']); ?>">
-                                            <?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <span class="error-text" id="member_id-error">Member is required.</span>
-                            </div>
-                            <div class="form-group">
-                                <label for="incident_type" class="block">Incident Type <span class="required">*</span></label>
-                                <select id="incident_type" name="incident_type" class="input-field" required>
-                                    <option value="" disabled selected>Select Type</option>
-                                    <option value="Death of Mother">Death of Mother</option>
-                                    <option value="Death of Father">Death of Father</option>
-                                    <option value="Death of Wife's Mother">Death of Wife's Mother</option>
-                                    <option value="Death of Wife's Father">Death of Wife's Father</option>
-                                    <option value="Death of Husband's Mother">Death of Husband's Mother</option>
-                                    <option value="Death of Husband's Father">Death of Husband's Father</option>
-                                    <option value="Death of Child">Death of Child</option>
-                                    <option value="Death - Other">Death - Other</option>
-                                    <option value="Accident">Accident</option>
-                                    <option value="Fraud">Fraud</option>
-                                    <option value="Payment Issue">Payment Issue</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                                <span class="error-text" id="incident_type-error">Incident type is required.</span>
-                            </div>
-                            <div class="form-group">
-                                <label for="incident_datetime" class="block">Incident Date & Time <span class="required">*</span></label>
-                                <input type="datetime-local" id="incident_datetime" name="incident_datetime" class="input-field" required max="<?php echo date('Y-m-d\TH:i'); ?>">
-                                <span class="error-text" id="incident_datetime-error">Date and time are required.</span>
-                            </div>
-                            <div class="form-group md:col-span-2">
-                                <label for="remarks" class="block">Remarks (Optional)</label>
-                                <textarea id="remarks" name="remarks" class="input-field" rows="4" placeholder="Additional details (e.g., circumstances, location)..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-4 mt-8">
-                        <button type="button" id="cancel-button" class="btn btn-secondary"><i class="ri-close-line mr-2"></i> Cancel</button>
-                        <button type="submit" name="add" class="btn btn-primary"><i class="ri-add-line mr-2"></i> Add Incident</button>
-                    </div>
-                </form>
-
-                <!-- Popups -->
-                <div class="popup-overlay" id="popup-overlay"></div>
-                <?php if ($success): ?>
-                    <div class="popup popup-success show" id="success-popup">
-                        <i class="ri-checkbox-circle-fill popup-icon"></i>
-                        <h2>Success</h2>
-                        <p><?php echo htmlspecialchars($success); ?> Redirecting in <span id="success-countdown">3</span> seconds...</p>
-                    </div>
-                <?php endif; ?>
-                <div class="popup popup-cancel" id="cancel-popup">
-                    <i class="ri-close-circle-fill popup-icon"></i>
-                    <h2>Cancel Entry</h2>
-                    <p>Are you sure you want to cancel? You will be redirected in <span id="cancel-countdown">3</span> seconds.</p>
-                </div>
-            <?php else: ?>
-                <div class="header-section">
-                    <h1>Manage Incidents</h1>
-                    <p>View, edit, or delete recorded incidents, and export data as needed.</p>
-                </div>
-
-                <?php if ($error): ?>
-                    <div class="alert alert-error animate-in">
-                        <i class="ri-error-warning-fill mr-2 text-lg"></i> <?php echo htmlspecialchars($error); ?>
-                    </div>
-                <?php endif; ?>
-
-                <div class="controls-section">
-                    <div class="search-container">
-                        <input type="text" id="search-input" class="search-input" placeholder="Search incidents...">
-                    </div>
-                    <div class="date-filter">
-                        <input type="date" id="date-from" class="date-input" placeholder="From">
-                        <input type="date" id="date-to" class="date-input" placeholder="To">
-                    </div>
-                    <button id="download-csv" class="btn btn-download"><i class="ri-download-line mr-2"></i> Download CSV</button>
-                </div>
-
-                <div class="card animate-in">
-                    <div class="table-container">
-                        <table class="table">
-                            <thead>
-                            <tr>
-                                <th>Incident ID</th>
-                                <th>Member</th>
-                                <th>Type</th>
-                                <th>Date & Time</th>
-                                <th>Remarks</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody id="incident-table-body">
-                            <?php foreach ($incidents_paginated as $i): ?>
-                                <?php $m = $member->getMemberById($i['member_id']); ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($i['incident_id']); ?></td>
-                                    <td><?php echo $m ? htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']) : 'Unknown Member'; ?></td>
-                                    <td><?php echo htmlspecialchars($i['incident_type']); ?></td>
-                                    <td><?php echo htmlspecialchars($i['incident_datetime']); ?></td>
-                                    <td><?php echo htmlspecialchars($i['remarks'] ?? 'N/A'); ?></td>
-                                    <td class="flex space-x-2">
-                                        <button class="btn-icon edit-btn" data-id="<?php echo $i['id']; ?>" data-type="<?php echo htmlspecialchars($i['incident_type']); ?>" data-datetime="<?php echo htmlspecialchars($i['incident_datetime']); ?>" data-remarks="<?php echo htmlspecialchars($i['remarks'] ?? ''); ?>" title="Edit Incident"><i class="ri-edit-line"></i></button>
-                                        <button class="btn-icon delete-btn" data-id="<?php echo $i['id']; ?>" title="Delete Incident"><i class="ri-delete-bin-line text-[var(--error)]"></i></button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($incidents_paginated)): ?>
-                                <tr><td colspan="6" class="text-center text-[var(--text-secondary)]">No incidents recorded yet.</td></tr>
-                            <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    <?php if ($total_pages > 1): ?>
-                        <div class="mt-8 flex justify-between items-center">
-                            <p class="text-sm text-[var(--text-secondary)]">
-                                Showing <?php echo $offset + 1; ?>-<?php echo min($offset + $items_per_page, $total_incidents); ?> of <?php echo $total_incidents; ?>
-                            </p>
-                            <div class="flex space-x-3">
-                                <a href="?page=<?php echo $page - 1; ?>" class="pagination-btn <?php echo $page <= 1 ? 'disabled' : ''; ?>" <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
-                                <a href="?page=<?php echo $page + 1; ?>" class="pagination-btn <?php echo $page >= $total_pages ? 'disabled' : ''; ?>" <?php echo $page >= $total_pages ? 'onclick="return false;"' : ''; ?>>Next</a>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Popups -->
-                <div class="popup-overlay" id="popup-overlay"></div>
-                <?php if ($success): ?>
-                    <div class="popup popup-success show" id="success-popup">
-                        <i class="ri-checkbox-circle-fill popup-icon"></i>
-                        <h2>Success</h2>
-                        <p><?php echo htmlspecialchars($success); ?> Redirecting in <span id="success-countdown">3</span> seconds...</p>
-                    </div>
-                <?php endif; ?>
-                <div class="popup popup-delete" id="delete-popup">
-                    <i class="ri-error-warning-fill popup-icon"></i>
-                    <h2>Confirm Deletion</h2>
-                    <p>Are you sure you want to delete this incident? This action cannot be undone.</p>
-                    <form method="POST" id="delete-form">
-                        <input type="hidden" name="id" id="delete-id">
-                        <div class="popup-buttons">
-                            <button type="button" class="btn btn-secondary" id="delete-cancel"><i class="ri-close-line mr-2"></i> Cancel</button>
-                            <button type="submit" name="delete" class="btn btn-danger"><i class="ri-delete-bin-line mr-2"></i> Delete</button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Edit Modal -->
-                <div id="edit-modal" class="modal">
-                    <div class="modal-content">
-                        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-                        <h2 class="text-2xl font-semibold text-[var(--primary)] mb-6">Edit Incident</h2>
-                        <form method="POST" id="edit-form">
-                            <input type="hidden" name="id" id="edit-id">
-                            <div class="space-y-6">
-                                <div class="form-group">
-                                    <label for="edit-incident-type" class="block">Incident Type <span class="required">*</span></label>
-                                    <select id="edit-incident-type" name="incident_type" class="input-field" required>
-                                        <option value="Death of Mother">Death of Mother</option>
-                                        <option value="Death of Father">Death of Father</option>
-                                        <option value="Death of Wife's Mother">Death of Wife's Mother</option>
-                                        <option value="Death of Wife's Father">Death of Wife's Father</option>
-                                        <option value="Death of Husband's Mother">Death of Husband's Mother</option>
-                                        <option value="Death of Husband's Father">Death of Husband's Father</option>
-                                        <option value="Death of Child">Death of Child</option>
-                                        <option value="Death - Other">Death - Other</option>
-                                        <option value="Accident">Accident</option>
-                                        <option value="Fraud">Fraud</option>
-                                        <option value="Payment Issue">Payment Issue</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                    <span class="error-text" id="edit-incident-type-error">Incident type is required.</span>
-                                </div>
-                                <div class="form-group">
-                                    <label for="edit-incident-datetime" class="block">Date & Time <span class="required">*</span></label>
-                                    <input type="datetime-local" id="edit-incident-datetime" name="incident_datetime" class="input-field" required max="<?php echo date('Y-m-d\TH:i'); ?>">
-                                    <span class="error-text" id="edit-incident-datetime-error">Date and time are required.</span>
-                                </div>
-                                <div class="form-group">
-                                    <label for="edit-remarks" class="block">Remarks (Optional)</label>
-                                    <textarea id="edit-remarks" name="remarks" class="input-field" rows="4" placeholder="Additional details..."></textarea>
-                                </div>
-                            </div>
-                            <div class="flex justify-end space-x-4 mt-8">
-                                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line mr-2"></i> Cancel</button>
-                                <button type="submit" name="update" class="btn btn-primary"><i class="ri-save-line mr-2"></i> Save Changes</button>
-                            </div>
-                        </form>
-                    </div>
+            <?php if ($error): ?>
+                <div class="alert alert-error animate-slide-in">
+                    <i class="ri-error-warning-fill"></i> <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
+            <?php if ($success): ?>
+                <div class="alert alert-success animate-slide-in">
+                    <i class="ri-checkbox-circle-fill"></i> <?php echo htmlspecialchars($success); ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Search Bar -->
+            <form method="GET" class="search-container animate-slide-in" id="search-form" role="search">
+                <i class="ri-search-line"></i>
+                <input type="text" name="search" id="search-input" value="<?php echo htmlspecialchars($search); ?>"
+                       placeholder="Search incidents..." class="input-field" aria-label="Search incidents">
+                <i class="ri-close-line" id="clear-search" role="button" aria-label="Clear search"></i>
+                <div class="search-loading" id="search-loading">
+                    <div class="spinner"></div>
+                </div>
+                <div class="search-options" id="search-options">
+                    <div class="search-option <?php echo $search_type === 'all' ? 'active' : ''; ?>" data-type="all">All Fields</div>
+                    <div class="search-option <?php echo $search_type === 'incident_id' ? 'active' : ''; ?>" data-type="incident_id">Incident ID</div>
+                    <div class="search-option <?php echo $search_type === 'incident_type' ? 'active' : ''; ?>" data-type="incident_type">Type</div>
+                    <div class="search-option <?php echo $search_type === 'member_name' ? 'active' : ''; ?>" data-type="member_name">Member</div>
+                </div>
+                <input type="hidden" name="search_type" id="search-type" value="<?php echo htmlspecialchars($search_type); ?>">
+            </form>
+
+            <!-- Incidents List -->
+            <div class="card animate-slide-in">
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th class="sortable">ID</th>
+                            <th class="sortable">Type</th>
+                            <th class="sortable">Member</th>
+                            <th class="sortable">Date & Time</th>
+                            <th>Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($incidents_paginated as $i): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($i['incident_id']); ?></td>
+                                <td><?php echo htmlspecialchars($i['incident_type']); ?></td>
+                                <td>
+                                    <a href="members.php?member_id=<?php echo htmlspecialchars($i['member_id']); ?>" style="color: #f97316;">
+                                        <?php echo htmlspecialchars($i['member_name']); ?>
+                                    </a>
+                                </td>
+                                <td><?php echo htmlspecialchars($i['incident_datetime']); ?></td>
+                                <td class="flex">
+                                    <button class="btn-icon edit-btn" data-incident='<?php echo htmlspecialchars(json_encode($i), ENT_QUOTES); ?>' title="Edit Incident" aria-label="Edit Incident">
+                                        <i class="ri-edit-line"></i>
+                                        <span class="tooltip">Edit</span>
+                                    </button>
+                                    <button class="btn-icon delete-btn" data-id="<?php echo $i['id']; ?>" title="Delete Incident" aria-label="Delete Incident">
+                                        <i class="ri-delete-bin-line" style="color: #e53e3e;"></i>
+                                        <span class="tooltip">Delete</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <?php if (empty($incidents_paginated)): ?>
+                            <tr><td colspan="6" class="no-results">
+                                <i class="ri-search-line"></i><br>
+                                No incidents found. Try adjusting your search.
+                            </td></tr>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if ($total_pages > 1): ?>
+                    <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <p style="font-size: 0.9rem; color: #718096;">
+                            Showing <?php echo $offset + 1; ?>-<?php echo min($offset + $items_per_page, $total_incidents); ?> of <?php echo $total_incidents; ?>
+                        </p>
+                        <div class="flex" style="gap: 10px;">
+                            <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&search_type=<?php echo urlencode($search_type); ?>"
+                               class="pagination-btn <?php echo $page <= 1 ? 'disabled' : ''; ?>"
+                                <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
+                            <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&search_type=<?php echo urlencode($search_type); ?>"
+                               class="pagination-btn <?php echo $page >= $total_pages ? 'disabled' : ''; ?>"
+                                <?php echo $page >= $total_pages ? 'onclick="return false;"' : ''; ?>>Next</a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </main>
 </div>
 
-<?php include '../../includes/footer.php'; ?>
+<!-- Modal Overlay -->
+<div class="modal-overlay"></div>
+
+<!-- Add Incident Modal -->
+<div id="add-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <h2 style="font-size: 1.5rem; color: #f97316; margin-bottom: 20px;">Report New Incident</h2>
+        <form method="POST" id="add-form">
+            <div class="grid">
+                <div class="form-group">
+                    <label for="add-member_id" class="form-label">Member <span class="required-mark">*</span></label>
+                    <select name="member_id" id="add-member_id" class="input-field" required aria-describedby="add-member_id-error">
+                        <option value="">Select Member</option>
+                        <?php foreach ($all_members as $m): ?>
+                            <option value="<?php echo $m['id']; ?>">
+                                <?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span class="error-text" id="add-member_id-error">Please select a member.</span>
+                </div>
+                <div class="form-group">
+                    <label for="add-incident_type" class="form-label">Incident Type <span class="required-mark">*</span></label>
+                    <select name="incident_type" id="add-incident_type" class="input-field" required aria-describedby="add-incident_type-error">
+                        <option value="Death of Mother">Death of Mother</option>
+                        <option value="Death of Father">Death of Father</option>
+                        <option value="Death of Wife's Mother">Death of Wife's Mother</option>
+                        <option value="Death of Wife's Father">Death of Wife's Father</option>
+                        <option value="Death of Husband's Mother">Death of Husband's Mother</option>
+                        <option value="Death of Husband's Father">Death of Husband's Father</option>
+                        <option value="Death of Child">Death of Child</option>
+                        <option value="Death - Other">Death - Other</option>
+                        <option value="Accident">Accident</option>
+                        <option value="Fraud">Fraud</option>
+                        <option value="Payment Issue">Payment Issue</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <span class="error-text" id="add-incident_type-error">Incident type is required.</span>
+                </div>
+                <div class="form-group">
+                    <label for="add-incident_datetime" class="form-label">Date & Time <span class="required-mark">*</span></label>
+                    <input type="datetime-local" name="incident_datetime" id="add-incident_datetime" class="input-field" required aria-describedby="add-incident_datetime-error">
+                    <span class="error-text" id="add-incident_datetime-error">Date and time are required.</span>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="add-remarks" class="form-label">Remarks</label>
+                    <textarea name="remarks" id="add-remarks" class="input-field" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
+                <button type="submit" name="add" class="btn btn-primary"><i class="ri-add-line"></i> Report Incident</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="edit-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <h2 style="font-size: 1.5rem; color: #f97316; margin-bottom: 20px;">Edit Incident</h2>
+        <form method="POST" id="edit-form">
+            <input type="hidden" name="id" id="edit-id">
+            <div class="grid">
+                <div class="form-group">
+                    <label for="edit-incident_type" class="form-label">Incident Type <span class="required-mark">*</span></label>
+                    <input type="text" name="incident_type" id="edit-incident_type" class="input-field" required aria-describedby="edit-incident_type-error">
+                    <span class="error-text" id="edit-incident_type-error">Incident type is required.</span>
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="edit-remarks" class="form-label">Remarks</label>
+                    <textarea name="remarks" id="edit-remarks" class="input-field" rows="4"></textarea>
+                </div>
+            </div>
+            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
+                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
+                <button type="submit" name="update" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
+        <div style="text-align: center;">
+            <i class="ri-error-warning-fill" style="font-size: 3rem; color: #e53e3e; margin-bottom: 20px;"></i>
+            <h3 style="font-size: 1.5rem; font-weight: 700;">Confirm Deletion</h3>
+            <p style="color: #718096; margin-top: 10px;">Are you sure you want to delete this incident? This action cannot be undone.</p>
+            <form method="POST" id="delete-form">
+                <input type="hidden" name="id" id="delete-id">
+                <div class="flex" style="justify-content: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
+                    <button type="submit" name="delete" class="btn btn-primary"><i class="ri-delete-bin-line"></i> Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const sidebar = document.getElementById('sidebar');
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const editModal = document.getElementById('edit-modal');
-        const editButtons = document.querySelectorAll('.edit-btn');
-        const deleteButtons = document.querySelectorAll('.delete-btn');
-        const closeButtons = document.querySelectorAll('.modal-close');
-        const addForm = document.getElementById('add-form');
-        const editForm = document.getElementById('edit-form');
-        const searchInput = document.getElementById('search-input');
-        const dateFrom = document.getElementById('date-from');
-        const dateTo = document.getElementById('date-to');
-        const tableBody = document.getElementById('incident-table-body');
-        const downloadCsvButton = document.getElementById('download-csv');
-        const cancelButton = document.getElementById('cancel-button');
-        const popupOverlay = document.getElementById('popup-overlay');
-        const cancelPopup = document.getElementById('cancel-popup');
-        const successPopup = document.getElementById('success-popup');
-        const deletePopup = document.getElementById('delete-popup');
-        const deleteCancel = document.getElementById('delete-cancel');
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const addModal = document.getElementById('add-modal');
+    const editModal = document.getElementById('edit-modal');
+    const deleteModal = document.getElementById('delete-modal');
+    const modalOverlay = document.querySelector('.modal-overlay');
+    const addButton = document.getElementById('add-incident-btn');
+    const editButtons = document.querySelectorAll('.edit-btn');
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    const closeButtons = document.querySelectorAll('.modal-close');
+    const searchInput = document.getElementById('search-input');
+    const clearSearch = document.getElementById('clear-search');
+    const addForm = document.getElementById('add-form');
+    const editForm = document.getElementById('edit-form');
+    const searchForm = document.getElementById('search-form');
+    const searchOptions = document.getElementById('search-options');
+    const searchTypeInput = document.getElementById('search-type');
+    const searchLoading = document.getElementById('search-loading');
 
-        // Sidebar toggle
-        if (sidebar && sidebarToggle) {
-            sidebarToggle.addEventListener('click', () => {
-                sidebarawley.classList.toggle('expanded');
-            });
-
-            document.addEventListener('click', (e) => {
-                if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
-                    !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-                    sidebar.classList.remove('expanded');
-                }
-            });
-        }
-
-        // Edit modal
-        editButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const id = button.getAttribute('data-id');
-                const type = button.getAttribute('data-type');
-                let datetime = button.getAttribute('data-datetime');
-                const remarks = button.getAttribute('data-remarks');
-
-                try {
-                    const date = new Date(datetime);
-                    if (!isNaN(date)) {
-                        datetime = date.toISOString().slice(0, 16);
-                    } else {
-                        datetime = '';
-                    }
-                } catch (e) {
-                    datetime = '';
-                }
-
-                document.getElementById('edit-id').value = id;
-                document.getElementById('edit-incident-type').value = type;
-                document.getElementById('edit-incident-datetime').value = datetime;
-                document.getElementById('edit-remarks').value = remarks === 'N/A' ? '' : remarks;
-
-                editModal.style.display = 'flex';
-            });
+    // Sidebar toggle
+    if (sidebar && sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('expanded');
+            document.body.classList.toggle('sidebar-expanded');
         });
 
-        // Delete popup
-        deleteButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const id = button.getAttribute('data-id');
-                document.getElementById('delete-id').value = id;
-                showPopup(deletePopup);
-            });
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
+                !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+                sidebar.classList.remove('expanded');
+                document.body.classList.remove('sidebar-expanded');
+            }
         });
+    }
 
-        // Cancel delete
-        if (deleteCancel) {
-            deleteCancel.addEventListener('click', () => {
-                hidePopup(deletePopup);
-            });
-        }
-
-        // Close edit modal
-        closeButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                editModal.style.display = 'none';
-                clearErrors();
-            });
+    // Add modal
+    if (addButton) {
+        addButton.addEventListener('click', () => {
+            addModal.classList.add('show');
+            modalOverlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
         });
+    }
 
-        // Click outside to close edit modal
-        if (editModal) {
-            editModal.addEventListener('click', (e) => {
-                if (e.target === editModal) {
-                    editModal.style.display = 'none';
-                    clearErrors();
-                }
-            });
-        }
-
-        // Form validation for add
-        if (addForm) {
-            addForm.addEventListener('submit', (e) => {
-                let hasError = false;
-                clearErrors();
-
-                const memberId = document.getElementById('member_id');
-                const incidentType = document.getElementById('incident_type');
-                const incidentDatetime = document.getElementById('incident_datetime');
-
-                if (!memberId.value) {
-                    showError('member_id-error', memberId);
-                    hasError = true;
-                }
-                if (!incidentType.value) {
-                    showError('incident_type-error', incidentType);
-                    hasError = true;
-                }
-                if (!incidentDatetime.value) {
-                    showError('incident_datetime-error', incidentDatetime);
-                    hasError = true;
-                }
-
-                if (hasError) {
-                    e.preventDefault();
-                }
-            });
-        }
-
-        // Form validation for edit
-        if (editForm) {
-            editForm.addEventListener('submit', (e) => {
-                let hasError = false;
-                clearErrors();
-
-                const incidentType = document.getElementById('edit-incident-type');
-                const incidentDatetime = document.getElementById('edit-incident-datetime');
-
-                if (!incidentType.value) {
-                    showError('edit-incident-type-error', incidentType);
-                    hasError = true;
-                }
-                if (!incidentDatetime.value) {
-                    showError('edit-incident-datetime-error', incidentDatetime);
-                    hasError = true;
-                }
-
-                if (hasError) {
-                    e.preventDefault();
-                }
-            });
-        }
-
-        // Search and Date Filter
-        function filterTable() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const fromDate = dateFrom.value ? new Date(dateFrom.value) : null;
-            const toDate = dateTo.value ? new Date(dateTo.value + 'T23:59:59') : null;
-            const rows = tableBody.querySelectorAll('tr');
-
-            rows.forEach(row => {
-                if (row.querySelector('td[colspan="6"]')) {
-                    return;
-                }
-
-                const cells = row.querySelectorAll('td');
-                let matchesSearch = false;
-                let matchesDate = true;
-
-                // Search filter
-                for (let i = 0; i < cells.length - 1; i++) {
-                    const cellText = cells[i].textContent.toLowerCase();
-                    if (cellText.includes(searchTerm)) {
-                        matchesSearch = true;
-                        break;
-                    }
-                }
-
-                // Date filter (only Date & Time column)
-                if (fromDate || toDate) {
-                    const dateCell = cells[3].textContent; // Date & Time column
-                    const rowDate = new Date(dateCell);
-                    matchesDate = (!fromDate || rowDate >= fromDate) && (!toDate || rowDate <= toDate);
-                }
-
-                row.style.display = (matchesSearch || searchTerm === '') && matchesDate ? '' : 'none';
-            });
-
-            // Handle empty table
-            const noResultsRow = tableBody.querySelector('tr td[colspan="6"]');
-            if (noResultsRow) {
-                noResultsRow.style.display = (searchTerm === '' && !fromDate && !toDate) ? '' : 'none';
-                if ((searchTerm !== '' || fromDate || toDate) && Array.from(rows).every(row => row.style.display === 'none')) {
-                    if (!tableBody.querySelector('.no-results')) {
-                        const noResults = document.createElement('tr');
-                        noResults.className = 'no-results';
-                        noResults.innerHTML = '<td colspan="6" class="text-center text-[var(--text-secondary)]">No incidents match your criteria.</td>';
-                        tableBody.appendChild(noResults);
-                    }
-                } else {
-                    const existingNoResults = tableBody.querySelector('.no-results');
-                    if (existingNoResults) {
-                        existingNoResults.remove();
-                    }
-                }
+    // Edit modal
+    editButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            try {
+                const incident = JSON.parse(button.getAttribute('data-incident'));
+                document.getElementById('edit-id').value = incident.id || '';
+                document.getElementById('edit-incident_type').value = incident.incident_type || '';
+                document.getElementById('edit-remarks').value = incident.remarks || '';
+                editModal.classList.add('show');
+                modalOverlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            } catch (e) {
+                console.error('Failed to parse incident data:', e);
+                alert('Error loading incident data. Please try again.');
             }
-        }
+        });
+    });
 
-        if (searchInput) {
-            searchInput.addEventListener('input', filterTable);
-        }
+    // Delete modal
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const id = button.getAttribute('data-id');
+            document.getElementById('delete-id').value = id;
+            deleteModal.classList.add('show');
+            modalOverlay.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        });
+    });
 
-        if (dateFrom && dateTo) {
-            dateFrom.addEventListener('change', filterTable);
-            dateTo.addEventListener('change', filterTable);
-        }
+    // Close modals
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            addModal.classList.remove('show');
+            editModal.classList.remove('show');
+            deleteModal.classList.remove('show');
+            modalOverlay.classList.remove('show');
+            document.body.style.overflow = '';
+            addForm.reset();
+            editForm.reset();
+            clearErrors();
+        });
+    });
 
-        // CSV Download
-        if (downloadCsvButton) {
-            downloadCsvButton.addEventListener('click', () => {
-                const rows = tableBody.querySelectorAll('tr');
-                let csvContent = 'Incident ID,Member,Type,Date & Time,Remarks\n';
-
-                rows.forEach(row => {
-                    if (row.style.display !== 'none' && !row.querySelector('td[colspan="6"]')) {
-                        const cells = row.querySelectorAll('td');
-                        const rowData = [
-                            cells[0].textContent,
-                            cells[1].textContent,
-                            cells[2].textContent,
-                            cells[3].textContent,
-                            cells[4].textContent === 'N/A' ? '' : cells[4].textContent
-                        ].map(cell => `"${cell.replace(/"/g, '""')}"`).join(',');
-                        csvContent += rowData + '\n';
-                    }
-                });
-
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.setAttribute('href', url);
-                link.setAttribute('download', 'incidents.csv');
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            });
-        }
-
-        // Cancel Popup
-        if (cancelButton) {
-            cancelButton.addEventListener('click', (e) => {
-                e.preventDefault();
-                showPopup(cancelPopup);
-                startCountdown('cancel-countdown', 'incidents.php');
-            });
-        }
-
-        // Success Popup
-        if (successPopup) {
-            showPopup(successPopup);
-            startCountdown('success-countdown', 'incidents.php');
-        }
-
-        function showPopup(popup) {
-            popupOverlay.classList.add('show');
-            popup.classList.add('show');
-        }
-
-        function hidePopup(popup) {
-            popupOverlay.classList.remove('show');
-            popup.classList.remove('show');
-        }
-
-        function startCountdown(elementId, redirectUrl) {
-            let timeLeft = 3;
-            const countdown = document.getElementById(elementId);
-            if (countdown) {
-                const interval = setInterval(() => {
-                    timeLeft--;
-                    countdown.textContent = timeLeft;
-                    if (timeLeft <= 0) {
-                        clearInterval(interval);
-                        window.location.href = redirectUrl;
-                    }
-                }, 1000);
-            }
-        }
-
-        function showError(id, input) {
-            const errorElement = document.getElementById(id);
-            if (errorElement) {
-                errorElement.classList.add('show');
-                if (input) input.classList.add('error');
-            }
-        }
-
-        function clearErrors() {
-            document.querySelectorAll('.error-text').forEach(error => error.classList.remove('show'));
-            document.querySelectorAll('.input-field').forEach(input => input.classList.remove('error'));
+    // Click outside to close modals
+    addModal.addEventListener('click', (e) => {
+        if (e.target === addModal) {
+            addModal.classList.remove('show');
+            modalOverlay.classList.remove('show');
+            document.body.style.overflow = '';
+            addForm.reset();
+            clearErrors();
         }
     });
+
+    editModal.addEventListener('click', (e) => {
+        if (e.target === editModal) {
+            editModal.classList.remove('show');
+            modalOverlay.classList.remove('show');
+            document.body.style.overflow = '';
+            editForm.reset();
+            clearErrors();
+        }
+    });
+
+    deleteModal.addEventListener('click', (e) => {
+        if (e.target === deleteModal) {
+            deleteModal.classList.remove('show');
+            modalOverlay.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Form validation for add
+    if (addForm) {
+        addForm.addEventListener('submit', (e) => {
+            let hasError = false;
+            clearErrors();
+
+            const memberId = document.getElementById('add-member_id');
+            const incidentType = document.getElementById('add-incident_type');
+            const incidentDatetime = document.getElementById('add-incident_datetime');
+
+            if (!memberId.value) {
+                showError('add-member_id-error', memberId);
+                hasError = true;
+            }
+            if (!incidentType.value.trim()) {
+                showError('add-incident_type-error', incidentType);
+                hasError = true;
+            }
+            if (!incidentDatetime.value) {
+                showError('add-incident_datetime-error', incidentDatetime);
+                hasError = true;
+            }
+
+            if (hasError) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Form validation for edit
+    if (editForm) {
+        editForm.addEventListener('submit', (e) => {
+            let hasError = false;
+            clearErrors();
+
+            const incidentType = document.getElementById('edit-incident_type');
+
+            if (!incidentType.value.trim()) {
+                showError('edit-incident_type-error', incidentType);
+                hasError = true;
+            }
+
+            if (hasError) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    function showError(id, input) {
+        const errorElement = document.getElementById(id);
+        if (errorElement) {
+            errorElement.classList.add('show');
+            if (input) input.classList.add('error');
+        }
+    }
+
+    function clearErrors() {
+        document.querySelectorAll('.error-text').forEach(error => error.classList.remove('show'));
+        document.querySelectorAll('.input-field').forEach(input => input.classList.remove('error'));
+    }
+
+    // Search functionality
+    if (searchInput && clearSearch && searchForm) {
+        let debounceTimer;
+        const debounce = (callback, delay) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(callback, delay);
+        };
+
+        // Toggle search options
+        searchInput.addEventListener('focus', () => {
+            searchOptions.classList.add('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!searchForm.contains(e.target)) {
+                searchOptions.classList.remove('show');
+            }
+        });
+
+        // Handle search option selection
+        searchOptions.querySelectorAll('.search-option').forEach(option => {
+            option.addEventListener('click', () => {
+                searchOptions.querySelectorAll('.search-option').forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+                searchTypeInput.value = option.getAttribute('data-type');
+                if (searchInput.value.trim()) {
+                    searchLoading.classList.add('show');
+                    searchForm.submit();
+                }
+            });
+        });
+
+        // Debounced search
+        searchInput.addEventListener('input', () => {
+            debounce(() => {
+                if (searchInput.value.trim()) {
+                    searchLoading.classList.add('show');
+                    searchForm.submit();
+                }
+            }, 500);
+        });
+
+        // Clear search
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            searchTypeInput.value = 'all';
+            searchOptions.querySelectorAll('.search-option').forEach(opt => opt.classList.remove('active'));
+            searchOptions.querySelector('.search-option[data-type="all"]').classList.add('active');
+            searchInput.focus();
+            searchForm.submit();
+        });
+
+        // Prevent empty search submission
+        searchForm.addEventListener('submit', (e) => {
+            if (!searchInput.value.trim() && searchTypeInput.value !== 'all') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.classList.add('error');
+                setTimeout(() => searchInput.classList.remove('error'), 2000);
+            } else {
+                searchLoading.classList.add('show');
+            }
+        });
+
+        // Keyboard navigation for search options
+        searchOptions.querySelectorAll('.search-option').forEach((option, index) => {
+            option.setAttribute('tabindex', '0');
+            option.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    option.click();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const next = searchOptions.querySelectorAll('.search-option')[index + 1];
+                    if (next) next.focus();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const prev = searchOptions.querySelectorAll('.search-option')[index - 1];
+                    if (prev) prev.focus();
+                }
+            });
+        });
+    }
+});
 </script>
 </body>
 </html>

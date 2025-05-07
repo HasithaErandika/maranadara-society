@@ -33,7 +33,12 @@ class Incident {
     // Get all incidents (for admin incidents.php)
     public function getAllIncidents() {
         $conn = $this->db->getConnection();
-        $result = $conn->query("SELECT * FROM incidents ORDER BY incident_datetime DESC");
+        $result = $conn->query("
+            SELECT i.*, m.full_name as member_name 
+            FROM incidents i 
+            LEFT JOIN members m ON i.member_id = m.id 
+            ORDER BY i.incident_datetime DESC
+        ");
         return $result->fetch_all(MYSQLI_ASSOC);
     }
 
@@ -43,6 +48,22 @@ class Incident {
         $last_incident = $conn->query("SELECT incident_id FROM incidents ORDER BY id DESC LIMIT 1")->fetch_assoc();
         $last_num = $last_incident ? (int)substr($last_incident['incident_id'], 4) : 0;
         return 'INC-' . str_pad($last_num + 1, 3, '0', STR_PAD_LEFT);
+    }
+
+    // Delete an incident
+    public function deleteIncident($id) {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("DELETE FROM incidents WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        return $stmt->execute();
+    }
+
+    // Update an incident
+    public function updateIncident($id, $data) {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("UPDATE incidents SET incident_type = ?, remarks = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $data['incident_type'], $data['remarks'], $id);
+        return $stmt->execute();
     }
 }
 ?>

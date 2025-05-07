@@ -43,96 +43,8 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary-orange: #F97316;
-            --orange-dark: #C2410C;
-            --orange-light: #FED7AA;
-            --gray-bg: #F9FAFB;
-            --card-bg: #FFFFFF;
-            --text-primary: #111827;
-            --text-secondary: #6B7280;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --sidebar-width: 64px;
-            --sidebar-expanded: 240px;
-        }
-
-        body {
-            background: var(--gray-bg);
-            color: var(--text-primary);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            line-height: 1.5;
-        }
-
-        .main-content {
-            margin-left: calc(var(--sidebar-width) + 32px);
-            transition: margin-left 0.3s ease;
-        }
-
-        .sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content {
-            margin-left: calc(var(--sidebar-expanded) + 32px);
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-card {
-            border-left: 4px solid var(--primary-orange);
-        }
-
-        .btn-primary {
-            background: var(--primary-orange);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .btn-primary:hover {
-            background: var(--orange-dark);
-            transform: translateY(-1px);
-        }
-
-        .financial-summary {
-            background: var(--card-bg);
-            border-radius: 8px;
-            padding: 24px;
-            box-shadow: var(--shadow);
-        }
-
-        .animate-in {
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                margin-left: 16px;
-            }
-        }
-    </style>
-</head>
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    </head>
 <body>
 <?php include '../../includes/header.php'; ?>
 <div class="flex min-h-screen pt-20">
@@ -244,7 +156,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
         </div>
     </main>
 </div>
-<?php include '../../includes/footer.php'; ?>
+<!-- <?php include '../../includes/footer.php'; ?> -->
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
