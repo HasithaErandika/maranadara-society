@@ -2,9 +2,12 @@
 define('APP_START', true);
 session_start();
 
-// Enable error reporting for debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+// Start output buffering to prevent unwanted output
+ob_start();
+
+// Disable displaying errors to avoid breaking JSON
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 
 // Log session state
@@ -50,7 +53,7 @@ try {
         $payment_status = $_POST['payment_status'] ?? '';
         $member_status = $_POST['member_status'] ?? '';
 
-        // Basic validation
+        // Validate mandatory member details
         if (empty($member_id) || !ctype_digit($member_id)) {
             throw new Exception("Membership ID must be a positive number.");
         }
@@ -99,22 +102,6 @@ try {
             throw new Exception("NIC number '$nic_number' already exists.");
         }
 
-        // Validate family details limits
-        if (isset($_POST['spouse_name']) && !empty($_POST['spouse_name'])) {
-            $spouse_count = 1;
-            if ($spouse_count > 1) {
-                throw new Exception("Only one spouse is allowed.");
-            }
-        }
-
-        if (isset($_POST['children']) && count($_POST['children']) > 5) {
-            throw new Exception("Maximum of 5 children are allowed.");
-        }
-
-        if (isset($_POST['dependents']) && count($_POST['dependents']) > 4) {
-            throw new Exception("Maximum of 4 dependents are allowed.");
-        }
-
         // Start transaction
         $db = new Database();
         $conn = $db->getConnection();
@@ -154,11 +141,15 @@ try {
             }
             $new_member_id = $result['id'];
 
-            // Add spouse details
-            if (isset($_POST['spouse_name']) && !empty($_POST['spouse_name'])) {
+            // Add spouse details (optional)
+            if (isset($_POST['spouse_name']) && !empty(trim($_POST['spouse_name']))) {
                 $spouse_name = trim($_POST['spouse_name']);
-                $spouse_age = (int)($_POST['spouse_age'] ?? 0);
-                $spouse_gender = $_POST['spouse_gender'] ?? null;
+                $spouse_age = !empty($_POST['spouse_age']) ? (int)$_POST['spouse_age'] : null;
+                $spouse_gender = !empty($_POST['spouse_gender']) ? $_POST['spouse_gender'] : null;
+
+                if ($family->getSpouseCount($new_member_id) >= 1) {
+                    throw new Exception("Only one spouse is allowed.");
+                }
 
                 $spouse_data = [
                     'name' => $spouse_name,
@@ -166,45 +157,70 @@ try {
                     'gender' => $spouse_gender
                 ];
 
-                if (!$family->addFamilyDetails($new_member_id, $spouse_data)) {
-                    throw new Exception("Failed to add spouse details.");
+                try {
+                    $family->validateSpouseData($spouse_data);
+                    if (!$family->addFamilyDetails($new_member_id, $spouse_data)) {
+                        throw new Exception("Failed to add spouse details.");
+                    }
+                } catch (Exception $e) {
+                    throw new Exception("Spouse details error: " . $e->getMessage());
                 }
             }
 
-            // Add children details
-            if (isset($_POST['children']) && !empty($_POST['children'])) {
+            // Add children details (optional)
+            if (isset($_POST['children']) && is_array($_POST['children']) && !empty($_POST['children'])) {
                 $children_data = [];
                 foreach ($_POST['children'] as $child) {
-                    if (!empty($child['name']) && !empty($child['age']) && !empty($child['gender'])) {
+                    if (!empty(trim($child['name'])) && !empty($child['age']) && !empty($child['gender'])) {
                         $children_data[] = [
-                            'name' => $child['name'],
+                            'name' => trim($child['name']),
                             'age' => (int)$child['age'],
                             'gender' => $child['gender']
                         ];
                     }
                 }
                 if (!empty($children_data)) {
-                    if (!$family->addFamilyDetails($new_member_id, null, $children_data)) {
-                        throw new Exception("Failed to add child details.");
+                    if (count($children_data) > 5) {
+                        throw new Exception("Maximum of 5 children are allowed.");
+                    }
+                    try {
+                        foreach ($children_data as $child_data) {
+                            $family->validateChildData($child_data);
+                        }
+                        if (!$family->addFamilyDetails($new_member_id, null, $children_data)) {
+                            throw new Exception("Failed to add children details.");
+                        }
+                    } catch (Exception $e) {
+                        throw new Exception("Children details error: " . $e->getMessage());
                     }
                 }
             }
 
-            // Add dependents details
-            if (isset($_POST['dependents']) && !empty($_POST['dependents'])) {
+            // Add dependents details (optional)
+            if (isset($_POST['dependents']) && is_array($_POST['dependents']) && !empty($_POST['dependents'])) {
                 $dependents_data = [];
                 foreach ($_POST['dependents'] as $dependent) {
-                    if (!empty($dependent['name']) && !empty($dependent['relationship'])) {
+                    if (!empty(trim($dependent['name'])) && !empty(trim($dependent['relationship']))) {
                         $dependents_data[] = [
-                            'name' => $dependent['name'],
-                            'relationship' => $dependent['relationship'],
+                            'name' => trim($dependent['name']),
+                            'relationship' => trim($dependent['relationship']),
                             'age' => !empty($dependent['age']) ? (int)$dependent['age'] : null
                         ];
                     }
                 }
                 if (!empty($dependents_data)) {
-                    if (!$family->addFamilyDetails($new_member_id, null, null, $dependents_data)) {
-                        throw new Exception("Failed to add dependent details.");
+                    if (count($dependents_data) > 4) {
+                        throw new Exception("Maximum of 4 dependents are allowed.");
+                    }
+                    try {
+                        foreach ($dependents_data as $dependent_data) {
+                            $family->validateDependentData($dependent_data);
+                        }
+                        if (!$family->addFamilyDetails($new_member_id, null, null, $dependents_data)) {
+                            throw new Exception("Failed to add dependents details.");
+                        }
+                    } catch (Exception $e) {
+                        throw new Exception("Dependents details error: " . $e->getMessage());
                     }
                 }
             }
@@ -219,7 +235,7 @@ try {
             error_log("Inserted member: " . print_r($result->fetch_assoc(), true));
         } catch (Exception $e) {
             $conn->rollback();
-            throw $e;
+            throw new Exception("Database error: " . $e->getMessage());
         } finally {
             $db->closeConnection();
         }
@@ -229,11 +245,27 @@ try {
     error_log("add_member.php: Error: $error");
 }
 
-// Escape messages for JavaScript
+// Check if the request is AJAX
+if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+    // Clear output buffer to prevent any prior output
+    ob_end_clean();
+    header('Content-Type: application/json');
+    if ($success) {
+        echo json_encode(['success' => true, 'message' => $success]);
+    } else {
+        echo json_encode(['success' => false, 'message' => $error]);
+    }
+    exit;
+}
+
+// Escape messages for JavaScript (for synchronous requests)
 $js_success = json_encode($success);
 $js_error = json_encode($error);
 error_log("JS Success: $js_success");
 error_log("JS Error: $js_error");
+
+// Clear output buffer for non-AJAX requests
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -258,7 +290,7 @@ error_log("JS Error: $js_error");
             background-color: #f5f6f5;
             color: #333;
             line-height: 1.6;
-            padding-top: 50px; /* Add 50px top padding to the body */
+            padding-top: 50px;
         }
 
         .container {
@@ -497,7 +529,6 @@ error_log("JS Error: $js_error");
         .animate-slide-in {
             animation: slideIn 0.5s ease-out;
         }
-
     </style>
 </head>
 <body>
@@ -616,7 +647,7 @@ error_log("JS Error: $js_error");
 
                 <!-- Family Details -->
                 <div class="form-section">
-                    <h2>Family Details</h2>
+                    <h2>Family Details (Optional)</h2>
                     <div style="margin-top: 20px;">
                         <!-- Spouse Section -->
                         <div class="family-section">
@@ -629,13 +660,14 @@ error_log("JS Error: $js_error");
                             <div id="spouse-details" class="family-content" style="display: none;">
                                 <div class="grid">
                                     <div class="form-group">
-                                        <label for="spouse_name" class="form-label">Spouse Name <span class="required-mark">*</span></label>
-                                        <input type="text" id="spouse_name" name="spouse_name" class="input-field" required>
-                                        <span class="error-text" id="spouse_name-error">Spouse name is required.</span>
+                                        <label for="spouse_name" class="form-label">Spouse Name</label>
+                                        <input type="text" id="spouse_name" name="spouse_name" class="input-field">
+                                        <span class="error-text" id="spouse_name-error">Spouse name is required if provided.</span>
                                     </div>
                                     <div class="form-group">
                                         <label for="spouse_age" class="form-label">Age</label>
                                         <input type="number" id="spouse_age" name="spouse_age" class="input-field" min="0" max="120">
+                                        <span class="error-text" id="spouse_age-error">Age must be between 0 and 120.</span>
                                     </div>
                                     <div class="form-group">
                                         <label for="spouse_gender" class="form-label">Gender</label>
@@ -645,6 +677,7 @@ error_log("JS Error: $js_error");
                                             <option value="Female">Female</option>
                                             <option value="Other">Other</option>
                                         </select>
+                                        <span class="error-text" id="spouse_gender-error">Gender is required if provided.</span>
                                     </div>
                                 </div>
                                 <button type="button" id="remove-spouse-btn" class="btn btn-danger" style="margin-top: 20px;">Remove Spouse</button>
@@ -735,374 +768,501 @@ error_log("JS Error: $js_error");
     </div>
 </div>
 
-
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.getElementById('add-member-form');
-        const inputs = form.querySelectorAll('.input-field');
-        const progressBar = document.getElementById('progress-bar');
-        const popupOverlay = document.getElementById('popup-overlay');
-        const successPopup = document.getElementById('success-popup');
-        const errorPopup = document.getElementById('error-popup');
-        const cancelPopup = document.getElementById('cancel-popup');
-        const successMessage = document.getElementById('success-message');
-        const errorMessage = document.getElementById('error-message');
-        const cancelButton = document.getElementById('cancel-button');
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('add-member-form');
+    const inputs = form.querySelectorAll('.input-field');
+    const progressBar = document.getElementById('progress-bar');
+    const popupOverlay = document.getElementById('popup-overlay');
+    const successPopup = document.getElementById('success-popup');
+    const errorPopup = document.getElementById('error-popup');
+    const cancelPopup = document.getElementById('cancel-popup');
+    const successMessage = document.getElementById('success-message');
+    const errorMessage = document.getElementById('error-message');
+    const cancelButton = document.getElementById('cancel-button');
 
-        const MAX_SPOUSE = 1;
-        const MAX_CHILDREN = 5;
-        const MAX_DEPENDENTS = 4;
-        let childCount = 0;
-        let dependentCount = 0;
+    const MAX_SPOUSE = 1;
+    const MAX_CHILDREN = 5;
+    const MAX_DEPENDENTS = 4;
+    let childCount = 0;
+    let dependentCount = 0;
 
-        // Update progress bar
-        const updateProgress = () => {
-            const requiredInputs = form.querySelectorAll('.input-field[required]');
-            let filled = 0;
-            requiredInputs.forEach(input => {
-                if (input.value.trim()) filled++;
-            });
-            const progress = (filled / requiredInputs.length) * 100;
-            progressBar.style.width = `${progress}%`;
-        };
+    // Update progress bar
+    const updateProgress = () => {
+        const requiredInputs = form.querySelectorAll('.input-field[required]');
+        let filled = 0;
+        requiredInputs.forEach(input => {
+            if (input.value.trim()) filled++;
+        });
+        const progress = (filled / requiredInputs.length) * 100;
+        progressBar.style.width = `${progress}%`;
+    };
 
-        // Input validation
-        inputs.forEach(input => {
-            input.addEventListener('input', () => {
-                const group = input.closest('.form-group');
-                const error = group?.querySelector('.error-text');
-                let isValid = true;
+    // Input validation
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            const group = input.closest('.form-group');
+            const error = group?.querySelector('.error-text');
+            let isValid = true;
 
-                if (input.id === 'member_id' && (!/^\d+$/.test(input.value) || parseInt(input.value) <= 0)) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'full_name' && !input.value.trim()) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'nic_number' && !input.value.trim()) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'contact_number' && !/^\+94\d{9}$/.test(input.value)) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'email' && input.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'address' && !input.value.trim()) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'date_of_birth' && !input.value) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'gender' && !input.value) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'date_of_joining' && !input.value) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'membership_type' && !input.value) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'contribution_amount' && (!input.value || parseFloat(input.value) <= 0)) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'payment_status' && !input.value) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'member_status' && !input.value) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else if (input.id === 'spouse_name' && !input.value.trim()) {
-                    error?.classList.add('show');
-                    group?.classList.remove('valid');
-                    isValid = false;
-                } else {
-                    error?.classList.remove('show');
-                    group?.classList.add('valid');
+            if (input.id === 'member_id' && (!/^\d+$/.test(input.value) || parseInt(input.value) <= 0)) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'full_name' && !input.value.trim()) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'nic_number' && !input.value.trim()) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'contact_number' && !/^\+94\d{9}$/.test(input.value)) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'email' && input.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value)) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'address' && !input.value.trim()) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'date_of_birth' && !input.value) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'gender' && !input.value) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'date_of_joining' && !input.value) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'membership_type' && !input.value) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'contribution_amount' && (!input.value || parseFloat(input.value) <= 0)) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'payment_status' && !input.value) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'member_status' && !input.value) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else if (input.id === 'spouse_age' && input.value && (parseInt(input.value) < 0 || parseInt(input.value) > 120)) {
+                error?.classList.add('show');
+                group?.classList.remove('valid');
+                isValid = false;
+            } else {
+                error?.classList.remove('show');
+                group?.classList.add('valid');
+            }
+
+            updateProgress();
+        });
+    });
+
+    // Show popups if messages exist (for synchronous submissions)
+    const successMsg = <?php echo $js_success; ?>;
+    const errorMsg = <?php echo $js_error; ?>;
+
+    if (successMsg) {
+        successMessage.textContent = successMsg;
+        showPopup(successPopup);
+        startCountdown('success-countdown', 'add_member.php');
+    } else if (errorMsg) {
+        errorMessage.textContent = errorMsg;
+        showPopup(errorPopup);
+        startCountdown('error-countdown', 'add_member.php');
+    }
+
+    // Cancel button
+    cancelButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPopup(cancelPopup);
+        startCountdown('cancel-countdown', 'add_member.php');
+    });
+
+    function showPopup(popup) {
+        popupOverlay.classList.add('show');
+        popup.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hidePopup(popup) {
+        popupOverlay.classList.remove('show');
+        popup.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    function startCountdown(elementId, redirectUrl) {
+        let timeLeft = 3;
+        const countdown = document.getElementById(elementId);
+        if (countdown) {
+            const interval = setInterval(() => {
+                timeLeft--;
+                countdown.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    window.location.href = redirectUrl;
                 }
-
-                updateProgress();
-            });
-        });
-
-        // Show popups if messages exist
-        const successMsg = <?php echo $js_success; ?>;
-        const errorMsg = <?php echo $js_error; ?>;
-
-        if (successMsg) {
-            successMessage.textContent = successMsg;
-            showPopup(successPopup);
-            startCountdown('success-countdown', 'add_member.php');
-        } else if (errorMsg) {
-            errorMessage.textContent = errorMsg;
-            showPopup(errorPopup);
-            startCountdown('error-countdown', 'add_member.php');
+            }, 1000);
         }
+    }
 
-        // Cancel button
-        cancelButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            showPopup(cancelPopup);
-            startCountdown('cancel-countdown', 'add_member.php');
-        });
+    // Spouse handling
+    const addSpouseBtn = document.getElementById('add-spouse-btn');
+    const spouseDetails = document.getElementById('spouse-details');
+    const removeSpouseBtn = document.getElementById('remove-spouse-btn');
+    const spouseLimit = document.getElementById('spouse-limit');
 
-        function showPopup(popup) {
-            popupOverlay.classList.add('show');
-            popup.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
+    addSpouseBtn.addEventListener('click', () => {
+        spouseDetails.style.display = 'block';
+        addSpouseBtn.style.display = 'none';
+        spouseLimit.style.color = '#e74c3c';
+    });
 
-        function hidePopup(popup) {
-            popupOverlay.classList.remove('show');
-            popup.classList.remove('show');
-            document.body.style.overflow = '';
-        }
+    removeSpouseBtn.addEventListener('click', () => {
+        spouseDetails.style.display = 'none';
+        addSpouseBtn.style.display = 'inline-flex';
+        spouseLimit.style.color = '#7f8c8d';
+        document.getElementById('spouse_name').value = '';
+        document.getElementById('spouse_age').value = '';
+        document.getElementById('spouse_gender').value = '';
+    });
 
-        function startCountdown(elementId, redirectUrl) {
-            let timeLeft = 3;
-            const countdown = document.getElementById(elementId);
-            if (countdown) {
-                const interval = setInterval(() => {
-                    timeLeft--;
-                    countdown.textContent = timeLeft;
-                    if (timeLeft <= 0) {
-                        clearInterval(interval);
-                        window.location.href = redirectUrl;
-                    }
-                }, 1000);
-            }
-        }
+    // Children handling
+    const addChildBtn = document.getElementById('add-child-btn');
+    const addAnotherChildBtn = document.getElementById('add-another-child-btn');
+    const childrenDetails = document.getElementById('children-details');
+    const childrenList = document.getElementById('children-list');
+    const childLimit = document.getElementById('child-limit');
 
-        // Spouse handling
-        const addSpouseBtn = document.getElementById('add-spouse-btn');
-        const spouseDetails = document.getElementById('spouse-details');
-        const removeSpouseBtn = document.getElementById('remove-spouse-btn');
-        const spouseLimit = document.getElementById('spouse-limit');
-
-        addSpouseBtn.addEventListener('click', () => {
-            spouseDetails.style.display = 'block';
-            addSpouseBtn.style.display = 'none';
-            spouseLimit.style.color = '#e74c3c';
-        });
-
-        removeSpouseBtn.addEventListener('click', () => {
-            spouseDetails.style.display = 'none';
-            addSpouseBtn.style.display = 'inline-flex';
-            spouseLimit.style.color = '#7f8c8d';
-            document.getElementById('spouse_name').value = '';
-            document.getElementById('spouse_age').value = '';
-            document.getElementById('spouse_gender').value = '';
-        });
-
-        // Children handling
-        const addChildBtn = document.getElementById('add-child-btn');
-        const addAnotherChildBtn = document.getElementById('add-another-child-btn');
-        const childrenDetails = document.getElementById('children-details');
-        const childrenList = document.getElementById('children-list');
-        const childLimit = document.getElementById('child-limit');
-
-        addChildBtn.addEventListener('click', () => {
-            if (childCount < MAX_CHILDREN) {
-                childrenDetails.style.display = 'block';
-                addChildBtn.style.display = 'none';
-                addChildEntry();
-                updateChildLimit();
-            }
-        });
-
-        addAnotherChildBtn.addEventListener('click', () => {
-            if (childCount < MAX_CHILDREN) {
-                addChildEntry();
-                updateChildLimit();
-            }
-        });
-
-        function addChildEntry() {
-            const childDiv = document.createElement('div');
-            childDiv.className = 'entry-card';
-            childDiv.innerHTML = `
-                <button type="button" onclick="removeChildEntry(this)" class="remove-btn">
-                    <i class="ri-close-circle-line" style="font-size: 1.2rem;"></i>
-                </button>
-                <div class="grid">
-                    <div class="form-group">
-                        <label class="form-label">Child Name <span class="required-mark">*</span></label>
-                        <input type="text" name="children[${childCount}][name]" class="input-field" required>
-                        <span class="error-text">Child name is required.</span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Age <span class="required-mark">*</span></label>
-                        <input type="number" name="children[${childCount}][age]" class="input-field" required min="0" max="120">
-                        <span class="error-text">Age is required.</span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Gender <span class="required-mark">*</span></label>
-                        <select name="children[${childCount}][gender]" class="input-field" required>
-                            <option value="">Select Gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <span class="error-text">Gender is required.</span>
-                    </div>
-                </div>
-            `;
-            childrenList.appendChild(childDiv);
-            childCount++;
-            addAnotherChildBtn.disabled = childCount >= MAX_CHILDREN;
-        }
-
-        function removeChildEntry(button) {
-            button.closest('.entry-card').remove();
-            childCount--;
-            addAnotherChildBtn.disabled = childCount >= MAX_CHILDREN;
-            if (childCount === 0) {
-                childrenDetails.style.display = 'none';
-                addChildBtn.style.display = 'inline-flex';
-            }
+    addChildBtn.addEventListener('click', () => {
+        if (childCount < MAX_CHILDREN) {
+            childrenDetails.style.display = 'block';
+            addChildBtn.style.display = 'none';
+            addChildEntry();
             updateChildLimit();
         }
+    });
 
-        function updateChildLimit() {
-            childLimit.textContent = `${childCount}/${MAX_CHILDREN} Children`;
-            childLimit.style.color = childCount === MAX_CHILDREN ? '#e74c3c' : '#7f8c8d';
+    addAnotherChildBtn.addEventListener('click', () => {
+        if (childCount < MAX_CHILDREN) {
+            addChildEntry();
+            updateChildLimit();
         }
+    });
 
-        // Dependents handling
-        const addDependentBtn = document.getElementById('add-dependent-btn');
-        const addAnotherDependentBtn = document.getElementById('add-another-dependent-btn');
-        const dependentsDetails = document.getElementById('dependents-details');
-        const dependentsList = document.getElementById('dependents-list');
-        const dependentLimit = document.getElementById('dependent-limit');
-
-        addDependentBtn.addEventListener('click', () => {
-            if (dependentCount < MAX_DEPENDENTS) {
-                dependentsDetails.style.display = 'block';
-                addDependentBtn.style.display = 'none';
-                addDependentEntry();
-                updateDependentLimit();
-            }
-        });
-
-        addAnotherDependentBtn.addEventListener('click', () => {
-            if (dependentCount < MAX_DEPENDENTS) {
-                addDependentEntry();
-                updateDependentLimit();
-            }
-        });
-
-        function addDependentEntry() {
-            const dependentDiv = document.createElement('div');
-            dependentDiv.className = 'entry-card';
-            dependentDiv.innerHTML = `
-                <button type="button" onclick="removeDependentEntry(this)" class="remove-btn">
-                    <i class="ri-close-circle-line" style="font-size: 1.2rem;"></i>
-                </button>
-                <div class="grid">
-                    <div class="form-group">
-                        <label class="form-label">Name <span class="required-mark">*</span></label>
-                        <input type="text" name="dependents[${dependentCount}][name]" class="input-field" required>
-                        <span class="error-text">Name is required.</span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Relationship <span class="required-mark">*</span></label>
-                        <input type="text" name="dependents[${dependentCount}][relationship]" class="input-field" required placeholder="e.g., Father, Mother">
-                        <span class="error-text">Relationship is required.</span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Age</label>
-                        <input type="number" name="dependents[${dependentCount}][age]" class="input-field" min="0" max="120">
-                    </div>
+    function addChildEntry() {
+        const childDiv = document.createElement('div');
+        childDiv.className = 'entry-card';
+        childDiv.innerHTML = `
+            <button type="button" onclick="removeChildEntry(this)" class="remove-btn">
+                <i class="ri-close-circle-line" style="font-size: 1.2rem;"></i>
+            </button>
+            <div class="grid">
+                <div class="form-group">
+                    <label class="form-label">Child Name</label>
+                    <input type="text" name="children[${childCount}][name]" class="input-field">
+                    <span class="error-text">Child name is required if provided.</span>
                 </div>
-            `;
-            dependentsList.appendChild(dependentDiv);
-            dependentCount++;
-            addAnotherDependentBtn.disabled = dependentCount >= MAX_DEPENDENTS;
-        }
+                <div class="form-group">
+                    <label class="form-label">Age</label>
+                    <input type="number" name="children[${childCount}][age]" class="input-field" min="0" max="120">
+                    <span class="error-text">Age is required if provided.</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gender</label>
+                    <select name="children[${childCount}][gender]" class="input-field">
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <span class="error-text">Gender is required if provided.</span>
+                </div>
+            </div>
+        `;
+        childrenList.appendChild(childDiv);
+        childCount++;
+        addAnotherChildBtn.disabled = childCount >= MAX_CHILDREN;
+    }
 
-        function removeDependentEntry(button) {
-            button.closest('.entry-card').remove();
-            dependentCount--;
-            addAnotherDependentBtn.disabled = dependentCount >= MAX_DEPENDENTS;
-            if (dependentCount === 0) {
-                dependentsDetails.style.display = 'none';
-                addDependentBtn.style.display = 'inline-flex';
-            }
+    function removeChildEntry(button) {
+        button.closest('.entry-card').remove();
+        childCount--;
+        addAnotherChildBtn.disabled = childCount >= MAX_CHILDREN;
+        if (childCount === 0) {
+            childrenDetails.style.display = 'none';
+            addChildBtn.style.display = 'inline-flex';
+        }
+        updateChildLimit();
+    }
+
+    function updateChildLimit() {
+        childLimit.textContent = `${childCount}/${MAX_CHILDREN} Children`;
+        childLimit.style.color = childCount === MAX_CHILDREN ? '#e74c3c' : '#7f8c8d';
+    }
+
+    // Dependents handling
+    const addDependentBtn = document.getElementById('add-dependent-btn');
+    const addAnotherDependentBtn = document.getElementById('add-another-dependent-btn');
+    const dependentsDetails = document.getElementById('dependents-details');
+    const dependentsList = document.getElementById('dependents-list');
+    const dependentLimit = document.getElementById('dependent-limit');
+
+    addDependentBtn.addEventListener('click', () => {
+        if (dependentCount < MAX_DEPENDENTS) {
+            dependentsDetails.style.display = 'block';
+            addDependentBtn.style.display = 'none';
+            addDependentEntry();
             updateDependentLimit();
         }
+    });
 
-        function updateDependentLimit() {
-            dependentLimit.textContent = `${dependentCount}/${MAX_DEPENDENTS} Dependents`;
-            dependentLimit.style.color = dependentCount === MAX_DEPENDENTS ? '#e74c3c' : '#7f8c8d';
+    addAnotherDependentBtn.addEventListener('click', () => {
+        if (dependentCount < MAX_DEPENDENTS) {
+            addDependentEntry();
+            updateDependentLimit();
+        }
+    });
+
+    function addDependentEntry() {
+        const dependentDiv = document.createElement('div');
+        dependentDiv.className = 'entry-card';
+        dependentDiv.innerHTML = `
+            <button type="button" onclick="removeDependentEntry(this)" class="remove-btn">
+                <i class="ri-close-circle-line" style="font-size: 1.2rem;"></i>
+            </button>
+            <div class="grid">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" name="dependents[${dependentCount}][name]" class="input-field">
+                    <span class="error-text">Name is required if provided.</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Relationship</label>
+                    <select name="dependents[${dependentCount}][relationship]" class="input-field">
+                        <option value="">Select Relationship</option>
+                        <option value="Father">Father</option>
+                        <option value="Mother">Mother</option>
+                        <option value="Spouse Father">Spouse Father</option>
+                        <option value="Spouse Mother">Spouse Mother</option>
+                    </select>
+                    <span class="error-text">Relationship is required if provided.</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Age</label>
+                    <input type="number" name="dependents[${dependentCount}][age]" class="input-field" min="0" max="120">
+                    <span class="error-text">Age must be between 0 and 120 if provided.</span>
+                </div>
+            </div>
+        `;
+        dependentsList.appendChild(dependentDiv);
+        dependentCount++;
+        addAnotherDependentBtn.disabled = dependentCount >= MAX_DEPENDENTS;
+    }
+
+    function removeDependentEntry(button) {
+        button.closest('.entry-card').remove();
+        dependentCount--;
+        addAnotherDependentBtn.disabled = dependentCount >= MAX_DEPENDENTS;
+        if (dependentCount === 0) {
+            dependentsDetails.style.display = 'none';
+            addDependentBtn.style.display = 'inline-flex';
+        }
+        updateDependentLimit();
+    }
+
+    function updateDependentLimit() {
+        dependentLimit.textContent = `${dependentCount}/${MAX_DEPENDENTS} Dependents`;
+        dependentLimit.style.color = dependentCount === MAX_DEPENDENTS ? '#e74c3c' : '#7f8c8d';
+    }
+
+    // Form submission validation
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Validate form
+        if (!validateForm()) {
+            errorMessage.textContent = 'Please fill out all required member fields correctly.';
+            showPopup(errorPopup);
+            startCountdown('error-countdown', 'add_member.php');
+            return;
         }
 
-        // Form submission validation
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Validate form
-            if (!validateForm()) {
-                return;
+        try {
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+            let result;
             try {
-                const formData = new FormData(form);
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData
-                });
+                result = await response.json();
+            } catch (jsonError) {
+                console.error('JSON parse error:', jsonError);
+                throw new Error('Invalid server response. Please try again.');
+            }
 
-                const result = await response.json();
-                
-                if (result.success) {
-                    successMessage.textContent = result.message;
-                    showPopup(successPopup);
-                    startCountdown('success-countdown', 'add_member.php');
-                } else {
-                    errorMessage.textContent = result.message;
-                    showPopup(errorPopup);
-                    startCountdown('error-countdown', 'add_member.php');
-                }
-            } catch (error) {
-                errorMessage.textContent = 'An error occurred. Please try again.';
+            if (result.success) {
+                successMessage.textContent = result.message;
+                showPopup(successPopup);
+                startCountdown('success-countdown', 'add_member.php');
+            } else {
+                errorMessage.textContent = result.message;
                 showPopup(errorPopup);
                 startCountdown('error-countdown', 'add_member.php');
             }
+        } catch (error) {
+            console.error('Submission error:', error);
+            errorMessage.textContent = 'An unexpected error occurred: ' + error.message;
+            showPopup(errorPopup);
+            startCountdown('error-countdown', 'add_member.php');
+        }
+    });
+
+    // Form validation function
+    function validateForm() {
+        let isValid = true;
+
+        // Validate mandatory member fields
+        const requiredFields = form.querySelectorAll('.input-field[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                const errorElement = field.nextElementSibling;
+                if (errorElement && errorElement.classList.contains('error-text')) {
+                    errorElement.classList.add('show');
+                }
+                isValid = false;
+            } else {
+                const errorElement = field.nextElementSibling;
+                if (errorElement && errorElement.classList.contains('error-text')) {
+                    errorElement.classList.remove('show');
+                }
+            }
         });
 
-        // Add form validation function
-        function validateForm() {
-            let isValid = true;
-            const requiredFields = form.querySelectorAll('[required]');
-            
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    const errorElement = field.nextElementSibling;
-                    if (errorElement && errorElement.classList.contains('error-text')) {
-                        errorElement.classList.add('show');
-                    }
-                    isValid = false;
-                }
-            });
-
-            return isValid;
+        // Additional validations for member fields
+        const memberId = document.getElementById('member_id');
+        if (memberId && (!/^\d+$/.test(memberId.value) || parseInt(memberId.value) <= 0)) {
+            const errorElement = memberId.nextElementSibling;
+            if (errorElement) errorElement.classList.add('show');
+            isValid = false;
         }
 
-        updateProgress();
-    });
+        const contactNumber = document.getElementById('contact_number');
+        if (contactNumber && !/^\+94\d{9}$/.test(contactNumber.value)) {
+            const errorElement = contactNumber.nextElementSibling;
+            if (errorElement) errorElement.classList.add('show');
+            isValid = false;
+        }
+
+        const email = document.getElementById('email');
+        if (email && email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+            const errorElement = email.nextElementSibling;
+            if (errorElement) errorElement.classList.add('show');
+            isValid = false;
+        }
+
+        const contributionAmount = document.getElementById('contribution_amount');
+        if (contributionAmount && (!contributionAmount.value || parseFloat(contributionAmount.value) <= 0)) {
+            const errorElement = contributionAmount.nextElementSibling;
+            if (errorElement) errorElement.classList.add('show');
+            isValid = false;
+        }
+
+        // Validate spouse details (optional)
+        const spouseName = document.getElementById('spouse_name');
+        const spouseAge = document.getElementById('spouse_age');
+        const spouseGender = document.getElementById('spouse_gender');
+        if (spouseName && spouseName.value.trim()) {
+            if (!spouseName.value.trim()) {
+                const errorElement = spouseName.nextElementSibling;
+                if (errorElement) errorElement.classList.add('show');
+                isValid = false;
+            }
+            if (spouseAge.value && (parseInt(spouseAge.value) < 0 || parseInt(spouseAge.value) > 120)) {
+                const errorElement = spouseAge.nextElementSibling;
+                if (errorElement) errorElement.classList.add('show');
+                isValid = false;
+            }
+        }
+
+        // Validate children details (optional)
+        const childrenEntries = document.querySelectorAll('#children-list .entry-card');
+        childrenEntries.forEach((entry, index) => {
+            const nameInput = entry.querySelector(`input[name="children[${index}][name]"]`);
+            const ageInput = entry.querySelector(`input[name="children[${index}][age]"]`);
+            const genderInput = entry.querySelector(`select[name="children[${index}][gender]"]`);
+
+            if (nameInput.value.trim() || ageInput.value || genderInput.value) {
+                if (!nameInput.value.trim()) {
+                    const errorElement = nameInput.nextElementSibling;
+                    if (errorElement) errorElement.classList.add('show');
+                    isValid = false;
+                }
+                if (!ageInput.value || parseInt(ageInput.value) < 0 || parseInt(ageInput.value) > 120) {
+                    const errorElement = ageInput.nextElementSibling;
+                    if (errorElement) errorElement.classList.add('show');
+                    isValid = false;
+                }
+                if (!genderInput.value) {
+                    const errorElement = genderInput.nextElementSibling;
+                    if (errorElement) errorElement.classList.add('show');
+                    isValid = false;
+                }
+            }
+        });
+
+        // Validate dependents details (optional)
+        const dependentsEntries = document.querySelectorAll('#dependents-list .entry-card');
+        dependentsEntries.forEach((entry, index) => {
+            const nameInput = entry.querySelector(`input[name="dependents[${index}][name]"]`);
+            const relationshipInput = entry.querySelector(`select[name="dependents[${index}][relationship]"]`);
+            const ageInput = entry.querySelector(`input[name="dependents[${index}][age]"]`);
+
+            if (nameInput.value.trim() || relationshipInput.value || ageInput.value) {
+                if (!nameInput.value.trim()) {
+                    const errorElement = nameInput.nextElementSibling;
+                    if (errorElement) errorElement.classList.add('show');
+                    isValid = false;
+                }
+                if (!relationshipInput.value) {
+                    const errorElement = relationshipInput.nextElementSibling;
+                    if (errorElement) errorElement.classList.add('show');
+                    isValid = false;
+                }
+                if (ageInput.value && (parseInt(ageInput.value) < 0 || parseInt(ageInput.value) > 120)) {
+                    const errorElement = ageInput.nextElementSibling;
+                    if (errorElement) errorElement.classList.add('show');
+                    isValid = false;
+                }
+            }
+        });
+
+        return isValid;
+    }
+
+    updateProgress();
+});
 </script>
 </body>
 </html>
