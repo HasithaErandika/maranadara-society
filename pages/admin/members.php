@@ -238,27 +238,60 @@ try {
                 }
             } elseif (isset($_POST['update_family'])) {
                 $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
-                $spouse_name = trim($_POST['spouse_name'] ?? '');
-                $children_info = isset($_POST['children']) ? array_filter(array_map('trim', $_POST['children'])) : [];
-                $dependents_info = isset($_POST['dependents']) ? array_filter(array_map('trim', $_POST['dependents'])) : [];
+                
+                // Process spouse data
+                $spouse_data = null;
+                if (!empty($_POST['spouse_name'])) {
+                    $spouse_data = [
+                        'name' => trim($_POST['spouse_name']),
+                        'age' => !empty($_POST['spouse_age']) ? (int)$_POST['spouse_age'] : null,
+                        'gender' => !empty($_POST['spouse_gender']) ? trim($_POST['spouse_gender']) : null
+                    ];
+                }
+
+                // Process children data
+                $children_data = [];
+                if (isset($_POST['children']) && is_array($_POST['children'])) {
+                    foreach ($_POST['children'] as $child) {
+                        if (!empty(trim($child['name']))) {
+                            $children_data[] = [
+                                'name' => trim($child['name']),
+                                'age' => !empty($child['age']) ? (int)$child['age'] : null,
+                                'gender' => !empty($child['gender']) ? trim($child['gender']) : null
+                            ];
+                        }
+                    }
+                }
+
+                // Process dependents data
+                $dependents_data = [];
+                if (isset($_POST['dependents']) && is_array($_POST['dependents'])) {
+                    foreach ($_POST['dependents'] as $dependent) {
+                        if (!empty(trim($dependent['name']))) {
+                            $dependents_data[] = [
+                                'name' => trim($dependent['name']),
+                                'relationship' => !empty($dependent['relationship']) ? trim($dependent['relationship']) : null,
+                                'age' => !empty($dependent['age']) ? (int)$dependent['age'] : null
+                            ];
+                        }
+                    }
+                }
 
                 if (!$member_id) {
                     throw new Exception("Invalid member ID.");
                 }
 
-                $data = [
-                    'spouse_name' => $spouse_name,
-                    'children_info' => implode(', ', $children_info),
-                    'dependents_info' => implode(', ', $dependents_info)
-                ];
-
-                if ($family->updateFamilyDetails($member_id, $data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
-                    exit;
-                } else {
-                    throw new Exception("Failed to update family details.");
+                try {
+                    if ($family->updateFamilyDetails($member_id, $spouse_data, $children_data, $dependents_data)) {
+                        ob_end_clean();
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
+                        exit;
+                    } else {
+                        throw new Exception("Failed to update family details.");
+                    }
+                } catch (Exception $e) {
+                    throw new Exception("Error updating family details: " . $e->getMessage());
                 }
             }
         } catch (Exception $e) {
@@ -929,30 +962,52 @@ try {
     <div class="modal-content">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
         <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Family Details</h2>
+        <p style="color: #7f8c8d; margin-bottom: 20px; font-size: 0.9rem;">All family details are optional. You can add or remove family members as needed.</p>
         <form id="edit-family-form">
             <input type="hidden" name="member_id" id="edit-family-member-id">
+            
+            <!-- Spouse Section -->
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Spouse</h3>
-                <div class="form-group">
-                    <label for="edit-spouse-name" class="form-label">Spouse Name</label>
-                    <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field" aria-describedby="edit-spouse-name-error">
-                    <span class="error-text" id="edit-spouse-name-error">Invalid spouse name.</span>
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Spouse Information (Optional)</h3>
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="edit-spouse-name" class="form-label">Spouse Name</label>
+                        <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-spouse-age" class="form-label">Spouse Age</label>
+                        <input type="number" name="spouse_age" id="edit-spouse-age" class="input-field" min="0" max="120">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-spouse-gender" class="form-label">Spouse Gender</label>
+                        <select name="spouse_gender" id="edit-spouse-gender" class="input-field">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
                 </div>
             </div>
+
+            <!-- Children Section -->
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Children</h3>
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Children (Optional)</h3>
                 <div id="children-container" class="dynamic-fields">
                     <!-- Dynamic children inputs will be added here -->
                 </div>
                 <button type="button" class="btn btn-secondary add-field" id="add-child"><i class="ri-add-line"></i> Add Child</button>
             </div>
+
+            <!-- Dependents Section -->
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Dependents</h3>
+                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Dependents (Optional)</h3>
                 <div id="dependents-container" class="dynamic-fields">
                     <!-- Dynamic dependents inputs will be added here -->
                 </div>
                 <button type="button" class="btn btn-secondary add-field" id="add-dependent"><i class="ri-add-line"></i> Add Dependent</button>
             </div>
+
             <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
                 <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
@@ -981,372 +1036,10 @@ try {
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const editModal = document.getElementById('edit-modal');
-    const editDetailsModal = document.getElementById('edit-details-modal');
-    const editFamilyModal = document.getElementById('edit-family-modal');
-    const deleteModal = document.getElementById('delete-modal');
-    const overlay = document.getElementById('overlay');
-    const editButtons = document.querySelectorAll('.edit-btn');
-    const editDetailsButtons = document.querySelectorAll('.edit-details-btn');
-    const editFamilyButtons = document.querySelectorAll('.edit-family-btn');
-    const deleteButtons = document.querySelectorAll('.delete-btn');
-    const closeButtons = document.querySelectorAll('.modal-close');
-    const accordionHeaders = document.querySelectorAll('.accordion-header');
-    const searchInput = document.getElementById('search-input');
-    const clearSearch = document.getElementById('clear-search');
-    const editForm = document.getElementById('edit-form');
-    const editDetailsForm = document.getElementById('edit-details-form');
-    const editFamilyForm = document.getElementById('edit-family-form');
-    const deleteForm = document.getElementById('delete-form');
-    const searchForm = document.getElementById('search-form');
-    const searchLoading = document.getElementById('search-loading');
-    const successPopup = document.getElementById('success-popup');
-    const errorPopup = document.getElementById('error-popup');
-    const cancelPopup = document.getElementById('cancel-popup');
-    const successMessage = document.getElementById('success-message');
-    const errorMessage = document.getElementById('error-message');
-
-    // Show popups if messages exist
-    const successMsg = <?php echo $js_success; ?>;
-    const errorMsg = <?php echo $js_error; ?>;
-
-    if (successMsg && successMsg !== '') {
-        successMessage.textContent = successMsg;
-        showPopup(successPopup);
-        startCountdown('success-countdown', window.location.href);
-    } else if (errorMsg && errorMsg !== '') {
-        errorMessage.textContent = errorMsg;
-        showPopup(errorPopup);
-        startCountdown('error-countdown', window.location.href);
-    }
-
-    function showPopup(popup) {
-        overlay.classList.add('show');
-        popup.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function hidePopup(popup) {
-        overlay.classList.remove('show');
-        popup.classList.remove('show');
-        document.body.style.overflow = '';
-    }
-
-    function startCountdown(elementId, redirectUrl) {
-        let timeLeft = 3;
-        const countdown = document.getElementById(elementId);
-        if (countdown) {
-            const interval = setInterval(() => {
-                timeLeft--;
-                countdown.textContent = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    window.location.href = redirectUrl;
-                }
-            }, 1000);
-        }
-    }
-
-    function showModal(modal) {
-        modal.classList.add('show');
-        overlay.classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    function hideModal(modal) {
-        modal.classList.remove('show');
-        overlay.classList.remove('show');
-        document.body.style.overflow = '';
-    }
-
-    // Edit modal (Manage Members)
-    editButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            try {
-                const member = JSON.parse(button.getAttribute('data-member') || '{}');
-                document.getElementById('edit-id').value = member.id || '';
-                document.getElementById('edit-full_name').value = member.full_name || '';
-                document.getElementById('edit-contact_number').value = member.contact_number || '';
-                document.getElementById('edit-membership_type').value = member.membership_type || 'Individual';
-                document.getElementById('edit-payment_status').value = member.payment_status || 'Active';
-                document.getElementById('edit-member_status').value = member.member_status || 'Active';
-                showModal(editModal);
-            } catch (e) {
-                console.error('Failed to parse member data:', e);
-                errorMessage.textContent = 'Error loading member data. Please try again.';
-                showPopup(errorPopup);
-            }
-        });
-    });
-
-    // Edit details modal (Member Details)
-    editDetailsButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            try {
-                const member = JSON.parse(button.getAttribute('data-member') || '{}');
-                document.getElementById('edit-details-id').value = member.id || '';
-                document.getElementById('edit-details-full_name').value = member.full_name || '';
-                document.getElementById('edit-details-date_of_birth').value = member.date_of_birth || '';
-                document.getElementById('edit-details-gender').value = member.gender || 'Male';
-                document.getElementById('edit-details-nic_number').value = member.nic_number || '';
-                document.getElementById('edit-details-address').value = member.address || '';
-                document.getElementById('edit-details-contact_number').value = member.contact_number || '';
-                document.getElementById('edit-details-email').value = member.email || '';
-                document.getElementById('edit-details-date_of_joining').value = member.date_of_joining || '';
-                document.getElementById('edit-details-membership_type').value = member.membership_type || 'Individual';
-                document.getElementById('edit-details-payment_status').value = member.payment_status || 'Active';
-                document.getElementById('edit-details-member_status').value = member.member_status || 'Active';
-                showModal(editDetailsModal);
-            } catch (e) {
-                console.error('Failed to parse member data:', e);
-                errorMessage.textContent = 'Error loading member data. Please try again.';
-                showPopup(errorPopup);
-            }
-        });
-    });
-
-    // Edit family modal
-    editFamilyButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            try {
-                const family = JSON.parse(button.getAttribute('data-family') || '{}');
-                const memberId = button.getAttribute('data-member-id');
-                document.getElementById('edit-family-member-id').value = memberId || '';
-                document.getElementById('edit-spouse-name').value = family.spouse_name || '';
-
-                const childrenContainer = document.getElementById('children-container');
-                const dependentsContainer = document.getElementById('dependents-container');
-                childrenContainer.innerHTML = '';
-                dependentsContainer.innerHTML = '';
-
-                const children = family.children_info ? family.children_info.split(', ') : [];
-                children.forEach(child => {
-                    if (child) addDynamicField(childrenContainer, 'children[]', child);
-                });
-                if (children.length === 0) addDynamicField(childrenContainer, 'children[]', '');
-
-                const dependents = family.dependents_info ? family.dependents_info.split(', ') : [];
-                dependents.forEach(dependent => {
-                    if (dependent) addDynamicField(dependentsContainer, 'dependents[]', dependent);
-                });
-                if (dependents.length === 0) addDynamicField(dependentsContainer, 'dependents[]', '');
-
-                showModal(editFamilyModal);
-            } catch (e) {
-                console.error('Failed to parse family data:', e);
-                errorMessage.textContent = 'Error loading family data. Please try again.';
-                showPopup(errorPopup);
-            }
-        });
-    });
-
-    function addDynamicField(container, name, value = '') {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'form-group dynamic-field';
-        fieldDiv.innerHTML = `
-            <input type="text" name="${name}" class="input-field" value="${value}" aria-label="${name}">
-            <button type="button" class="btn-icon remove-field"><i class="ri-delete-bin-line"></i></button>
-        `;
-        container.appendChild(fieldDiv);
-
-        fieldDiv.querySelector('.remove-field').addEventListener('click', () => {
-            if (container.children.length > 1) {
-                fieldDiv.remove();
-            }
-        });
-    }
-
-    document.getElementById('add-child').addEventListener('click', () => {
-        addDynamicField(document.getElementById('children-container'), 'children[]', '');
-    });
-
-    document.getElementById('add-dependent').addEventListener('click', () => {
-        addDynamicField(document.getElementById('dependents-container'), 'dependents[]', '');
-    });
-
-    // Delete modal
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const id = button.getAttribute('data-id');
-            document.getElementById('delete-id').value = id;
-            showModal(deleteModal);
-        });
-    });
-
-    // Close modals
-    closeButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const modal = button.closest('.modal');
-            if (modal) {
-                hideModal(modal);
-            }
-        });
-    });
-
-    // Accordion toggle
-    accordionHeaders.forEach(header => {
-        header.addEventListener('click', () => {
-            const targetId = header.getAttribute('data-target');
-            const content = document.getElementById(targetId);
-            const isActive = content.classList.contains('active');
-            document.querySelectorAll('.accordion-content').forEach(c => {
-                c.classList.remove('active');
-            });
-            if (!isActive) {
-                content.classList.add('active');
-            }
-        });
-    });
-
-    // Edit form submission with validation
-    editForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const contactNumber = document.getElementById('edit-contact_number').value;
-        if (!/^\+94\d{9}$/.test(contactNumber)) {
-            document.getElementById('edit-contact_number-error').classList.add('show');
-            return;
-        }
-        const formData = new FormData(editForm);
-        formData.append('update', 'true');
-
-        try {
-            const response = await fetch('', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            const result = await response.json();
-            if (result.success) {
-                successMessage.textContent = result.message;
-                showPopup(successPopup);
-                startCountdown('success-countdown', window.location.href);
-            } else {
-                errorMessage.textContent = result.message;
-                showPopup(errorPopup);
-            }
-        } catch (error) {
-            console.error('Error submitting edit form:', error);
-            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
-            showPopup(errorPopup);
-        }
-    });
-
-    // Edit details form submission with validation
-    editDetailsForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const contactNumber = document.getElementById('edit-details-contact_number').value;
-        if (!/^\+94\d{9}$/.test(contactNumber)) {
-            document.getElementById('edit-details-contact_number-error').classList.add('show');
-            return;
-        }
-        const formData = new FormData(editDetailsForm);
-        formData.append('update_details', 'true');
-
-        try {
-            const response = await fetch('', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            const result = await response.json();
-            if (result.success) {
-                successMessage.textContent = result.message;
-                showPopup(successPopup);
-                startCountdown('success-countdown', window.location.href);
-            } else {
-                errorMessage.textContent = result.message;
-                showPopup(errorPopup);
-            }
-        } catch (error) {
-            console.error('Error submitting edit details form:', error);
-            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
-            showPopup(errorPopup);
-        }
-    });
-
-    // Edit family form submission
-    editFamilyForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(editFamilyForm);
-        formData.append('update_family', 'true');
-
-        try {
-            const response = await fetch('', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            const result = await response.json();
-            if (result.success) {
-                successMessage.textContent = result.message;
-                showPopup(successPopup);
-                startCountdown('success-countdown', window.location.href);
-            } else {
-                errorMessage.textContent = result.message;
-                showPopup(errorPopup);
-            }
-        } catch (error) {
-            console.error('Error submitting family form:', error);
-            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
-            showPopup(errorPopup);
-        }
-    });
-
-    // Delete form submission
-    deleteForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData(deleteForm);
-        formData.append('delete', 'true');
-
-        try {
-            const response = await fetch('', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            const result = await response.json();
-            if (result.success) {
-                successMessage.textContent = result.message;
-                showPopup(successPopup);
-                startCountdown('success-countdown', 'members.php');
-            } else {
-                errorMessage.textContent = result.message;
-                showPopup(errorPopup);
-            }
-        } catch (error) {
-            console.error('Error submitting delete form:', error);
-            errorMessage.textContent = 'An unexpected error occurred. Please try again.';
-            showPopup(errorPopup);
-        }
-    });
-
-    // Search functionality
-    if (searchInput && clearSearch) {
-        let searchTimeout;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchLoading.classList.add('show');
-            searchTimeout = setTimeout(() => {
-                searchLoading.classList.remove('show');
-                searchForm.submit();
-            }, 500);
-        });
-
-        clearSearch.addEventListener('click', () => {
-            searchInput.value = '';
-            searchForm.submit();
-        });
-    }
-});
+    // Make PHP variables available to JavaScript
+    window.successMsg = <?php echo $js_success; ?>;
+    window.errorMsg = <?php echo $js_error; ?>;
 </script>
+<script src="../../assets/js/member.js"></script>
 </body>
 </html>
