@@ -1,0 +1,992 @@
+[11-Apr-2025 09:23:57 America/Chicago] PHP Warning:  include(header.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:23:57 America/Chicago] PHP Warning:  include(): Failed opening 'header.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:23:57 America/Chicago] PHP Warning:  include(sidepanel.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:23:57 America/Chicago] PHP Warning:  include(): Failed opening 'sidepanel.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:23:57 America/Chicago] PHP Warning:  include(footer.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:23:57 America/Chicago] PHP Warning:  include(): Failed opening 'footer.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:25:02 America/Chicago] PHP Warning:  include(header.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:25:02 America/Chicago] PHP Warning:  include(): Failed opening 'header.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:25:02 America/Chicago] PHP Warning:  include(sidepanel.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:25:02 America/Chicago] PHP Warning:  include(): Failed opening 'sidepanel.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:25:02 America/Chicago] PHP Warning:  include(footer.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:25:02 America/Chicago] PHP Warning:  include(): Failed opening 'footer.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:26:18 America/Chicago] PHP Warning:  include(header.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:26:18 America/Chicago] PHP Warning:  include(): Failed opening 'header.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:26:18 America/Chicago] PHP Warning:  include(sidepanel.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:26:18 America/Chicago] PHP Warning:  include(): Failed opening 'sidepanel.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:26:18 America/Chicago] PHP Warning:  include(footer.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:26:18 America/Chicago] PHP Warning:  include(): Failed opening 'footer.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:29:02 America/Chicago] PHP Warning:  include(header.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:29:02 America/Chicago] PHP Warning:  include(): Failed opening 'header.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 145
+[11-Apr-2025 09:29:02 America/Chicago] PHP Warning:  include(sidepanel.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:29:02 America/Chicago] PHP Warning:  include(): Failed opening 'sidepanel.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 147
+[11-Apr-2025 09:29:02 America/Chicago] PHP Warning:  include(footer.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 09:29:02 America/Chicago] PHP Warning:  include(): Failed opening 'footer.php' for inclusion (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 255
+[11-Apr-2025 21:37:37 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 21:41:49 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 21:42:26 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 23:19:48 America/Chicago] PHP Warning:  require_once(header.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 10
+[11-Apr-2025 23:19:48 America/Chicago] PHP Fatal error:  Uncaught Error: Failed opening required 'header.php' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:10
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 10
+[11-Apr-2025 23:21:50 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 23:38:28 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 23:41:53 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 23:42:35 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:44
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(44): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 44
+[11-Apr-2025 23:53:30 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:47
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(47): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 47
+[11-Apr-2025 23:59:02 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:47
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(47): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 47
+[12-Apr-2025 00:00:20 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:47
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(47): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 47
+[12-Apr-2025 00:03:51 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php:47
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(47): mysqli->prepare('SELECT COUNT(*)...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php on line 47
+[12-Apr-2025 00:09:59 America/Chicago] PHP Fatal error:  Uncaught Error: Call to undefined method Member::getAllMembers() in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php:23
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 23
+[12-Apr-2025 00:10:03 America/Chicago] PHP Fatal error:  Uncaught Error: Call to undefined method Member::getAllMembers() in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php:23
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 23
+[12-Apr-2025 00:10:08 America/Chicago] PHP Fatal error:  Uncaught Error: Call to undefined method Member::getAllMembers() in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php:23
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/dashboard.php on line 23
+[12-Apr-2025 00:14:29 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:14:36 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:33:24 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:33:42 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:34:20 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:36:56 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:41:06 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:41:06 America/Chicago] JS Success: ""
+[12-Apr-2025 00:41:06 America/Chicago] JS Error: ""
+[12-Apr-2025 00:41:47 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:41:47 America/Chicago] add_member.php: POST received: Array
+(
+    [member_id] => 2050978
+    [full_name] => Kaligasivaththage Ruwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1987564585
+    [address] => No, 87, Royal Road, Rajagiriya.
+    [contact_number] => +94771499544
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000
+    [payment_status] => Active
+    [member_status] => Active
+    [spouse_name] => Priya Fernando 
+    [children_info] => Sahan:12
+    [dependents_info] => Mother:T.D.Subasinghe, Father:T.D.Jayathissa
+)
+
+[12-Apr-2025 00:41:47 America/Chicago] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Member.php:46
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Member.php(46): mysqli_stmt->bind_param('sssssssssssds', '2050978', 'Kaligasivaththa...', '2025-04-01', 'Male', '1987564585', 'No, 87, Royal R...', '+94771499544', 'sameera@gmail.c...', 'Electrician Aut...', '2025-04-12', 'Individual', 1000.0, 'Active', 'Active')
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/add_member.php(112): Member->addMember('2050978', 'Kaligasivaththa...', '2025-04-01', 'Male', '1987564585', 'No, 87, Royal R...', '+94771499544', 'sameera@gmail.c...', 'Electrician Aut...', '2025-04-12', 'Individual', 1000.0, 'Active', 'Active')
+#2 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Member.php on line 46
+[12-Apr-2025 00:44:11 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:44:11 America/Chicago] add_member.php: POST received: Array
+(
+    [member_id] => 2050978
+    [full_name] => Kaligasivaththage Ruwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1987564585
+    [address] => No, 87, Royal Road, Rajagiriya.
+    [contact_number] => +94771499544
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000
+    [payment_status] => Active
+    [member_status] => Active
+    [spouse_name] => Priya Fernando 
+    [children_info] => Sahan:12
+    [dependents_info] => Mother:T.D.Subasinghe, Father:T.D.Jayathissa
+)
+
+[12-Apr-2025 00:44:11 America/Chicago] Member added successfully: member_id=2050978, full_name=Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 00:44:11 America/Chicago] add_member.php: Success: Member 'Kaligasivaththage Ruwan Sameera Anurudhdha' added successfully!
+[12-Apr-2025 00:44:11 America/Chicago] Inserted member: Array
+(
+    [id] => 1
+    [member_id] => 2050978
+    [full_name] => Kaligasivaththage Ruwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1987564585
+    [address] => No, 87, Royal Road, Rajagiriya.
+    [contact_number] => +94771499544
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000.00
+    [payment_status] => Active
+    [member_status] => Active
+)
+
+[12-Apr-2025 00:44:11 America/Chicago] JS Success: "Member 'Kaligasivaththage Ruwan Sameera Anurudhdha' added successfully!"
+[12-Apr-2025 00:44:11 America/Chicago] JS Error: ""
+[12-Apr-2025 00:44:15 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:44:15 America/Chicago] JS Success: ""
+[12-Apr-2025 00:44:15 America/Chicago] JS Error: ""
+[12-Apr-2025 00:44:56 America/Chicago] Error fetching family details: Invalid member ID: 1
+[12-Apr-2025 00:45:22 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:45:22 America/Chicago] JS Success: ""
+[12-Apr-2025 00:45:22 America/Chicago] JS Error: ""
+[12-Apr-2025 00:49:27 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:49:27 America/Chicago] JS Success: ""
+[12-Apr-2025 00:49:27 America/Chicago] JS Error: ""
+[12-Apr-2025 00:50:04 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:50:04 America/Chicago] JS Success: ""
+[12-Apr-2025 00:50:04 America/Chicago] JS Error: ""
+[12-Apr-2025 00:54:01 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 00:54:01 America/Chicago] JS Success: ""
+[12-Apr-2025 00:54:01 America/Chicago] JS Error: ""
+[12-Apr-2025 00:59:57 America/Chicago] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home3/suramalraj/records.a2zengineering.net/maranadara-society/includes/header.php:9) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/members.php on line 124
+[12-Apr-2025 01:00:12 America/Chicago] Error deleting member: Cannot delete or update a parent row: a foreign key constraint fails (`suramalr_maranadaraDB`.`family_details`, CONSTRAINT `family_details_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `members` (`id`))
+[12-Apr-2025 01:02:51 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:02:51 America/Chicago] JS Success: ""
+[12-Apr-2025 01:02:51 America/Chicago] JS Error: ""
+[12-Apr-2025 01:03:19 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:03:19 America/Chicago] add_member.php: POST received: Array
+(
+    [member_id] => 2050979
+    [full_name] => Kaligasivaththage Ruwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1987564585
+    [address] => No, 87, Royal Road, Rajagiriya.
+    [contact_number] => +94771499544
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000
+    [payment_status] => Pending
+    [member_status] => Active
+    [spouse_name] => Priya Fernando 
+    [children_info] => Sahan:12
+    [dependents_info] => Mother:T.D.Subasinghe, Father:T.D.Jayathissa
+)
+
+[12-Apr-2025 01:03:19 America/Chicago] add_member.php: Error: NIC number '1987564585' already exists.
+[12-Apr-2025 01:03:19 America/Chicago] JS Success: ""
+[12-Apr-2025 01:03:19 America/Chicago] JS Error: "NIC number '1987564585' already exists."
+[12-Apr-2025 01:03:23 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:03:23 America/Chicago] JS Success: ""
+[12-Apr-2025 01:03:23 America/Chicago] JS Error: ""
+[12-Apr-2025 01:04:10 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:04:10 America/Chicago] add_member.php: POST received: Array
+(
+    [member_id] => 2050978
+    [full_name] => Kuwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1984566385
+    [address] => No, 87, Ro
+    [contact_number] => +94771499545
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000
+    [payment_status] => Active
+    [member_status] => Active
+    [spouse_name] => 
+    [children_info] => 
+    [dependents_info] => Mother:T.D.Subasinghe, Father:T.D.Jayathissa
+)
+
+[12-Apr-2025 01:04:10 America/Chicago] add_member.php: Error: Membership ID '2050978' already exists.
+[12-Apr-2025 01:04:10 America/Chicago] JS Success: ""
+[12-Apr-2025 01:04:10 America/Chicago] JS Error: "Membership ID '2050978' already exists."
+[12-Apr-2025 01:04:14 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:04:14 America/Chicago] JS Success: ""
+[12-Apr-2025 01:04:14 America/Chicago] JS Error: ""
+[12-Apr-2025 01:04:42 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:04:42 America/Chicago] add_member.php: POST received: Array
+(
+    [member_id] => 561531231
+    [full_name] => Kuwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1984566385
+    [address] => No, 87, Ro
+    [contact_number] => +94771499545
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000
+    [payment_status] => Active
+    [member_status] => Active
+    [spouse_name] => 
+    [children_info] => 
+    [dependents_info] => Mother:T.D.Subasinghe, Father:T.D.Jayathissa
+)
+
+[12-Apr-2025 01:04:42 America/Chicago] Member added successfully: member_id=561531231, full_name=Kuwan Sameera Anurudhdha
+[12-Apr-2025 01:04:42 America/Chicago] add_member.php: Success: Member 'Kuwan Sameera Anurudhdha' added successfully!
+[12-Apr-2025 01:04:42 America/Chicago] Inserted member: Array
+(
+    [id] => 2
+    [member_id] => 561531231
+    [full_name] => Kuwan Sameera Anurudhdha
+    [date_of_birth] => 2025-04-01
+    [gender] => Male
+    [nic_number] => 1984566385
+    [address] => No, 87, Ro
+    [contact_number] => +94771499545
+    [email] => sameera@gmail.com
+    [occupation] => Electrician Auto/Power
+    [date_of_joining] => 2025-04-12
+    [membership_type] => Individual
+    [contribution_amount] => 1000.00
+    [payment_status] => Active
+    [member_status] => Active
+)
+
+[12-Apr-2025 01:04:42 America/Chicago] JS Success: "Member 'Kuwan Sameera Anurudhdha' added successfully!"
+[12-Apr-2025 01:04:42 America/Chicago] JS Error: ""
+[12-Apr-2025 01:04:46 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:04:46 America/Chicago] JS Success: ""
+[12-Apr-2025 01:04:46 America/Chicago] JS Error: ""
+[12-Apr-2025 01:04:56 America/Chicago] Error fetching family details: Invalid member ID: 2
+[12-Apr-2025 01:05:15 America/Chicago] Error fetching family details: Invalid member ID: 1
+[12-Apr-2025 01:10:13 America/Chicago] Error fetching family details: Invalid member ID: 1
+[12-Apr-2025 01:17:39 America/Chicago] Error deleting member: Cannot delete or update a parent row: a foreign key constraint fails (`suramalr_maranadaraDB`.`family_details`, CONSTRAINT `family_details_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `members` (`id`))
+[12-Apr-2025 01:25:53 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:25:53 America/Chicago] JS Success: ""
+[12-Apr-2025 01:25:53 America/Chicago] JS Error: ""
+[12-Apr-2025 01:26:32 America/Chicago] Error deleting member: Cannot delete or update a parent row: a foreign key constraint fails (`suramalr_maranadaraDB`.`family_details`, CONSTRAINT `family_details_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `members` (`id`))
+[12-Apr-2025 01:26:36 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:26:36 America/Chicago] JS Success: ""
+[12-Apr-2025 01:26:36 America/Chicago] JS Error: ""
+[12-Apr-2025 01:32:51 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:32:51 America/Chicago] JS Success: ""
+[12-Apr-2025 01:32:51 America/Chicago] JS Error: ""
+[12-Apr-2025 01:34:06 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:34:06 America/Chicago] JS Success: ""
+[12-Apr-2025 01:34:06 America/Chicago] JS Error: ""
+[12-Apr-2025 01:34:18 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:34:18 America/Chicago] JS Success: ""
+[12-Apr-2025 01:34:18 America/Chicago] JS Error: ""
+[12-Apr-2025 01:35:01 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:35:01 America/Chicago] add_member.php: POST received: Array
+(
+    [member_id] => 561531232
+    [full_name] => Hasitha Erandika Wickramasinghe
+    [date_of_birth] => 2025-04-02
+    [gender] => Male
+    [nic_number] => 6456546356
+    [address] => 174/A, Annasigalahena,
+    [contact_number] => +94778449035
+    [email] => wickramasinghe.erandika@gmail.com
+    [occupation] => 
+    [date_of_joining] => 2025-04-11
+    [membership_type] => Individual
+    [contribution_amount] => 1000
+    [payment_status] => Active
+    [member_status] => Active
+    [spouse_name] => bhugv
+    [children_info] => 
+    [dependents_info] => 
+)
+
+[12-Apr-2025 01:35:01 America/Chicago] Member added successfully: member_id=561531232, full_name=Hasitha Erandika Wickramasinghe
+[12-Apr-2025 01:35:01 America/Chicago] add_member.php: Success: Member 'Hasitha Erandika Wickramasinghe' added successfully!
+[12-Apr-2025 01:35:01 America/Chicago] Inserted member: Array
+(
+    [id] => 3
+    [member_id] => 561531232
+    [full_name] => Hasitha Erandika Wickramasinghe
+    [date_of_birth] => 2025-04-02
+    [gender] => Male
+    [nic_number] => 6456546356
+    [address] => 174/A, Annasigalahena,
+    [contact_number] => +94778449035
+    [email] => wickramasinghe.erandika@gmail.com
+    [occupation] => 
+    [date_of_joining] => 2025-04-11
+    [membership_type] => Individual
+    [contribution_amount] => 1000.00
+    [payment_status] => Active
+    [member_status] => Active
+)
+
+[12-Apr-2025 01:35:01 America/Chicago] JS Success: "Member 'Hasitha Erandika Wickramasinghe' added successfully!"
+[12-Apr-2025 01:35:01 America/Chicago] JS Error: ""
+[12-Apr-2025 01:35:04 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:35:04 America/Chicago] JS Success: ""
+[12-Apr-2025 01:35:04 America/Chicago] JS Error: ""
+[12-Apr-2025 01:38:23 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:38:23 America/Chicago] JS Success: ""
+[12-Apr-2025 01:38:23 America/Chicago] JS Error: ""
+[12-Apr-2025 01:38:50 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:38:50 America/Chicago] JS Success: ""
+[12-Apr-2025 01:38:50 America/Chicago] JS Error: ""
+[12-Apr-2025 01:39:04 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 01:39:04 America/Chicago] JS Success: ""
+[12-Apr-2025 01:39:04 America/Chicago] JS Error: ""
+[12-Apr-2025 01:43:38 America/Chicago] Error fetching family details: Invalid member ID: 1
+[12-Apr-2025 01:44:37 America/Chicago] Error fetching family details: Invalid member ID: 1
+[12-Apr-2025 01:45:16 America/Chicago] Error fetching family details: Invalid member ID: 1
+[12-Apr-2025 01:45:44 America/Chicago] Error fetching family details: Invalid member ID: 2
+[12-Apr-2025 01:45:49 America/Chicago] Error fetching family details: Invalid member ID: 3
+[12-Apr-2025 02:30:19 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 02:30:19 America/Chicago] JS Success: ""
+[12-Apr-2025 02:30:19 America/Chicago] JS Error: ""
+[12-Apr-2025 02:30:44 America/Chicago] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home3/suramalraj/records.a2zengineering.net/maranadara-society/includes/header.php:9) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/incidents.php on line 57
+[12-Apr-2025 02:31:55 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 02:32:03 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 02:42:17 America/Chicago] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home3/suramalraj/records.a2zengineering.net/maranadara-society/includes/header.php:9) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/incidents.php on line 58
+[12-Apr-2025 02:42:38 America/Chicago] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home3/suramalraj/records.a2zengineering.net/maranadara-society/includes/header.php:9) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/incidents.php on line 57
+[12-Apr-2025 02:42:45 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 02:42:45 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 02:43:04 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 02:45:29 America/Chicago] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home3/suramalraj/records.a2zengineering.net/maranadara-society/includes/header.php:9) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/incidents.php on line 57
+[12-Apr-2025 02:45:33 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 02:45:54 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:10:59 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:18:20 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:19:22 America/Chicago] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home3/suramalraj/records.a2zengineering.net/maranadara-society/includes/header.php:9) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/incidents.php on line 57
+[12-Apr-2025 03:19:33 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:19:33 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:01 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:01 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:28 America/Chicago] Error fetching member by ID: Invalid member ID: 3
+[12-Apr-2025 03:26:28 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:28 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:48 America/Chicago] Error fetching member by ID: Invalid member ID: 3
+[12-Apr-2025 03:26:48 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:48 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:51 America/Chicago] Error fetching member by ID: Invalid member ID: 3
+[12-Apr-2025 03:26:51 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:26:51 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:28:04 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:28:04 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:28:07 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:28:07 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:28:13 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:28:16 America/Chicago] Error fetching member by ID: Invalid member ID: 1
+[12-Apr-2025 03:31:58 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 03:33:13 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 03:33:13 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 03:39:15 America/Chicago] Fetched member for member_id: 561531232, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 03:39:37 America/Chicago] No member found for member_id: 2
+[12-Apr-2025 03:39:37 America/Chicago] No member found for member_id: 1
+[12-Apr-2025 03:39:45 America/Chicago] No member found for member_id: 2
+[12-Apr-2025 03:39:45 America/Chicago] No member found for member_id: 1
+[12-Apr-2025 03:41:23 America/Chicago] No member found for member_id: 2
+[12-Apr-2025 03:41:23 America/Chicago] No member found for member_id: 1
+[12-Apr-2025 04:02:01 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 04:02:05 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 04:02:05 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 04:02:05 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 04:02:24 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 04:02:24 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 04:02:27 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 04:02:27 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 04:02:32 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 04:02:35 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 04:33:57 America/Chicago] Fetched member for member_id: 561531231, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 04:36:14 America/Chicago] Fetched member for member_id: 561531231, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 04:36:14 America/Chicago] Error adding incident: Cannot add or update a child row: a foreign key constraint fails (`suramalr_maranadaraDB`.`incidents`, CONSTRAINT `incidents_ibfk_1` FOREIGN KEY (`member_id`) REFERENCES `members` (`id`))
+[12-Apr-2025 05:47:27 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 05:47:27 America/Chicago] JS Success: ""
+[12-Apr-2025 05:47:27 America/Chicago] JS Error: ""
+[12-Apr-2025 05:47:53 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 05:47:57 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 05:47:57 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 05:48:07 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 05:48:11 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 05:57:00 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 05:57:14 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 77
+[12-Apr-2025 05:57:14 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:04:02 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:05:26 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:09:56 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:16:27 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:16:27 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:17:19 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:17:19 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:23:38 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:23:38 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:23:45 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 78
+[12-Apr-2025 06:23:45 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:23:45 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:35:30 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:35:34 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php:52
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php(52): mysqli->prepare('SELECT status F...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 52
+[12-Apr-2025 06:35:38 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:36:49 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:36:49 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:36:58 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:36:58 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:37:05 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:37:05 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:37:09 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:37:09 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:37:13 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:37:13 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:37:37 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:37:37 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:37:42 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 78
+[12-Apr-2025 06:37:42 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:37:42 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:37:45 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 78
+[12-Apr-2025 06:37:45 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:37:45 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:43:58 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 77
+[12-Apr-2025 06:43:58 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:43:58 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:45:17 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:45:17 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:45:34 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:45:34 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:45:34 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:45:43 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 06:45:43 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 06:52:26 America/Chicago] PHP Fatal error:  Uncaught TypeError: number_format(): Argument #1 ($num) must be of type int|float, string given in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php:501
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php(501): number_format('50,000.00', 2)
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 501
+[12-Apr-2025 07:07:14 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:07:18 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php:52
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php(52): mysqli->prepare('SELECT status F...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 52
+[12-Apr-2025 07:14:48 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:15:21 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:15:21 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:15:31 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php:56
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php(56): mysqli->begin_transaction()
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 56
+[12-Apr-2025 07:21:25 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:21:25 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:21:31 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:21:31 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:21:34 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 103
+[12-Apr-2025 07:21:34 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:21:34 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:21:37 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:21:37 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:21:41 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php:56
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php(56): mysqli->begin_transaction()
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 56
+[12-Apr-2025 07:21:42 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:21:42 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:22:57 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:22:57 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:22:57 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:23:04 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php on line 103
+[12-Apr-2025 07:23:04 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:23:04 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:23:04 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:23:07 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:23:07 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:23:07 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:26:48 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:26:48 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:26:48 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:26:52 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Loan.php:177
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Loan.php(177): mysqli->prepare('SELECT status F...')
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/loans.php(52): Loan->deleteLoan(3)
+#2 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Loan.php on line 177
+[12-Apr-2025 07:26:54 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:26:54 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:26:54 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:34:14 America/Chicago] add_member.php: Session: Array
+(
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[12-Apr-2025 07:34:14 America/Chicago] JS Success: ""
+[12-Apr-2025 07:34:14 America/Chicago] JS Error: ""
+[12-Apr-2025 07:34:26 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:34:26 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:34:26 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:34:30 America/Chicago] Loan ID 3 deleted by user suramalr_hasitha
+[12-Apr-2025 07:34:30 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:34:30 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:34:34 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:34:34 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:35:27 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:35:33 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:35:37 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:38:23 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:38:23 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:43:31 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:43:31 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:43:36 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:43:36 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:43:40 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:43:40 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:44:07 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:44:07 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:44:07 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:44:12 America/Chicago] Loan ID 3 deleted by user suramalr_hasitha
+[12-Apr-2025 07:44:12 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:44:12 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:44:15 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:44:15 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:57:28 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 07:57:28 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:59:39 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 07:59:39 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 07:59:39 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:00:05 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php on line 119
+[12-Apr-2025 08:00:05 America/Chicago] PHP Warning:  Undefined array key "user" in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php on line 120
+[12-Apr-2025 08:00:05 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:00:05 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:00:05 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:25:37 America/Chicago] Error in payments.php: Error confirming payment or already confirmed.
+[12-Apr-2025 08:25:37 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:25:37 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:25:37 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:25:46 America/Chicago] PHP Fatal error:  Uncaught Error: mysqli object is already closed in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php:100
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php(100): mysqli->prepare('SELECT is_confi...')
+#1 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php on line 100
+[12-Apr-2025 08:25:48 America/Chicago] Error in payments.php: Error confirming payment or already confirmed.
+[12-Apr-2025 08:25:48 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:25:48 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:25:48 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:25:58 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:25:58 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:25:58 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:26:24 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:26:24 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:26:24 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:26:40 America/Chicago] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php:95
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php(95): mysqli_stmt->bind_param('idssssisis', 3, 5500.0, '2025-04-01', 'Cash', 'Loan Settlement', 'Monthly Loan Se...', 1, false, NULL)
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php(42): Payment->autoAddLoanSettlements('2025-04-01')
+#2 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php on line 95
+[12-Apr-2025 08:26:44 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:26:44 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:26:44 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:37:12 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:37:12 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:37:12 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:37:21 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 08:37:21 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 08:37:21 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 08:37:40 America/Chicago] PHP Fatal error:  Uncaught Error: Call to undefined method Payment::deletePayment() in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php:111
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php on line 111
+[12-Apr-2025 21:30:44 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 21:30:44 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 21:30:44 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 21:31:02 America/Chicago] PHP Warning:  require_once(../classes/Payment.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 21:31:02 America/Chicago] PHP Fatal error:  Uncaught Error: Failed opening required '../classes/Payment.php' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php:2
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:14:42 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:14:42 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:14:58 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:14:58 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:14:58 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:15:07 America/Chicago] PHP Warning:  require_once(../classes/Payment.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:15:07 America/Chicago] PHP Fatal error:  Uncaught Error: Failed opening required '../classes/Payment.php' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php:2
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:15:09 America/Chicago] PHP Warning:  require_once(../classes/Payment.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:15:09 America/Chicago] PHP Fatal error:  Uncaught Error: Failed opening required '../classes/Payment.php' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php:2
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:15:23 America/Chicago] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php:95
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php(95): mysqli_stmt->bind_param('idssssisis', 3, 5500.0, '2025-04-01', 'Cash', 'Loan Settlement', 'Monthly Loan Se...', 1, false, NULL)
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php(44): Payment->autoAddLoanSettlements('2025-04-01')
+#2 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php on line 95
+[12-Apr-2025 22:15:26 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:15:26 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:15:26 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:15:38 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:15:38 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:15:38 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:16:17 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:16:17 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:17:21 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:17:21 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:17:21 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:17:41 America/Chicago] Loan ID 4 deleted by user suramalr_hasitha
+[12-Apr-2025 22:17:41 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:17:41 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:17:44 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:17:44 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:17:51 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:17:51 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:17:51 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:21:50 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:21:50 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:21:50 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:21:53 America/Chicago] PHP Warning:  require_once(../classes/Payment.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:21:53 America/Chicago] PHP Fatal error:  Uncaught Error: Failed opening required '../classes/Payment.php' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php:2
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:22:06 America/Chicago] PHP Warning:  require_once(../classes/Payment.php): Failed to open stream: No such file or directory in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:22:06 America/Chicago] PHP Fatal error:  Uncaught Error: Failed opening required '../classes/Payment.php' (include_path='.:/opt/cpanel/ea-php83/root/usr/share/pear') in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php:2
+Stack trace:
+#0 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/get_loans.php on line 2
+[12-Apr-2025 22:26:13 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:26:13 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:26:13 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:26:41 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:26:41 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:27:02 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:27:02 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:27:14 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:27:14 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:27:14 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:27:50 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:27:50 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:27:50 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:27:55 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:27:55 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:27:55 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:28:29 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:28:29 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:28:29 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:28:35 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:28:35 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:28:35 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:28:55 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:28:55 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:28:55 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:20 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:29:20 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:23 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:29:23 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:29:26 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:29:26 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:30 America/Chicago] Delete payment failed: id=2
+[12-Apr-2025 22:29:30 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:29:30 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:30 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:29:35 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:29:35 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:35 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:29:40 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:40 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:29:49 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:29:49 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:29:53 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:30:03 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:30:03 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:30:03 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:30:23 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:30:23 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:30:23 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:30:42 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:30:42 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:30:42 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:30:44 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:30:44 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:30:44 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[12-Apr-2025 22:30:46 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[12-Apr-2025 22:30:46 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[12-Apr-2025 22:30:46 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[13-Apr-2025 03:18:00 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[13-Apr-2025 03:18:00 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[13-Apr-2025 03:18:00 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[13-Apr-2025 03:18:05 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[13-Apr-2025 03:18:05 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[13-Apr-2025 03:18:05 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[21-Apr-2025 00:42:16 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[21-Apr-2025 00:42:16 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[21-Apr-2025 00:42:16 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[21-Apr-2025 00:43:15 America/Chicago] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php:93
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php(93): mysqli_stmt->bind_param('idssssisis', 3, 5500.0, '2025-04-01', 'Cash', 'Loan Settlement', 'Monthly Loan Se...', 1, false, NULL)
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/admin/payments.php(42): Payment->autoAddLoanSettlements('2025-04-01')
+#2 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Payment.php on line 93
+[21-Apr-2025 00:43:17 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[21-Apr-2025 00:43:17 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[21-Apr-2025 00:43:17 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[21-Apr-2025 00:43:22 America/Chicago] Fetched member for ID: 1, Name: Kaligasivaththage Ruwan Sameera Anurudhdha
+[21-Apr-2025 00:43:22 America/Chicago] Fetched member for ID: 2, Name: Kuwan Sameera Anurudhdha
+[21-Apr-2025 00:43:22 America/Chicago] Fetched member for ID: 3, Name: Hasitha Erandika Wickramasinghe
+[21-Apr-2025 00:43:39 America/Chicago] add_member.php: Session: Array
+(
+    [csrf_token] => c2b37141d429074cc9ba1e2b9538d0de513c8571d85efc66cb4d5fd2ca884335
+    [db_username] => suramalr_hasitha
+    [db_password] => Login@123456
+    [role] => admin
+)
+
+[21-Apr-2025 00:43:39 America/Chicago] JS Success: ""
+[21-Apr-2025 00:43:39 America/Chicago] JS Error: ""
+[21-Apr-2025 00:43:46 America/Chicago] Error fetching family details: Invalid member ID: 1

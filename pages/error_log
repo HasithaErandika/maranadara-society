@@ -1,0 +1,21 @@
+[09-Apr-2025 11:36:07 America/Chicago] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php:8
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php(8): mysqli->__construct('localhost', 'root', Object(SensitiveParameterValue), 'maranadara_db')
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/User.php(8): Database->__construct()
+#2 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/login.php(7): User->__construct()
+#3 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php on line 8
+[09-Apr-2025 11:40:58 America/Chicago] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php:8
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php(8): mysqli->__construct('localhost', 'root', Object(SensitiveParameterValue), 'maranadara_db')
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/User.php(8): Database->__construct()
+#2 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/login.php(7): User->__construct()
+#3 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php on line 8
+[11-Apr-2025 08:00:16 America/Chicago] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'root'@'localhost' (using password: NO) in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php:8
+Stack trace:
+#0 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php(8): mysqli->__construct('localhost', 'root', Object(SensitiveParameterValue), 'maranadara_db')
+#1 /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/User.php(8): Database->__construct()
+#2 /home3/suramalraj/records.a2zengineering.net/maranadara-society/pages/login.php(7): User->__construct()
+#3 {main}
+  thrown in /home3/suramalraj/records.a2zengineering.net/maranadara-society/classes/Database.php on line 8

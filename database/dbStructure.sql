@@ -28,10 +28,8 @@ CREATE TABLE incidents (
                            member_id INT NOT NULL,
                            incident_type VARCHAR(50) NOT NULL,
                            incident_datetime DATETIME NOT NULL,
-                           reporter_name VARCHAR(100) NOT NULL,
-                           reporter_member_id VARCHAR(10) NOT NULL,
                            remarks TEXT,
-                           FOREIGN KEY (member_id) REFERENCES members(id)
+                           FOREIGN KEY (member_id) REFERENCES members(member_id)
 );
 
 -- Table: documents
@@ -45,15 +43,35 @@ CREATE TABLE documents (
                            FOREIGN KEY (member_id) REFERENCES members(id)
 );
 
--- Table: family_details
-CREATE TABLE family_details (
-                                id INT AUTO_INCREMENT PRIMARY KEY,
-                                member_id INT NOT NULL,
-                                spouse_name VARCHAR(100),
-                                children_info TEXT, -- Could be JSON or comma-separated string
-                                dependents_info TEXT, -- Could be JSON or comma-separated string
-                                FOREIGN KEY (member_id) REFERENCES members(id)
-);
+CREATE TABLE IF NOT EXISTS family_details (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    member_id INT NOT NULL,
+    spouse_name VARCHAR(100),
+    spouse_age INT,
+    spouse_gender ENUM('Male', 'Female', 'Other'),
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_member_spouse (member_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Create children table
+CREATE TABLE IF NOT EXISTS children (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    member_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    age INT NOT NULL,
+    gender ENUM('Male', 'Female', 'Other') NOT NULL,
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Create dependents table
+CREATE TABLE IF NOT EXISTS dependents (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    member_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    relationship VARCHAR(50) NOT NULL,
+    age INT,
+    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci; 
 
 -- Table: loans
 CREATE TABLE loans (

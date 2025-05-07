@@ -53,8 +53,8 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
             --text-primary: #111827;
             --text-secondary: #6B7280;
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --sidebar-width: 64px;
-            --sidebar-expanded: 240px;
+            --sidebar-width: 100px;
+            --sidebar-expanded: 240px; /* Increased for better visibility of expansion */
         }
 
         body {
@@ -63,16 +63,35 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
             font-family: 'Inter', sans-serif;
             margin: 0;
             line-height: 1.5;
+            position: relative; /* Needed for absolute positioning of sidebar */
         }
 
         .main-content {
-            margin-left: calc(var(--sidebar-width) + 32px);
-            transition: margin-left 0.3s ease;
+            margin-left: 300px; /* Initial left margin to avoid overlap with the default sidebar */
+            transition: margin-left 0.3s ease; /* You can keep this for other potential margin changes */
+            padding: 20px; /* Add some padding around the content */
         }
 
-        .sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content {
-            margin-left: calc(var(--sidebar-expanded) + 32px);
+        .sidebar {
+            position: absolute; /* Take it out of the normal flow */
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 10%; /* Make it full height */
+            background: var(--card-bg); /* Give it a background */
+            box-shadow: var(--shadow);
+            transition: width 0.3s ease;
+            z-index: 10; /* Ensure it's on top of the content */
         }
+
+        .sidebar:hover, .sidebar.expanded {
+            width: var(--sidebar-expanded);
+        }
+
+        /* Remove the rules that were shifting the main content */
+        /* .sidebar:hover ~ .main-content, .sidebar.expanded ~ .main-content {
+            margin-left: calc(var(--sidebar-expanded) - 90px);
+        } */
 
         .card {
             background: var(--card-bg);
@@ -128,7 +147,16 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
 
         @media (max-width: 768px) {
             .main-content {
-                margin-left: 16px;
+                margin-left: 16px; /* Adjust spacing for smaller screens */
+                padding: 10px; /* Adjust padding for smaller screens */
+            }
+
+            .sidebar {
+                width: 80px; /* Smaller default width for mobile */
+            }
+
+            .sidebar:hover, .sidebar.expanded {
+                width: 200px; /* Smaller expanded width for mobile */
             }
         }
     </style>
@@ -244,7 +272,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
         </div>
     </main>
 </div>
-<?php include '../../includes/footer.php'; ?>
+<!-- <?php include '../../includes/footer.php'; ?> -->
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
