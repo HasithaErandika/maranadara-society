@@ -13,6 +13,12 @@ error_reporting(E_ALL);
 // Log session state
 error_log("members.php: Session: " . print_r($_SESSION, true));
 
+// Check for headers already sent
+if (headers_sent()) {
+    error_log("members.php: Headers already sent, potential output buffering issue");
+    exit;
+}
+
 try {
     // Redirect if not admin
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -22,6 +28,7 @@ try {
     }
 
     require_once '../../includes/header.php';
+    echo '<link rel="stylesheet" href="../../assets/css/memberManagement.css">';
     require_once '../../classes/Member.php';
     require_once '../../classes/Family.php';
     require_once '../../classes/Payment.php';
@@ -39,7 +46,7 @@ try {
 
     $error = $success = '';
 
-    $items_per_page = 10;
+    $items_per_page = isset($_GET['items_per_page']) ? max(5, min(50, (int)$_GET['items_per_page'])) : 10;
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $offset = ($page - 1) * $items_per_page;
 
@@ -288,480 +295,7 @@ try {
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- External CSS -->
-    <style>
-        * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f5f6f5;
-    color: #333;
-    line-height: 1.6;
-    padding-top: 100px;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: 24px;
-    margin-bottom: 24px;
-    position: relative;
-}
-
-.member-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-}
-
-.member-header .header-buttons {
-    position: absolute;
-    top: 200px;
-    right: 20px;
-    display: flex;
-    gap: 10px;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-}
-
-.form-section, .card {
-    background: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.form-section h2, .card h2 {
-    font-size: 1.5rem;
-    color: #e67e22;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 10px;
-}
-
-.form-group {
-    margin-bottom: 15px;
-}
-
-.form-label {
-    display: block;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin-bottom: 5px;
-}
-
-.required-mark {
-    color: #e74c3c;
-}
-
-.input-field {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    transition: border-color 0.3s;
-}
-
-.input-field:focus {
-    outline: none;
-    border-color: #e67e22;
-    box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
-}
-
-.input-field:invalid:not(:placeholder-shown) {
-    border-color: #e74c3c;
-}
-
-.input-field.valid {
-    border-color: #2ecc71;
-}
-
-.error-text {
-    display: none;
-    color: #e74c3c;
-    font-size: 0.8rem;
-    margin-top: 5px;
-}
-
-.error-text.show {
-    display: block;
-}
-
-.btn {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.btn-primary {
-    background: #e67e22;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #d35400;
-}
-
-.btn-secondary {
-    background: #7f8c8d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background: #6c757d;
-}
-
-.btn-danger {
-    background: #e74c3c;
-    color: white;
-}
-
-.btn-danger:hover {
-    background: #c0392b;
-}
-
-.btn-icon {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 8px;
-    position: relative;
-}
-
-.btn-icon i {
-    font-size: 1.2rem;
-    color: #e67e22;
-}
-
-.btn-icon:hover i {
-    color: #d35400;
-}
-
-.tooltip {
-    visibility: hidden;
-    background: #333;
-    color: #fff;
-    font-size: 0.75rem;
-    padding: 4px 8px;
-    border-radius: 4px;
-    position: absolute;
-    top: -30px;
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    opacity: 0;
-    transition: opacity 0.2s;
-    z-index: 10;
-}
-
-.table-container {
-    overflow-x: auto;
-    border-radius: 8px;
-    background: #fff;
-}
-
-.table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-}
-
-.table th, .table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-}
-
-.table th {
-    background: #f9f9f9;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #333;
-}
-
-.table th.sortable:hover {
-    background: #eee;
-    color: #e67e22;
-    cursor: pointer;
-}
-
-.table tbody tr:hover {
-    background: #f9f9f9;
-}
-
-.search-container {
-    position: relative;
-    margin-bottom: 24px;
-}
-
-.search-container i {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #7f8c8d;
-    font-size: 1.2rem;
-}
-
-.search-container .ri-search-line {
-    left: 12px;
-}
-
-.search-container .ri-close-line {
-    right: 12px;
-    cursor: pointer;
-}
-
-
-.search-loading {
-    display: none;
-    position: absolute;
-    right: 40px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.search-loading.show {
-    display: block;
-}
-
-.accordion-header {
-    background: #e67e22;
-    color: #fff;
-    padding: 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-weight: 500;
-}
-
-.accordion-header:hover {
-    background: #d35400;
-}
-
-.accordion-content {
-    max-height: 0;
-    overflow: hidden;
-    padding: 0;
-    background: #fff;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-}
-
-.accordion-content.active {
-    max-height: 2000px;
-    padding: 20px;
-}
-
-.family-section {
-    background: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    margin-top: 20px;
-}
-
-.popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.95);
-    background: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    max-width: 500px;
-    width: 90%;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s;
-    z-index: 50;
-}
-
-.popup.show {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.popup-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 40;
-}
-
-.popup-overlay.show {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1001;
-}
-
-.modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    max-width: 600px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.modal-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    color: #7f8c8d;
-    cursor: pointer;
-}
-
-.modal-close:hover {
-    color: #e74c3c;
-}
-
-#edit-details-modal .modal-content,
-#edit-family-modal .modal-content {
-    max-width: 600px;
-    padding: 24px;
-}
-
-
-.pagination-btn {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.9rem;
-    color: #333;
-    background: #fff;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.pagination-btn:hover:not(.disabled) {
-    background: #e67e22;
-    color: #fff;
-    border-color: #e67e22;
-}
-
-.pagination-btn.disabled {
-    background: #eee;
-    color: #7f8c8d;
-    cursor: not-allowed;
-}
-
-.flex {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
-
-.main {
-    flex: 1;
-    padding: 20px;
-    margin-left: 240px;
-}
-
-.no-results {
-    text-align: center;
-    padding: 24px;
-    color: #7f8c8d;
-    font-size: 1rem;
-}
-
-.no-results i {
-    font-size: 2rem;
-    color: #e67e22;
-    margin-bottom: 12px;
-}
-
-@media (max-width: 768px) {
-    .main {
-        margin-left: 0;
-    }
-
-    .grid {
-        grid-template-columns: 1fr;
-    }
-
-    .search-container {
-        max-width: 100%;
-    }
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-.animate-slide-in {
-    animation: slideIn 0.5s ease-out;
-}
-
-.spinner {
-    width: 20px;
-    height: 20px;
-    border: 3px solid #e67e22;
-    border-top: 3px solid transparent;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-    </style>
+    
 </head>
 <body>
 <?php include '../../includes/header.php'; ?>
@@ -791,6 +325,12 @@ body {
                     <div class="search-loading" id="search-loading">
                         <div class="spinner"></div>
                     </div>
+                    <select name="items_per_page" onchange="this.form.submit()" class="input-field" style="margin-left: 10px; width: auto;">
+                        <option value="5" <?php echo $items_per_page == 5 ? 'selected' : ''; ?>>5</option>
+                        <option value="10" <?php echo $items_per_page == 10 ? 'selected' : ''; ?>>10</option>
+                        <option value="20" <?php echo $items_per_page == 20 ? 'selected' : ''; ?>>20</option>
+                        <option value="50" <?php echo $items_per_page == 50 ? 'selected' : ''; ?>>50</option>
+                    </select>
                 </form>
             <?php endif; ?>
 
@@ -1183,10 +723,10 @@ body {
                                 Showing <?php echo $offset + 1; ?>-<?php echo min($offset + $items_per_page, $total_members); ?> of <?php echo $total_members; ?>
                             </p>
                             <div class="flex" style="gap: 10px;">
-                                <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>"
+                                <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&items_per_page=<?php echo $items_per_page; ?>"
                                    class="pagination-btn <?php echo $page <= 1 ? 'disabled' : ''; ?>"
                                     <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
-                                <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>"
+                                <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&items_per_page=<?php echo $items_per_page; ?>"
                                    class="pagination-btn <?php echo $page >= $total_pages ? 'disabled' : ''; ?>"
                                     <?php echo $page >= $total_pages ? 'onclick="return false;"' : ''; ?>>Next</a>
                             </div>
@@ -1198,9 +738,10 @@ body {
     </main>
 </div>
 
-<!-- Popups -->
-<div class="popup-overlay" id="popup-overlay"></div>
+<!-- Overlay -->
+<div class="overlay" id="overlay"></div>
 
+<!-- Popups -->
 <div class="popup" id="success-popup">
     <div style="text-align: center;">
         <div style="font-size: 3rem; color: #2ecc71; margin-bottom: 20px;"><i class="ri-checkbox-circle-fill"></i></div>
@@ -1445,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editDetailsModal = document.getElementById('edit-details-modal');
     const editFamilyModal = document.getElementById('edit-family-modal');
     const deleteModal = document.getElementById('delete-modal');
-    const modalOverlay = document.querySelector('.modal-overlay');
+    const overlay = document.getElementById('overlay');
     const editButtons = document.querySelectorAll('.edit-btn');
     const editDetailsButtons = document.querySelectorAll('.edit-details-btn');
     const editFamilyButtons = document.querySelectorAll('.edit-family-btn');
@@ -1460,35 +1001,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const deleteForm = document.getElementById('delete-form');
     const searchForm = document.getElementById('search-form');
     const searchLoading = document.getElementById('search-loading');
-    const popupOverlay = document.getElementById('popup-overlay');
     const successPopup = document.getElementById('success-popup');
     const errorPopup = document.getElementById('error-popup');
     const cancelPopup = document.getElementById('cancel-popup');
     const successMessage = document.getElementById('success-message');
     const errorMessage = document.getElementById('error-message');
 
-    // Show popups if messages exist (for synchronous submissions)
+    // Show popups if messages exist
     const successMsg = <?php echo $js_success; ?>;
     const errorMsg = <?php echo $js_error; ?>;
 
-    if (successMsg) {
+    if (successMsg && successMsg !== '') {
         successMessage.textContent = successMsg;
         showPopup(successPopup);
         startCountdown('success-countdown', window.location.href);
-    } else if (errorMsg) {
+    } else if (errorMsg && errorMsg !== '') {
         errorMessage.textContent = errorMsg;
         showPopup(errorPopup);
         startCountdown('error-countdown', window.location.href);
     }
 
     function showPopup(popup) {
-        popupOverlay.classList.add('show');
+        overlay.classList.add('show');
         popup.classList.add('show');
         document.body.style.overflow = 'hidden';
     }
 
     function hidePopup(popup) {
-        popupOverlay.classList.remove('show');
+        overlay.classList.remove('show');
         popup.classList.remove('show');
         document.body.style.overflow = '';
     }
@@ -1510,13 +1050,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showModal(modal) {
         modal.classList.add('show');
-        modalOverlay.classList.add('show');
+        overlay.classList.add('show');
         document.body.style.overflow = 'hidden';
     }
 
     function hideModal(modal) {
         modal.classList.remove('show');
-        modalOverlay.classList.remove('show');
+        overlay.classList.remove('show');
         document.body.style.overflow = '';
     }
 
@@ -1524,7 +1064,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editButtons.forEach(button => {
         button.addEventListener('click', () => {
             try {
-                const member = JSON.parse(button.getAttribute('data-member'));
+                const member = JSON.parse(button.getAttribute('data-member') || '{}');
                 document.getElementById('edit-id').value = member.id || '';
                 document.getElementById('edit-full_name').value = member.full_name || '';
                 document.getElementById('edit-contact_number').value = member.contact_number || '';
@@ -1536,7 +1076,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to parse member data:', e);
                 errorMessage.textContent = 'Error loading member data. Please try again.';
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         });
     });
@@ -1545,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editDetailsButtons.forEach(button => {
         button.addEventListener('click', () => {
             try {
-                const member = JSON.parse(button.getAttribute('data-member'));
+                const member = JSON.parse(button.getAttribute('data-member') || '{}');
                 document.getElementById('edit-details-id').value = member.id || '';
                 document.getElementById('edit-details-full_name').value = member.full_name || '';
                 document.getElementById('edit-details-date_of_birth').value = member.date_of_birth || '';
@@ -1563,7 +1102,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to parse member data:', e);
                 errorMessage.textContent = 'Error loading member data. Please try again.';
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         });
     });
@@ -1572,25 +1110,22 @@ document.addEventListener('DOMContentLoaded', () => {
     editFamilyButtons.forEach(button => {
         button.addEventListener('click', () => {
             try {
-                const family = JSON.parse(button.getAttribute('data-family'));
+                const family = JSON.parse(button.getAttribute('data-family') || '{}');
                 const memberId = button.getAttribute('data-member-id');
                 document.getElementById('edit-family-member-id').value = memberId || '';
                 document.getElementById('edit-spouse-name').value = family.spouse_name || '';
 
-                // Clear existing children and dependents
                 const childrenContainer = document.getElementById('children-container');
                 const dependentsContainer = document.getElementById('dependents-container');
                 childrenContainer.innerHTML = '';
                 dependentsContainer.innerHTML = '';
 
-                // Populate children
                 const children = family.children_info ? family.children_info.split(', ') : [];
                 children.forEach(child => {
                     if (child) addDynamicField(childrenContainer, 'children[]', child);
                 });
                 if (children.length === 0) addDynamicField(childrenContainer, 'children[]', '');
 
-                // Populate dependents
                 const dependents = family.dependents_info ? family.dependents_info.split(', ') : [];
                 dependents.forEach(dependent => {
                     if (dependent) addDynamicField(dependentsContainer, 'dependents[]', dependent);
@@ -1602,12 +1137,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Failed to parse family data:', e);
                 errorMessage.textContent = 'Error loading family data. Please try again.';
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         });
     });
 
-    // Dynamic field addition
     function addDynamicField(container, name, value = '') {
         const fieldDiv = document.createElement('div');
         fieldDiv.className = 'form-group dynamic-field';
@@ -1617,7 +1150,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         container.appendChild(fieldDiv);
 
-        // Add remove event
         fieldDiv.querySelector('.remove-field').addEventListener('click', () => {
             if (container.children.length > 1) {
                 fieldDiv.remove();
@@ -1625,7 +1157,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add child and dependent buttons
     document.getElementById('add-child').addEventListener('click', () => {
         addDynamicField(document.getElementById('children-container'), 'children[]', '');
     });
@@ -1646,12 +1177,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Close modals
     closeButtons.forEach(button => {
         button.addEventListener('click', () => {
-            hideModal(editModal);
-            hideModal(editDetailsModal);
-            hideModal(editFamilyModal);
-            hideModal(deleteModal);
-            showPopup(cancelPopup);
-            startCountdown('cancel-countdown', window.location.href);
+            const modal = button.closest('.modal');
+            if (modal) {
+                hideModal(modal);
+            }
         });
     });
 
@@ -1670,9 +1199,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Edit form submission
+    // Edit form submission with validation
     editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const contactNumber = document.getElementById('edit-contact_number').value;
+        if (!/^\+94\d{9}$/.test(contactNumber)) {
+            document.getElementById('edit-contact_number-error').classList.add('show');
+            return;
+        }
         const formData = new FormData(editForm);
         formData.append('update', 'true');
 
@@ -1692,19 +1226,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         } catch (error) {
             console.error('Error submitting edit form:', error);
             errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
-            startCountdown('error-countdown', window.location.href);
         }
     });
 
-    // Edit details form submission
+    // Edit details form submission with validation
     editDetailsForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const contactNumber = document.getElementById('edit-details-contact_number').value;
+        if (!/^\+94\d{9}$/.test(contactNumber)) {
+            document.getElementById('edit-details-contact_number-error').classList.add('show');
+            return;
+        }
         const formData = new FormData(editDetailsForm);
         formData.append('update_details', 'true');
 
@@ -1724,13 +1261,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         } catch (error) {
             console.error('Error submitting edit details form:', error);
             errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
-            startCountdown('error-countdown', window.location.href);
         }
     });
 
@@ -1756,13 +1291,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         } catch (error) {
             console.error('Error submitting family form:', error);
             errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
-            startCountdown('error-countdown', window.location.href);
         }
     });
 
@@ -1788,23 +1321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
-                startCountdown('error-countdown', window.location.href);
             }
         } catch (error) {
             console.error('Error submitting delete form:', error);
             errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
-            startCountdown('error-countdown', window.location.href);
         }
     });
 
-    // Search functionality with debouncing
+    // Search functionality
     if (searchInput && clearSearch) {
         let searchTimeout;
         searchInput.addEventListener('input', () => {
             clearTimeout(searchTimeout);
             searchLoading.classList.add('show');
             searchTimeout = setTimeout(() => {
+                searchLoading.classList.remove('show');
                 searchForm.submit();
             }, 500);
         });
