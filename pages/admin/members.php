@@ -2,139 +2,159 @@
 define('APP_START', true);
 session_start();
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
-    exit;
-}
+// Start output buffering to prevent unwanted output
+ob_start();
 
-require_once '../../includes/header.php';
-require_once '../../classes/Member.php';
-require_once '../../classes/Family.php';
-require_once '../../classes/Payment.php';
-require_once '../../classes/Incident.php';
-require_once '../../classes/Loan.php';
-require_once '../../classes/Document.php';
-require_once '../../classes/Database.php';
+// Disable displaying errors to avoid breaking JSON
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
 
-$member = new Member();
-$family = new Family();
-$payment = new Payment();
-$incident = new Incident();
-$loan = new Loan();
-$document = new Document();
+// Log session state
+error_log("members.php: Session: " . print_r($_SESSION, true));
 
-$error = $success = '';
+try {
+    // Redirect if not admin
+    if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+        error_log("members.php: Unauthorized access, redirecting to login.php");
+        header("Location: ../login.php");
+        exit;
+    }
 
-$items_per_page = 10;
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$offset = ($page - 1) * $items_per_page;
+    require_once '../../includes/header.php';
+    require_once '../../classes/Member.php';
+    require_once '../../classes/Family.php';
+    require_once '../../classes/Payment.php';
+    require_once '../../classes/Incident.php';
+    require_once '../../classes/Loan.php';
+    require_once '../../classes/Document.php';
+    require_once '../../classes/Database.php';
 
-$search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$search_type = isset($_GET['search_type']) ? trim($_GET['search_type']) : 'all';
-$members = $member->getAllMembers();
-$total_members = count($members);
+    $member = new Member();
+    $family = new Family();
+    $payment = new Payment();
+    $incident = new Incident();
+    $loan = new Loan();
+    $document = new Document();
 
-if ($search) {
-    $members = array_filter($members, function ($m) use ($search, $search_type) {
-        $search = strtolower($search);
-        if ($search_type === 'all') {
-            return stripos(strtolower($m['member_id']), $search) !== false ||
-                stripos(strtolower($m['full_name']), $search) !== false ||
-                stripos(strtolower($m['nic_number'] ?? ''), $search) !== false ||
-                stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
-        } elseif ($search_type === 'member_id') {
-            return stripos(strtolower($m['member_id']), $search) !== false;
-        } elseif ($search_type === 'full_name') {
-            return stripos(strtolower($m['full_name']), $search) !== false;
-        } elseif ($search_type === 'nic_number') {
-            return stripos(strtolower($m['nic_number'] ?? ''), $search) !== false;
-        } elseif ($search_type === 'contact_number') {
-            return stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
-        }
-        return false;
-    });
-}
+    $error = $success = '';
 
-$members_paginated = array_slice($members, $offset, $items_per_page);
-$total_pages = ceil($total_members / $items_per_page);
+    $items_per_page = 10;
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $offset = ($page - 1) * $items_per_page;
 
-$selected_member = null;
-if (isset($_GET['member_id'])) {
-    $selected_member_id = trim($_GET['member_id']);
-    $selected_member = $member->getMemberByMemberId($selected_member_id);
+    $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+    $search_type = isset($_GET['search_type']) ? trim($_GET['search_type']) : 'all';
+    $members = $member->getAllMembers();
+    $total_members = count($members);
 
-    if ($selected_member) {
-        $member_id = (int)$selected_member['id'];
-        $family_details = $family->getFamilyDetailsByMemberId($member_id);
-        $all_payments = $payment->getPaymentsByMemberId($member_id);
-        $incidents = $incident->getIncidentsByMemberId($member_id);
-        $loans = $loan->getLoansByMemberId($member_id);
-        $documents = $document->getDocumentsByMemberId($member_id);
+    if ($search) {
+        $members = array_filter($members, function ($m) use ($search, $search_type) {
+            $search = strtolower($search);
+            if ($search_type === 'all') {
+                return stripos(strtolower($m['member_id']), $search) !== false ||
+                    stripos(strtolower($m['full_name']), $search) !== false ||
+                    stripos(strtolower($m['nic_number'] ?? ''), $search) !== false ||
+                    stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
+            } elseif ($search_type === 'member_id') {
+                return stripos(strtolower($m['member_id']), $search) !== false;
+            } elseif ($search_type === 'full_name') {
+                return stripos(strtolower($m['full_name']), $search) !== false;
+            } elseif ($search_type === 'nic_number') {
+                return stripos(strtolower($m['nic_number'] ?? ''), $search) !== false;
+            } elseif ($search_type === 'contact_number') {
+                return stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
+            }
+            return false;
+        });
+    }
 
-        $society_payments = array_filter($all_payments, fn($p) => $p['payment_type'] === 'Society Issued');
-        $membership_payments = array_filter($all_payments, fn($p) => $p['payment_type'] === 'Membership Fee');
-        $loan_settlements = array_filter($all_payments, fn($p) => $p['payment_type'] === 'Loan Settlement');
+    $members_paginated = array_slice($members, $offset, $items_per_page);
+    $total_pages = ceil($total_members / $items_per_page);
 
-        $total_society = array_sum(array_column($society_payments, 'amount'));
-        $total_membership = array_sum(array_column($membership_payments, 'amount'));
-        $total_loan_settlement = array_sum(array_column($loan_settlements, 'amount'));
-        $total_from_member = $total_membership + $total_loan_settlement;
-        $total_from_society = $total_society;
+    $selected_member = null;
+    if (isset($_GET['member_id'])) {
+        $selected_member_id = trim($_GET['member_id']);
+        $selected_member = $member->getMemberByMemberId($selected_member_id);
 
-        $join_date = new DateTime($selected_member['date_of_joining']);
-        $current_date = new DateTime();
-        $months_since_joining = $join_date->diff($current_date)->m + ($join_date->diff($current_date)->y * 12);
-        $expected_contribution = $selected_member['contribution_amount'] * $months_since_joining;
-        $pending_dues = max(0, $expected_contribution - $total_membership);
+        if ($selected_member) {
+            $member_id = (int)$selected_member['id'];
+            $family_details = $family->getFamilyDetailsByMemberId($member_id);
+            $all_payments = $payment->getPaymentsByMemberId($member_id);
+            $incidents = $incident->getIncidentsByMemberId($member_id);
+            $loans = $loan->getLoansByMemberId($member_id);
+            $documents = $document->getDocumentsByMemberId($member_id);
 
-        $total_loan_amount = array_sum(array_column($loans, 'amount'));
-        $total_interest_amount = 0;
-        $total_dues = 0;
-        foreach ($loans as $l) {
-            $interest = ($l['amount'] * $l['interest_rate'] / 100) * ($l['duration'] / 12);
-            $total_interest_amount += $interest;
-            $total_dues += max(0, ($l['monthly_payment'] * $l['duration']) - $total_loan_settlement);
+            $society_payments = array_filter($all_payments, fn($p) => $p['payment_type'] === 'Society Issued');
+            $membership_payments = array_filter($all_payments, fn($p) => $p['payment_type'] === 'Membership Fee');
+            $loan_settlements = array_filter($all_payments, fn($p) => $p['payment_type'] === 'Loan Settlement');
+
+            $total_society = array_sum(array_column($society_payments, 'amount'));
+            $total_membership = array_sum(array_column($membership_payments, 'amount'));
+            $total_loan_settlement = array_sum(array_column($loan_settlements, 'amount'));
+            $total_from_member = $total_membership + $total_loan_settlement;
+            $total_from_society = $total_society;
+
+            $join_date = new DateTime($selected_member['date_of_joining']);
+            $current_date = new DateTime();
+            $months_since_joining = $join_date->diff($current_date)->m + ($join_date->diff($current_date)->y * 12);
+            $expected_contribution = $selected_member['contribution_amount'] * $months_since_joining;
+            $pending_dues = max(0, $expected_contribution - $total_membership);
+
+            $total_loan_amount = array_sum(array_column($loans, 'amount'));
+            $total_interest_amount = 0;
+            $total_dues = 0;
+            foreach ($loans as $l) {
+                $interest = ($l['amount'] * $l['interest_rate'] / 100) * ($l['duration'] / 12);
+                $total_interest_amount += $interest;
+                $total_dues += max(0, ($l['monthly_payment'] * $l['duration']) - $total_loan_settlement);
+            }
         }
     }
-}
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $db = new Database();
-    $conn = $db->getConnection();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        $db = new Database();
+        $conn = $db->getConnection();
 
-    if (isset($_POST['delete'])) {
-        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-        if ($id) {
-            try {
-                if ($member->deleteMember($id)) {
-                    $success = "Member deleted successfully.";
+        try {
+            if (isset($_POST['delete'])) {
+                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+                if ($id) {
+                    if ($member->deleteMember($id)) {
+                        ob_end_clean();
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => 'Member deleted successfully.']);
+                        exit;
+                    } else {
+                        throw new Exception("Failed to delete member.");
+                    }
                 } else {
-                    $error = "Failed to delete member. Please try again.";
+                    throw new Exception("Invalid member ID.");
                 }
-            } catch (Exception $e) {
-                $error = "Error deleting member: " . $e->getMessage();
-            }
-        } else {
-            $error = "Invalid member ID.";
-        }
-    } elseif (isset($_POST['update'])) {
-        $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-        $full_name = trim($_POST['full_name'] ?? '');
-        $contact_number = trim($_POST['contact_number'] ?? '');
-        $membership_type = trim($_POST['membership_type'] ?? '');
-        $payment_status = trim($_POST['payment_status'] ?? '');
-        $member_status = trim($_POST['member_status'] ?? '');
+            } elseif (isset($_POST['update'])) {
+                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+                $full_name = trim($_POST['full_name'] ?? '');
+                $contact_number = trim($_POST['contact_number'] ?? '');
+                $membership_type = trim($_POST['membership_type'] ?? '');
+                $payment_status = trim($_POST['payment_status'] ?? '');
+                $member_status = trim($_POST['member_status'] ?? '');
 
-        if (empty($full_name) || empty($contact_number)) {
-            $error = "Full name and contact number are required.";
-        } elseif (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
-            $error = "Invalid membership type.";
-        } elseif (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
-            $error = "Invalid payment status.";
-        } elseif (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
-            $error = "Invalid member status.";
-        } else {
-            try {
+                if (empty($full_name)) {
+                    throw new Exception("Full name is required.");
+                }
+                if (empty($contact_number) || !preg_match('/^\+94\d{9}$/', $contact_number)) {
+                    throw new Exception("Valid contact number is required (format: +94XXXXXXXXX).");
+                }
+                if (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
+                    throw new Exception("Invalid membership type.");
+                }
+                if (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
+                    throw new Exception("Invalid payment status.");
+                }
+                if (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
+                    throw new Exception("Invalid member status.");
+                }
+
                 $data = [
                     'full_name' => $full_name,
                     'contact_number' => $contact_number,
@@ -142,17 +162,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'payment_status' => $payment_status,
                     'member_status' => $member_status
                 ];
-                
+
                 if ($member->updateMember($id, $data)) {
-                    $success = "Member updated successfully.";
+                    ob_end_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Member updated successfully.']);
+                    exit;
                 } else {
-                    $error = "Failed to update member. Please try again.";
+                    throw new Exception("Failed to update member.");
                 }
-            } catch (Exception $e) {
-                $error = "Error updating member: " . $e->getMessage();
             }
+        } catch (Exception $e) {
+            ob_end_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
         }
     }
+
+    // Escape messages for JavaScript (for synchronous requests)
+    $js_success = json_encode($success);
+    $js_error = json_encode($error);
+    error_log("JS Success: $js_success");
+    error_log("JS Error: $js_error");
+
+    // Clear output buffer for non-AJAX requests
+    ob_end_flush();
+} catch (Exception $e) {
+    error_log("members.php: Fatal error: " . $e->getMessage());
+    header("Location: ../login.php");
+    exit;
 }
 ?>
 
@@ -175,86 +214,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f7f9fc;
-            color: #2d3748;
+            background-color: #f5f6f5;
+            color: #333;
             line-height: 1.6;
+            padding-top: 50px;
         }
 
         .container {
-            max-width: 1280px;
+            max-width: 1250px;
             margin: 0 auto;
             padding: 20px;
-            padding-top: 80px;
         }
 
         .form-section, .card {
             background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            margin-top: 50px;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .form-section h2, .card h2 {
             font-size: 1.5rem;
-            color: #f97316;
-            margin-bottom: 16px;
-            border-bottom: 2px solid #edf2f7;
-            padding-bottom: 8px;
+            color: #e67e22;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 15px;
         }
 
         .form-label {
             display: block;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 500;
-            margin-bottom: 6px;
-            color: #4a5568;
+            margin-bottom: 5px;
         }
 
-        .required-mark, .required {
-            color: #e53e3e;
+        .required-mark {
+            color: #e74c3c;
         }
 
         .input-field {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
-            background: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s;
         }
 
         .input-field:focus {
             outline: none;
-            border-color: #f97316;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+            border-color: #e67e22;
+            box-shadow: 0 0 0 2px rgba(230, 126, 34, 0.2);
         }
 
         .input-field:invalid:not(:placeholder-shown) {
-            border-color: #e53e3e;
+            border-color: #e74c3c;
         }
 
         .input-field.valid {
-            border-color: #48bb78;
+            border-color: #2ecc71;
         }
 
         .error-text {
             display: none;
-            color: #e53e3e;
-            font-size: 0.75rem;
-            margin-top: 4px;
+            color: #e74c3c;
+            font-size: 0.8rem;
+            margin-top: 5px;
         }
 
         .error-text.show {
@@ -264,56 +300,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .btn {
             padding: 10px 20px;
             border: none;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
+            border-radius: 4px;
+            font-size: 0.9rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: background-color 0.3s;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
 
         .btn-primary {
-            background-color: #f97316;
+            background-color: #e67e22;
             color: #fff;
         }
 
         .btn-primary:hover {
-            background-color: #ed8936;
+            background-color: #d35400;
         }
 
         .btn-secondary {
-            background-color: #a0aec0;
+            background-color: #7f8c8d;
             color: #fff;
         }
 
         .btn-secondary:hover {
-            background-color: #718096;
+            background-color: #6c7a89;
         }
 
         .btn-danger {
-            color: #e53e3e;
+            color: #e74c3c;
             background: none;
-            order: 1px solid transparent; /* Add transparent border for consistent sizing on hover */
-            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
         }
 
         .btn-danger:hover {
-            background-color: #fde2e2; /* Light red background */
-            border-color: #e53e3e; /* Keep the border color on hover */
-            color: #c53030; /* Darken the text slightly on hover */
-         }         
+            color: #c0392b;
+        }
 
         .btn-icon {
             background: none;
-            color: #718096;
+            color: #7f8c8d;
             padding: 8px;
             position: relative;
         }
 
         .btn-icon:hover {
-            color: #f97316;
+            color: #e67e22;
         }
 
         .btn-icon:hover .tooltip {
@@ -323,7 +354,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .tooltip {
             visibility: hidden;
-            background: #2d3748;
+            background: #333;
             color: #fff;
             font-size: 0.75rem;
             padding: 4px 8px;
@@ -338,11 +369,199 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             z-index: 10;
         }
 
-        .family-section {
-            background: #f7fafc;
-            padding: 16px;
+        .table-container {
+            overflow-x: auto;
             border-radius: 8px;
-            margin-top: 16px;
+            background: #fff;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            background: #f9f9f9;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .table th.sortable:hover {
+            background: #eee;
+            color: #e67e22;
+            cursor: pointer;
+        }
+
+        .table tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 500px;
+            margin-bottom: 24px;
+        }
+
+        .search-container .ri-search-line {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7f8c8d;
+            font-size: 1.25rem;
+        }
+
+        .search-container .ri-close-line {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7f8c8d;
+            cursor: pointer;
+            font-size: 1.25rem;
+            transition: color 0.2s;
+        }
+
+        .search-container .ri-close-line:hover {
+            color: #e67e22;
+        }
+
+        .search-container .input-field {
+            padding: 12px 40px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            display: none;
+            margin-top: 4px;
+        }
+
+        .search-options.show {
+            display: block;
+        }
+
+        .search-option {
+            padding: 12px;
+            font-size: 0.9rem;
+            color: #333;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .search-option:hover {
+            background: #f9f9f9;
+        }
+
+        .search-option.active {
+            background: #e67e22;
+            color: #fff;
+        }
+
+        .search-loading {
+            display: none;
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .search-loading.show {
+            display: block;
+        }
+
+        .accordion-header {
+            background: #e67e22;
+            color: #fff;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+        }
+
+        .accordion-header:hover {
+            background: #d35400;
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0;
+            background: #fff;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .accordion-content.active {
+            max-height: 2000px;
+            padding: 20px;
+        }
+
+        .family-section {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.95);
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            z-index: 50;
+        }
+
+        .popup.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 40;
+        }
+
+        .popup-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
         }
 
         .modal {
@@ -365,27 +584,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .modal-content {
             background: #fff;
             padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             max-width: 600px;
             width: 90%;
             position: relative;
             animation: modalFadeIn 0.3s ease;
-        }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        .modal-overlay.show {
-            display: block;
         }
 
         .modal-close {
@@ -394,242 +598,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             right: 12px;
             background: none;
             border: none;
-            color: #718096;
+            color: #7f8c8d;
             font-size: 1.25rem;
             cursor: pointer;
             transition: color 0.2s;
         }
 
         .modal-close:hover {
-            color: #f97316;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            background: #fff;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-        }
-
-        .table th, .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #edf2f7;
-        }
-
-        .table th {
-            background: #f7fafc;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #2d3748;
-        }
-
-        .table th.sortable:hover {
-            background: #edf2f7;
-            color: #f97316;
-            cursor: pointer;
-        }
-
-        .table tbody tr:hover {
-            background: #f7fafc;
-        }
-
-        .search-container {
-            position: relative;
-            max-width: 500px;
-            margin-bottom: 24px;
-        }
-
-        .search-container .ri-search-line {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #718096;
-            font-size: 1.25rem;
-        }
-
-        .search-container .ri-close-line {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #718096;
-            cursor: pointer;
-            font-size: 1.25rem;
-            transition: color 0.2s;
-        }
-
-        .search-container .ri-close-line:hover {
-            color: #f97316;
-        }
-
-        .search-container .input-field {
-            padding: 12px 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .search-options {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-            display: none;
-            margin-top: 4px;
-        }
-
-        .search-options.show {
-            display: block;
-        }
-
-        .search-option {
-            padding: 12px;
-            font-size: 0.875rem;
-            color: #2d3748;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .search-option:hover {
-            background: #f7fafc;
-        }
-
-        .search-option.active {
-            background: #f97316;
-            color: #fff;
-        }
-
-        .search-loading {
-            display: none;
-            position: absolute;
-            right: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .search-loading.show {
-            display: block;
-        }
-
-        .accordion-header {
-            background: #f97316;
-            color: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
-        }
-
-        .accordion-header:hover {
-            background: #ed8936;
-        }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            padding: 0;
-            background: #fff;
-            transition: max-height 0.3s ease, padding 0.3s ease;
-        }
-
-        .accordion-content.active {
-            max-height: 2000px;
-            padding: 20px;
-        }
-
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .alert-success {
-            background: #f0fff4;
-            color: #48bb78;
-        }
-
-        .alert-error {
-            background: #fff5f5;
-            color: #e53e3e;
+            color: #e67e22;
         }
 
         .pagination-btn {
             padding: 8px 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            color: #2d3748;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #333;
             background: #fff;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(.disabled) {
-            background: #f97316;
+            background: #e67e22;
             color: #fff;
-            border-color: #f97316;
+            border-color: #e67e22;
         }
 
         .pagination-btn.disabled {
-            background: #edf2f7;
-            color: #a0aec0;
+            background: #eee;
+            color: #7f8c8d;
             cursor: not-allowed;
         }
 
         .flex {
             display: flex;
-            gap: 16px;
+            gap: 20px;
             align-items: center;
         }
 
         .main {
             flex: 1;
-            padding: 24px;
+            padding: 20px;
             margin-left: 240px;
         }
 
         .no-results {
             text-align: center;
             padding: 24px;
-            color: #718096;
+            color: #7f8c8d;
             font-size: 1rem;
         }
 
         .no-results i {
             font-size: 2rem;
-            color: #f97316;
+            color: #e67e22;
             margin-bottom: 12px;
         }
 
         @media (max-width: 768px) {
             .main {
                 margin-left: 0;
-                padding: 16px;
             }
 
             .grid {
                 grid-template-columns: 1fr;
-            }
-
-            .container {
-                padding: 16px;
             }
 
             .search-container {
@@ -651,11 +684,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             animation: slideIn 0.5s ease-out;
         }
 
-        /* Spinner */
         .spinner {
             width: 20px;
             height: 20px;
-            border: 3px solid #f97316;
+            border: 3px solid #e67e22;
             border-top: 3px solid transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;
@@ -679,21 +711,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php echo $selected_member ? 'Member Details' : 'Manage Members'; ?>
                     </h1>
                     <?php if (!$selected_member): ?>
-                        <p style="font-size: 0.9rem; color: #718096;">View and manage member records efficiently.</p>
+                        <p style="font-size: 0.9rem; color: #7f8c8d;">View and manage member records efficiently.</p>
                     <?php endif; ?>
                 </div>
             </div>
-
-            <?php if ($error): ?>
-                <div class="alert alert-error animate-slide-in">
-                    <i class="ri-error-warning-fill"></i> <?php echo htmlspecialchars($error); ?>
-                </div>
-            <?php endif; ?>
-            <?php if ($success): ?>
-                <div class="alert alert-success animate-slide-in">
-                    <i class="ri-checkbox-circle-fill"></i> <?php echo htmlspecialchars($success); ?>
-                </div>
-            <?php endif; ?>
 
             <!-- Search Bar -->
             <?php if (!$selected_member): ?>
@@ -721,21 +742,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="card animate-slide-in">
                     <div class="flex justify-between items-center mb-6">
                         <div class="flex items-center gap-4">
-                            <div style="background: #f97316; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <div style="background: #e67e22; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                                 <i class="ri-user-line" style="color: white; font-size: 24px;"></i>
                             </div>
                             <div>
-                                <h2 style="font-size: 1.5rem; color: #f97316; margin-bottom: 4px;">
+                                <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 4px;">
                                     <?php echo htmlspecialchars($selected_member['full_name']); ?>
                                 </h2>
-                                <p style="color: #718096; font-size: 0.9rem;">Member ID: <?php echo htmlspecialchars($selected_member['member_id']); ?></p>
+                                <p style="color: #7f8c8d; font-size: 0.9rem;">Member ID: <?php echo htmlspecialchars($selected_member['member_id']); ?></p>
                             </div>
                         </div>
-                        <div style="display: flex; justify-content: flex-end; align-items: center;">
+                        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+                            <button class="btn btn-primary edit-btn" data-member='<?php echo htmlspecialchars(json_encode($selected_member), ENT_QUOTES); ?>' title="Edit Member" aria-label="Edit Member">
+                                <i class="ri-edit-line"></i> Edit
+                            </button>
                             <button class="btn btn-danger" onclick="window.location.href='members.php';">
                                 <i class="ri-arrow-left-line"></i> Back to Members
                             </button>
-                        </div>                    
+                        </div>
                     </div>
 
                     <div class="grid">
@@ -744,31 +768,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h2><i class="ri-user-settings-line"></i> Personal Information</h2>
                             <div style="display: grid; gap: 12px;">
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-calendar-line" style="color: #f97316;"></i>
+                                    <i class="ri-calendar-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Date of Birth</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['date_of_birth']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Date of Birth</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['date_of_birth']); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-user-line" style="color: #f97316;"></i>
+                                    <i class="ri-user-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Gender</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['gender']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Gender</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['gender']); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-id-card-line" style="color: #f97316;"></i>
+                                    <i class="ri-id-card-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">NIC</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['nic_number'] ?? 'N/A'); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">NIC</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['nic_number'] ?? 'N/A'); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-map-pin-line" style="color: #f97316;"></i>
+                                    <i class="ri-map-pin-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Address</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['address']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Address</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['address']); ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -779,17 +803,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h2><i class="ri-contacts-line"></i> Contact Information</h2>
                             <div style="display: grid; gap: 12px;">
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-phone-line" style="color: #f97316;"></i>
+                                    <i class="ri-phone-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Contact Number</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['contact_number']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Contact Number</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['contact_number']); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-mail-line" style="color: #f97316;"></i>
+                                    <i class="ri-mail-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Email</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['email'] ?? 'N/A'); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Email</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['email'] ?? 'N/A'); ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -800,31 +824,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h2><i class="ri-group-line"></i> Membership Information</h2>
                             <div style="display: grid; gap: 12px;">
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-calendar-event-line" style="color: #f97316;"></i>
+                                    <i class="ri-calendar-event-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Join Date</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['date_of_joining']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Join Date</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['date_of_joining']); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-user-settings-line" style="color: #f97316;"></i>
+                                    <i class="ri-user-settings-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Membership Type</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['membership_type']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Membership Type</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['membership_type']); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-money-dollar-circle-line" style="color: #f97316;"></i>
+                                    <i class="ri-money-dollar-circle-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Contribution</span>
-                                        <p style="color: #2d3748; margin: 0;">LKR <?php echo number_format($selected_member['contribution_amount'], 2); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Contribution</span>
+                                        <p style="color: #333; margin: 0;">LKR <?php echo number_format($selected_member['contribution_amount'], 2); ?></p>
                                     </div>
                                 </div>
                                 <div class="flex" style="gap: 12px;">
-                                    <i class="ri-checkbox-circle-line" style="color: #f97316;"></i>
+                                    <i class="ri-checkbox-circle-line" style="color: #e67e22;"></i>
                                     <div>
-                                        <span style="color: #718096; font-size: 0.9rem;">Status</span>
-                                        <p style="color: #2d3748; margin: 0;"><?php echo htmlspecialchars($selected_member['member_status']); ?></p>
+                                        <span style="color: #7f8c8d; font-size: 0.9rem;">Status</span>
+                                        <p style="color: #333; margin: 0;"><?php echo htmlspecialchars($selected_member['member_status']); ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -842,17 +866,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <!-- Spouse Section -->
                                     <?php if ($family_details['spouse_name']): ?>
                                         <div class="family-section">
-                                            <h3 style="color: #f97316; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                            <h3 style="color: #e67e22; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                                                 <i class="ri-user-heart-line"></i> Spouse
                                             </h3>
-                                            <p style="font-size: 1.1rem; color: #2d3748;"><?php echo htmlspecialchars($family_details['spouse_name']); ?></p>
+                                            <p style="font-size: 1.1rem; color: #333;"><?php echo htmlspecialchars($family_details['spouse_name']); ?></p>
                                         </div>
                                     <?php endif; ?>
 
                                     <!-- Children Section -->
                                     <?php if ($family_details['children_info']): ?>
                                         <div class="family-section">
-                                            <h3 style="color: #f97316; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                            <h3 style="color: #e67e22; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                                                 <i class="ri-parent-line"></i> Children
                                             </h3>
                                             <div style="display: grid; gap: 12px;">
@@ -860,9 +884,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 $children = explode(', ', $family_details['children_info']);
                                                 foreach ($children as $child): 
                                                 ?>
-                                                    <div style="background: #f7fafc; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
-                                                        <i class="ri-user-smile-line" style="color: #f97316; font-size: 1.2rem;"></i>
-                                                        <span style="color: #2d3748;"><?php echo htmlspecialchars($child); ?></span>
+                                                    <div style="background: #f9f9f9; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
+                                                        <i class="ri-user-smile-line" style="color: #e67e22; font-size: 1.2rem;"></i>
+                                                        <span style="color: #333;"><?php echo htmlspecialchars($child); ?></span>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -872,7 +896,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <!-- Dependents Section -->
                                     <?php if ($family_details['dependents_info']): ?>
                                         <div class="family-section">
-                                            <h3 style="color: #f97316; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                            <h3 style="color: #e67e22; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                                                 <i class="ri-group-line"></i> Dependents
                                             </h3>
                                             <div style="display: grid; gap: 12px;">
@@ -880,9 +904,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 $dependents = explode(', ', $family_details['dependents_info']);
                                                 foreach ($dependents as $dependent): 
                                                 ?>
-                                                    <div style="background: #f7fafc; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
-                                                        <i class="ri-user-line" style="color: #f97316; font-size: 1.2rem;"></i>
-                                                        <span style="color: #2d3748;"><?php echo htmlspecialchars($dependent); ?></span>
+                                                    <div style="background: #f9f9f9; padding: 12px; border-radius: 4px; display: flex; align-items: center; gap: 12px;">
+                                                        <i class="ri-user-line" style="color: #e67e22; font-size: 1.2rem;"></i>
+                                                        <span style="color: #333;"><?php echo htmlspecialchars($dependent); ?></span>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -890,7 +914,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <?php endif; ?>
                                 </div>
                             <?php else: ?>
-                                <p style="color: #718096; text-align: center; padding: 20px;">No family details available.</p>
+                                <div style="text-align: center; padding: 20px;">
+                                    <p style="color: #7f8c8d; margin-bottom: 20px;">No family details available.</p>
+                                    <button class="btn btn-primary" onclick="window.location.href='add_family.php?member_id=<?php echo htmlspecialchars($selected_member['member_id']); ?>'">
+                                        <i class="ri-user-add-line"></i> Add Family Details
+                                    </button>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -900,18 +929,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="accordion-content" id="financial-records">
                             <div class="grid" style="margin-bottom: 20px;">
                                 <div style="text-align: center;">
-                                    <i class="ri-arrow-up-line" style="font-size: 1.5rem; color: #f97316;"></i>
-                                    <p style="font-size: 0.9rem; color: #718096;">From Member</p>
+                                    <i class="ri-arrow-up-line" style="font-size: 1.5rem; color: #e67e22;"></i>
+                                    <p style="font-size: 0.9rem; color: #7f8c8d;">From Member</p>
                                     <p style="font-weight: 600;">LKR <?php echo number_format($total_from_member, 2); ?></p>
                                 </div>
                                 <div style="text-align: center;">
-                                    <i class="ri-arrow-down-line" style="font-size: 1.5rem; color: #f97316;"></i>
-                                    <p style="font-size: 0.9rem; color: #718096;">From Society</p>
+                                    <i class="ri-arrow-down-line" style="font-size: 1.5rem; color: #e67e22;"></i>
+                                    <p style="font-size: 0.9rem; color: #7f8c8d;">From Society</p>
                                     <p style="font-weight: 600;">LKR <?php echo number_format($total_from_society, 2); ?></p>
                                 </div>
                                 <div style="text-align: center;">
-                                    <i class="ri-alert-line" style="font-size: 1.5rem; color: #f97316;"></i>
-                                    <p style="font-size: 0.9rem; color: #718096;">Pending Dues</p>
+                                    <i class="ri-alert-line" style="font-size: 1.5rem; color: #e67e22;"></i>
+                                    <p style="font-size: 0.9rem; color: #7f8c8d;">Pending Dues</p>
                                     <p style="font-weight: 600;">LKR <?php echo number_format($pending_dues, 2); ?></p>
                                 </div>
                             </div>
@@ -922,7 +951,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     ['title' => 'Loan Settlements', 'total' => $total_loan_settlement, 'payments' => $loan_settlements]
                                 ] as $section): ?>
                                     <div style="margin-bottom: 20px;">
-                                        <h3 style="font-size: 1.2rem; color: #f97316; margin-bottom: 10px;">
+                                        <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 10px;">
                                             <?php echo $section['title']; ?> (LKR <?php echo number_format($section['total'], 2); ?>)
                                         </h3>
                                         <div class="table-container">
@@ -941,7 +970,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                     </tr>
                                                 <?php endforeach; ?>
                                                 <?php if (empty($section['payments'])): ?>
-                                                    <tr><td colspan="5" style="text-align: center; color: #718096;">No records</td></tr>
+                                                    <tr><td colspan="5" style="text-align: center; color: #7f8c8d;">No records</td></tr>
                                                 <?php endif; ?>
                                                 </tbody>
                                             </table>
@@ -970,7 +999,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </tr>
                                     <?php endforeach; ?>
                                     <?php if (empty($incidents)): ?>
-                                        <tr><td colspan="4" style="text-align: center; color: #718096;">No records</td></tr>
+                                        <tr><td colspan="4" style="text-align: center; color: #7f8c8d;">No records</td></tr>
                                     <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -983,18 +1012,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="accordion-content" id="loans">
                             <div class="grid" style="margin-bottom: 20px;">
                                 <div style="text-align: center;">
-                                    <i class="ri-money-dollar-circle-line" style="font-size: 1.5rem; color: #f97316;"></i>
-                                    <p style="font-size: 0.9rem; color: #718096;">Total Amount</p>
+                                    <i class="ri-money-dollar-circle-line" style="font-size: 1.5rem; color: #e67e22;"></i>
+                                    <p style="font-size: 0.9rem; color: #7f8c8d;">Total Amount</p>
                                     <p style="font-weight: 600;">LKR <?php echo number_format($total_loan_amount, 2); ?></p>
                                 </div>
                                 <div style="text-align: center;">
-                                    <i class="ri-alert-line" style="font-size: 1.5rem; color: #f97316;"></i>
-                                    <p style="font-size: 0.9rem; color: #718096;">Total Dues</p>
+                                    <i class="ri-alert-line" style="font-size: 1.5rem; color: #e67e22;"></i>
+                                    <p style="font-size: 0.9rem; color: #7f8c8d;">Total Dues</p>
                                     <p style="font-weight: 600;">LKR <?php echo number_format($total_dues, 2); ?></p>
                                 </div>
                                 <div style="text-align: center;">
-                                    <i class="ri-percent-line" style="font-size: 1.5rem; color: #f97316;"></i>
-                                    <p style="font-size: 0.9rem; color: #718096;">Total Interest</p>
+                                    <i class="ri-percent-line" style="font-size: 1.5rem; color: #e67e22;"></i>
+                                    <p style="font-size: 0.9rem; color: #7f8c8d;">Total Interest</p>
                                     <p style="font-weight: 600;">LKR <?php echo number_format($total_interest_amount, 2); ?></p>
                                 </div>
                             </div>
@@ -1013,7 +1042,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </tr>
                                     <?php endforeach; ?>
                                     <?php if (empty($loans)): ?>
-                                        <tr><td colspan="4" style="text-align: center; color: #718096;">No records</td></tr>
+                                        <tr><td colspan="4" style="text-align: center; color: #7f8c8d;">No records</td></tr>
                                     <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -1038,7 +1067,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </tr>
                                     <?php endforeach; ?>
                                     <?php if (empty($documents)): ?>
-                                        <tr><td colspan="3" style="text-align: center; color: #718096;">No records</td></tr>
+                                        <tr><td colspan="3" style="text-align: center; color: #7f8c8d;">No records</td></tr>
                                     <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -1065,7 +1094,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <tbody>
                             <?php foreach ($members_paginated as $m): ?>
                                 <tr>
-                                    <td><a href="?member_id=<?php echo htmlspecialchars($m['member_id']); ?>" style="color: #f97316;"><?php echo htmlspecialchars($m['member_id']); ?></a></td>
+                                    <td><a href="?member_id=<?php echo htmlspecialchars($m['member_id']); ?>" style="color: #e67e22;"><?php echo htmlspecialchars($m['member_id']); ?></a></td>
                                     <td><?php echo htmlspecialchars($m['full_name']); ?></td>
                                     <td><?php echo htmlspecialchars($m['contact_number']); ?></td>
                                     <td><?php echo htmlspecialchars($m['membership_type']); ?></td>
@@ -1077,7 +1106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <span class="tooltip">Edit</span>
                                         </button>
                                         <button class="btn-icon delete-btn" data-id="<?php echo $m['id']; ?>" title="Delete Member" aria-label="Delete Member">
-                                            <i class="ri-delete-bin-line" style="color: #e53e3e;"></i>
+                                            <i class="ri-delete-bin-line" style="color: #e74c3c;"></i>
                                             <span class="tooltip">Delete</span>
                                         </button>
                                     </td>
@@ -1094,7 +1123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <?php if ($total_pages > 1): ?>
                         <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
-                            <p style="font-size: 0.9rem; color: #718096;">
+                            <p style="font-size: 0.9rem; color: #7f8c8d;">
                                 Showing <?php echo $offset + 1; ?>-<?php echo min($offset + $items_per_page, $total_members); ?> of <?php echo $total_members; ?>
                             </p>
                             <div class="flex" style="gap: 10px;">
@@ -1113,15 +1142,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </main>
 </div>
 
-<!-- Modal Overlay -->
-<div class="modal-overlay"></div>
+<!-- Popups -->
+<div class="popup-overlay" id="popup-overlay"></div>
+
+<div class="popup" id="success-popup">
+    <div style="text-align: center;">
+        <div style="font-size: 3rem; color: #2ecc71; margin-bottom: 20px;"><i class="ri-checkbox-circle-fill"></i></div>
+        <h3 style="font-size: 1.5rem; font-weight: 700;">Success!</h3>
+        <p style="color: #7f8c8d; margin-top: 10px;" id="success-message"></p>
+        <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
+            Closing in <span id="success-countdown" style="font-weight: 600;">3</span> seconds...
+        </div>
+    </div>
+</div>
+
+<div class="popup" id="error-popup">
+    <div style="text-align: center;">
+        <div style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"><i class="ri-error-warning-fill"></i></div>
+        <h3 style="font-size: 1.5rem; font-weight: 700;">Error</h3>
+        <p style="color: #7f8c8d; margin-top: 10px;" id="error-message"></p>
+        <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
+            Closing in <span id="error-countdown" style="font-weight: 600;">3</span> seconds...
+        </div>
+    </div>
+</div>
+
+<div class="popup" id="cancel-popup">
+    <div style="text-align: center;">
+        <div style="font-size: 3rem; color: #7f8c8d; margin-bottom: 20px;"><i class="ri-close-circle-fill"></i></div>
+        <h3 style="font-size: 1.5rem; font-weight: 700;">Cancelled</h3>
+        <p style="color: #7f8c8d; margin-top: 10px;">The operation has been cancelled.</p>
+        <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
+            Closing in <span id="cancel-countdown" style="font-weight: 600;">3</span> seconds...
+        </div>
+    </div>
+</div>
 
 <!-- Edit Modal -->
 <div id="edit-modal" class="modal">
     <div class="modal-content">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-        <h2 style="font-size: 1.5rem; color: #f97316; margin-bottom: 20px;">Edit Member</h2>
-        <form method="POST" id="edit-form">
+        <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Member</h2>
+        <form id="edit-form">
             <input type="hidden" name="id" id="edit-id">
             <div class="grid">
                 <div class="form-group">
@@ -1132,7 +1194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group">
                     <label for="edit-contact_number" class="form-label">Contact Number <span class="required-mark">*</span></label>
                     <input type="text" name="contact_number" id="edit-contact_number" class="input-field" required aria-describedby="edit-contact_number-error">
-                    <span class="error-text" id="edit-contact_number-error">Contact number is required.</span>
+                    <span class="error-text" id="edit-contact_number-error">Valid contact number is required (format: +94XXXXXXXXX).</span>
                 </div>
                 <div class="form-group">
                     <label for="edit-membership_type" class="form-label">Membership Type</label>
@@ -1161,7 +1223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                <button type="submit" name="update" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+                <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
             </div>
         </form>
     </div>
@@ -1172,14 +1234,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="modal-content">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
         <div style="text-align: center;">
-            <i class="ri-error-warning-fill" style="font-size: 3rem; color: #e53e3e; margin-bottom: 20px;"></i>
+            <i class="ri-error-warning-fill" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
             <h3 style="font-size: 1.5rem; font-weight: 700;">Confirm Deletion</h3>
-            <p style="color: #718096; margin-top: 10px;">Are you sure you want to delete this member? This action cannot be undone.</p>
-            <form method="POST" id="delete-form">
+            <p style="color: #7f8c8d; margin-top: 10px;">Are you sure you want to delete this member? This action cannot be undone.</p>
+            <form id="delete-form">
                 <input type="hidden" name="id" id="delete-id">
                 <div class="flex" style="justify-content: center; margin-top: 20px;">
                     <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                    <button type="submit" name="delete" class="btn btn-primary"><i class="ri-delete-bin-line"></i> Delete</button>
+                    <button type="submit" class="btn btn-primary"><i class="ri-delete-bin-line"></i> Delete</button>
                 </div>
             </form>
         </div>
@@ -1188,8 +1250,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const sidebar = document.getElementById('sidebar');
-    const sidebarToggle = document.getElementById('sidebar-toggle');
     const editModal = document.getElementById('edit-modal');
     const deleteModal = document.getElementById('delete-modal');
     const modalOverlay = document.querySelector('.modal-overlay');
@@ -1200,25 +1260,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('search-input');
     const clearSearch = document.getElementById('clear-search');
     const editForm = document.getElementById('edit-form');
+    const deleteForm = document.getElementById('delete-form');
     const searchForm = document.getElementById('search-form');
     const searchOptions = document.getElementById('search-options');
     const searchTypeInput = document.getElementById('search-type');
     const searchLoading = document.getElementById('search-loading');
+    const popupOverlay = document.getElementById('popup-overlay');
+    const successPopup = document.getElementById('success-popup');
+    const errorPopup = document.getElementById('error-popup');
+    const cancelPopup = document.getElementById('cancel-popup');
+    const successMessage = document.getElementById('success-message');
+    const errorMessage = document.getElementById('error-message');
 
-    // Sidebar toggle
-    if (sidebar && sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('expanded');
-            document.body.classList.toggle('sidebar-expanded');
-        });
+    // Show popups if messages exist (for synchronous submissions)
+    const successMsg = <?php echo $js_success; ?>;
+    const errorMsg = <?php echo $js_error; ?>;
 
-        document.addEventListener('click', (e) => {
-            if (window.innerWidth < 768 && sidebar.classList.contains('expanded') &&
-                !sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
-                sidebar.classList.remove('expanded');
-                document.body.classList.remove('sidebar-expanded');
-            }
-        });
+    if (successMsg) {
+        successMessage.textContent = successMsg;
+        showPopup(successPopup);
+        startCountdown('success-countdown', window.location.href);
+    } else if (errorMsg) {
+        errorMessage.textContent = errorMsg;
+        showPopup(errorPopup);
+        startCountdown('error-countdown', window.location.href);
+    }
+
+    function showPopup(popup) {
+        popupOverlay.classList.add('show');
+        popup.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function hidePopup(popup) {
+        popupOverlay.classList.remove('show');
+        popup.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    function startCountdown(elementId, redirectUrl) {
+        let timeLeft = 3;
+        const countdown = document.getElementById(elementId);
+        if (countdown) {
+            const interval = setInterval(() => {
+                timeLeft--;
+                countdown.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    window.location.href = redirectUrl;
+                }
+            }, 1000);
+        }
     }
 
     // Edit modal
@@ -1237,7 +1329,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.style.overflow = 'hidden';
             } catch (e) {
                 console.error('Failed to parse member data:', e);
-                alert('Error loading member data. Please try again.');
+                errorMessage.textContent = 'Error loading member data. Please try again.';
+                showPopup(errorPopup);
+                startCountdown('error-countdown', window.location.href);
             }
         });
     });
@@ -1262,6 +1356,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = '';
             editForm.reset();
             clearErrors();
+            showPopup(cancelPopup);
+            startCountdown('cancel-countdown', window.location.href);
         });
     });
 
@@ -1273,6 +1369,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.overflow = '';
             editForm.reset();
             clearErrors();
+            showPopup(cancelPopup);
+            startCountdown('cancel-countdown', window.location.href);
         }
     });
 
@@ -1281,12 +1379,97 @@ document.addEventListener('DOMContentLoaded', () => {
             deleteModal.classList.remove('show');
             modalOverlay.classList.remove('show');
             document.body.style.overflow = '';
+            showPopup(cancelPopup);
+            startCountdown('cancel-countdown', window.location.href);
         }
     });
 
     // Form validation for edit
-    editForm.addEventListener('submit', (e) => {
-        let hasError = false;
+    editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearErrors();
+
+        if (!validateEditForm()) {
+            errorMessage.textContent = 'Please fill out all required fields correctly.';
+            showPopup(errorPopup);
+            return;
+        }
+
+        try {
+            const formData = new FormData(editForm);
+            formData.append('update', 'true');
+            const response = await fetch('members.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                successMessage.textContent = result.message;
+                showPopup(successPopup);
+                startCountdown('success-countdown', window.location.href);
+                editModal.classList.remove('show');
+                modalOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+                editForm.reset();
+            } else {
+                errorMessage.textContent = result.message;
+                showPopup(errorPopup);
+            }
+        } catch (error) {
+            console.error('Submission error:', error);
+            errorMessage.textContent = 'An unexpected error occurred: ' + error.message;
+            showPopup(errorPopup);
+        }
+    });
+
+    // Delete form submission
+    deleteForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        try {
+            const formData = new FormData(deleteForm);
+            formData.append('delete', 'true');
+            const response = await fetch('members.php', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                successMessage.textContent = result.message;
+                showPopup(successPopup);
+                startCountdown('success-countdown', 'members.php');
+                deleteModal.classList.remove('show');
+                modalOverlay.classList.remove('show');
+                document.body.style.overflow = '';
+            } else {
+                errorMessage.textContent = result.message;
+                showPopup(errorPopup);
+            }
+        } catch (error) {
+            console.error('Submission error:', error);
+            errorMessage.textContent = 'An unexpected error occurred: ' + error.message;
+            showPopup(errorPopup);
+        }
+    });
+
+    function validateEditForm() {
+        let isValid = true;
         clearErrors();
 
         const fullName = document.getElementById('edit-full_name');
@@ -1294,17 +1477,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!fullName.value.trim()) {
             showError('edit-full_name-error', fullName);
-            hasError = true;
+            isValid = false;
         }
-        if (!contactNumber.value.trim()) {
+        if (!contactNumber.value.trim() || !/^\+94\d{9}$/.test(contactNumber.value)) {
             showError('edit-contact_number-error', contactNumber);
-            hasError = true;
+            isValid = false;
         }
 
-        if (hasError) {
-            e.preventDefault();
-        }
-    });
+        return isValid;
+    }
 
     function showError(id, input) {
         const errorElement = document.getElementById(id);
