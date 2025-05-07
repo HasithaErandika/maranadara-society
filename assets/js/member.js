@@ -24,12 +24,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const successMessage = document.getElementById('success-message');
     const errorMessage = document.getElementById('error-message');
 
+    function showModal(modal) {
+        modal.classList.add('show');
+        overlay.classList.add('show');
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        
+        // Apply blur to everything except the modal and its contents
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.style.filter = 'blur(5px)';
+            mainContent.style.transition = 'filter 0.3s ease';
+        }
+        
+        // Ensure modal and its contents are not blurred
+        modal.style.filter = 'none';
+        modal.style.transition = 'none';
+    }
+
+    function hideModal(modal) {
+        modal.classList.remove('show');
+        overlay.classList.remove('show');
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        
+        // Remove blur from main content
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.style.filter = '';
+            mainContent.style.transition = '';
+        }
+    }
+
     function showPopup(popup, message = '') {
         overlay.classList.add('show');
         popup.classList.add('show');
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
+        
+        // Apply blur to main content
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.style.filter = 'blur(5px)';
+            mainContent.style.transition = 'filter 0.3s ease';
+        }
+        
+        // Ensure popup and its contents are not blurred
+        popup.style.filter = 'none';
+        popup.style.transition = 'none';
+        
         if (message) {
             if (popup === successPopup) {
                 successMessage.textContent = message;
@@ -45,6 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = '';
         document.body.style.position = '';
         document.body.style.width = '';
+        
+        // Remove blur from main content
+        const mainContent = document.querySelector('main');
+        if (mainContent) {
+            mainContent.style.filter = '';
+            mainContent.style.transition = '';
+        }
     }
 
     function startCountdown(elementId, seconds, redirectUrl = null) {
@@ -63,22 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }, 1000);
         }
-    }
-
-    function showModal(modal) {
-        modal.classList.add('show');
-        overlay.classList.add('show');
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-    }
-
-    function hideModal(modal) {
-        modal.classList.remove('show');
-        overlay.classList.remove('show');
-        document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.width = '';
     }
 
     // Edit modal (Manage Members)
@@ -424,16 +461,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             const formData = new FormData(this);
-            
-            // Add member_id to formData
-            formData.append('member_id', editFamilyForm.dataset.memberId);
-            
-            // Add update_family flag
             formData.append('update_family', '1');
             
-            const response = await fetch(window.location.href, {
+            const response = await fetch('', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
             });
             
             if (!response.ok) {
@@ -443,10 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             
             if (result.success) {
-                // Hide the edit family modal
                 hideModal(editFamilyModal);
-                
-                // Show success message
                 successMessage.textContent = result.message || 'Family details updated successfully';
                 showPopup(successPopup);
                 startCountdown('success-countdown', 3, window.location.href);
@@ -457,7 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error:', error);
             errorMessage.textContent = error.message || 'An error occurred while updating family details';
             showPopup(errorPopup);
-            startCountdown('error-countdown', 3);
         }
     });
 
