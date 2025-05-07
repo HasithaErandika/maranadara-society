@@ -24,26 +24,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const successMessage = document.getElementById('success-message');
     const errorMessage = document.getElementById('error-message');
 
-    // Show popups if messages exist
-    const successMsg = window.successMsg;
-    const errorMsg = window.errorMsg;
-
-    if (successMsg && successMsg !== '') {
-        successMessage.textContent = successMsg;
-        showPopup(successPopup);
-        startCountdown('success-countdown', window.location.href);
-    } else if (errorMsg && errorMsg !== '') {
-        errorMessage.textContent = errorMsg;
-        showPopup(errorPopup);
-        startCountdown('error-countdown', window.location.href);
-    }
-
-    function showPopup(popup) {
+    function showPopup(popup, message = '') {
         overlay.classList.add('show');
         popup.classList.add('show');
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
+        if (message) {
+            if (popup === successPopup) {
+                successMessage.textContent = message;
+            } else if (popup === errorPopup) {
+                errorMessage.textContent = message;
+            }
+        }
     }
 
     function hidePopup(popup) {
@@ -54,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.width = '';
     }
 
-    function startCountdown(elementId, redirectUrl) {
-        let timeLeft = 3;
+    function startCountdown(elementId, seconds, redirectUrl = null) {
+        let timeLeft = seconds;
         const countdown = document.getElementById(elementId);
         if (countdown) {
             const interval = setInterval(() => {
@@ -63,8 +56,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 countdown.textContent = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(interval);
+                    hidePopup(successPopup);
                     if (redirectUrl) {
-                        window.location.href = redirectUrl;
+                        window.location.replace(redirectUrl);
                     }
                 }
             }, 1000);
@@ -320,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hideModal(modal);
                 // Show cancel popup and start countdown
                 showPopup(cancelPopup);
-                startCountdown('cancel-countdown', window.location.href);
+                startCountdown('cancel-countdown', 3, window.location.href);
             }
         });
     });
@@ -359,13 +353,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
             const result = await response.json();
+            
             if (result.success) {
-                successMessage.textContent = result.message;
+                hideModal(editModal);
+                successMessage.textContent = result.message || 'Member updated successfully';
                 showPopup(successPopup);
-                startCountdown('success-countdown', window.location.href);
+                startCountdown('success-countdown', 3, window.location.href);
             } else {
-                errorMessage.textContent = result.message;
+                errorMessage.textContent = result.message || 'Failed to update member';
                 showPopup(errorPopup);
             }
         } catch (error) {
@@ -394,13 +395,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
             const result = await response.json();
+            
             if (result.success) {
-                successMessage.textContent = result.message;
+                hideModal(editDetailsModal);
+                successMessage.textContent = result.message || 'Member details updated successfully';
                 showPopup(successPopup);
-                startCountdown('success-countdown', window.location.href);
+                startCountdown('success-countdown', 3, window.location.href);
             } else {
-                errorMessage.textContent = result.message;
+                errorMessage.textContent = result.message || 'Failed to update member details';
                 showPopup(errorPopup);
             }
         } catch (error) {
@@ -441,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Show success message
                 successMessage.textContent = result.message || 'Family details updated successfully';
                 showPopup(successPopup);
-                startCountdown('success-countdown', window.location.href);
+                startCountdown('success-countdown', 3, window.location.href);
             } else {
                 throw new Error(result.message || 'Failed to update family details');
             }
@@ -449,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error:', error);
             errorMessage.textContent = error.message || 'An error occurred while updating family details';
             showPopup(errorPopup);
-            startCountdown('error-countdown', window.location.href);
+            startCountdown('error-countdown', 3);
         }
     });
 
@@ -471,7 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 successMessage.textContent = result.message;
                 showPopup(successPopup);
-                startCountdown('success-countdown', 'members.php');
+                startCountdown('success-countdown', 3, 'members.php');
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);

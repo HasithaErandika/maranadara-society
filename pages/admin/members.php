@@ -283,12 +283,12 @@ try {
 
                 try {
                     if ($family->updateFamilyDetails($member_id, $spouse_data, $children_data, $dependents_data)) {
-                        ob_end_clean();
-                        header('Content-Type: application/json');
-                        echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
-                        exit;
-                    } else {
-                        throw new Exception("Failed to update family details.");
+                    ob_end_clean();
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
+                    exit;
+                } else {
+                    throw new Exception("Failed to update family details.");
                     }
                 } catch (Exception $e) {
                     throw new Exception("Error updating family details: " . $e->getMessage());
@@ -775,13 +775,15 @@ try {
 <div class="overlay" id="overlay"></div>
 
 <!-- Popups -->
+<div class="popup-overlay" id="popup-overlay"></div>
+
 <div class="popup" id="success-popup">
     <div style="text-align: center;">
         <div style="font-size: 3rem; color: #2ecc71; margin-bottom: 20px;"><i class="ri-checkbox-circle-fill"></i></div>
         <h3 style="font-size: 1.5rem; font-weight: 700;">Success!</h3>
         <p style="color: #7f8c8d; margin-top: 10px;" id="success-message"></p>
         <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-            Closing in <span id="success-countdown" style="font-weight: 600;">3</span> seconds...
+            Redirecting in <span id="success-countdown" style="font-weight: 600;">3</span> seconds...
         </div>
     </div>
 </div>
@@ -792,7 +794,7 @@ try {
         <h3 style="font-size: 1.5rem; font-weight: 700;">Error</h3>
         <p style="color: #7f8c8d; margin-top: 10px;" id="error-message"></p>
         <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-            Closing in <span id="error-countdown" style="font-weight: 600;">3</span> seconds...
+            Redirecting in <span id="error-countdown" style="font-weight: 600;">3</span> seconds...
         </div>
     </div>
 </div>
@@ -803,7 +805,7 @@ try {
         <h3 style="font-size: 1.5rem; font-weight: 700;">Cancelled</h3>
         <p style="color: #7f8c8d; margin-top: 10px;">The operation has been cancelled.</p>
         <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-            Closing in <span id="cancel-countdown" style="font-weight: 600;">3</span> seconds...
+            Redirecting in <span id="cancel-countdown" style="font-weight: 600;">3</span> seconds...
         </div>
     </div>
 </div>
@@ -970,14 +972,14 @@ try {
             <div class="form-section">
                 <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Spouse Information (Optional)</h3>
                 <div class="grid">
-                    <div class="form-group">
-                        <label for="edit-spouse-name" class="form-label">Spouse Name</label>
+                <div class="form-group">
+                    <label for="edit-spouse-name" class="form-label">Spouse Name</label>
                         <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field">
-                    </div>
+                </div>
                     <div class="form-group">
                         <label for="edit-spouse-age" class="form-label">Spouse Age</label>
                         <input type="number" name="spouse_age" id="edit-spouse-age" class="input-field" min="0" max="120">
-                    </div>
+            </div>
                     <div class="form-group">
                         <label for="edit-spouse-gender" class="form-label">Spouse Gender</label>
                         <select name="spouse_gender" id="edit-spouse-gender" class="input-field">
@@ -1036,9 +1038,9 @@ try {
 </div>
 
 <script>
-    // Make PHP variables available to JavaScript
-    window.successMsg = <?php echo $js_success; ?>;
-    window.errorMsg = <?php echo $js_error; ?>;
+    // Pass PHP variables to JavaScript
+    window.successMsg = '<?php echo json_encode($js_success); ?>';
+    window.errorMsg = '<?php echo json_encode($js_error); ?>';
 </script>
 <script src="../../assets/js/member.js"></script>
 </body>
