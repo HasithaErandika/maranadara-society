@@ -776,18 +776,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Modal functionality
-        const modal = document.getElementById('loan-modal');
-        const closeModal = document.getElementById('close-modal');
-        const loanDetails = document.getElementById('loan-details');
-        const viewButtons = document.querySelectorAll('.view-details');
+document.addEventListener('DOMContentLoaded', () => {
+    // Modal functionality
+    const modal = document.getElementById('loan-modal');
+    const closeModal = document.getElementById('close-modal');
+    const loanDetails = document.getElementById('loan-details');
+    const viewButtons = document.querySelectorAll('.view-details');
 
+<<<<<<< HEAD
+    viewButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const loan = JSON.parse(button.getAttribute('data-loan'));
+            const member = JSON.parse(button.getAttribute('data-member'));
+            loanDetails.innerHTML = `
+=======
         viewButtons.forEach(button => {
             button.addEventListener('click', () => {
                 const loan = JSON.parse(button.getAttribute('data-loan'));
                 const member = JSON.parse(button.getAttribute('data-member'));
                 loanDetails.innerHTML = `
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
                 <div class="grid grid-cols-1 gap-3">
                     <p><strong class="text-[var(--secondary)]">Member ID:</strong> ${member.member_id || 'N/A'}</p>
                     <p><strong class="text-[var(--secondary)]">Member Name:</strong> ${member.full_name || 'N/A'}</p>
@@ -804,6 +812,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <p><strong class="text-[var(--secondary)]">Remarks:</strong> ${loan.remarks || 'N/A'}</p>
                 </div>
             `;
+<<<<<<< HEAD
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+=======
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
             });
@@ -880,6 +892,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     setTimeout(() => hidePopup(errorPopup), 3000);
                 }
             });
+>>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
         });
 
         // Auto-populate application form from calculator
@@ -1135,6 +1148,333 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         setTimeout(() => hidePopup(errorPopup), 3000);
         <?php endif; ?>
     });
+
+    closeModal.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    });
+
+    // Custom searchable dropdown
+    const searchInput = document.getElementById('member-search');
+    const select = document.getElementById('filter_member_id');
+    const dropdown = document.getElementById('member-dropdown');
+    const options = Array.from(select.options);
+
+    const updateDropdown = (searchTerm = '') => {
+        dropdown.innerHTML = '';
+        const filteredOptions = options.filter(option => 
+            option.value === '' || 
+            option.text.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        filteredOptions.forEach(option => {
+            const item = document.createElement('div');
+            item.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
+            item.textContent = option.text;
+            item.dataset.value = option.value;
+            item.addEventListener('click', () => {
+                select.value = option.value;
+                searchInput.value = option.text;
+                dropdown.classList.add('hidden');
+                select.form.submit();
+            });
+            dropdown.appendChild(item);
+        });
+
+        dropdown.classList.toggle('hidden', filteredOptions.length === 0);
+    };
+
+    searchInput.addEventListener('input', () => updateDropdown(searchInput.value));
+    searchInput.addEventListener('focus', () => updateDropdown(searchInput.value));
+    searchInput.addEventListener('click', () => updateDropdown(searchInput.value));
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // Form validation
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', (e) => {
+            const inputs = form.querySelectorAll('input[required], select[required]');
+            let valid = true;
+            inputs.forEach(input => {
+                if (!input.value) {
+                    valid = false;
+                    input.classList.add('border-red-500');
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+            if (!valid) {
+                e.preventDefault();
+                showPopup(errorPopup, 'Please fill in all required fields.');
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            }
+        });
+    });
+
+    // Auto-populate application form from calculator
+    <?php if ($loan_breakdown): ?>
+        document.getElementById('amount').value = '<?php echo $loan_breakdown['amount']; ?>';
+        document.getElementById('interest_rate').value = '<?php echo $_POST['interest_rate']; ?>';
+        document.getElementById('duration').value = '<?php echo $_POST['duration']; ?>';
+        document.getElementById('monthly_payment').value = '<?php echo $loan_breakdown['monthly_payment']; ?>';
+        document.getElementById('total_payable').value = '<?php echo $loan_breakdown['total_payable']; ?>';
+        document.getElementById('start_date').value = '<?php echo $_POST['start_date']; ?>';
+        document.getElementById('end_date').value = '<?php echo $loan_breakdown['end_date']; ?>';
+    <?php endif; ?>
+
+    // Popup functionality
+    const popupOverlay = document.getElementById('popup-overlay');
+    const successPopup = document.getElementById('success-popup');
+    const errorPopup = document.getElementById('error-popup');
+    const confirmDeletePopup = document.getElementById('confirm-delete-popup');
+    const confirmApprovePopup = document.getElementById('confirm-approve-popup');
+    const submitBtn = document.getElementById('submit-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const calculatorForm = document.getElementById('calculator-form');
+    const applicationForm = document.getElementById('application-form');
+
+    function showPopup(popup, message = '') {
+        if (message) {
+            const messageEl = popup.querySelector('p');
+            if (messageEl) messageEl.innerHTML = message;
+        }
+        popupOverlay.classList.add('show');
+        popup.classList.add('show');
+        popup.focus();
+    }
+
+    function hidePopup(popup) {
+        popupOverlay.classList.remove('show');
+        popup.classList.remove('show');
+    }
+
+    function startCountdown(elementId, redirectUrl) {
+        let timeLeft = 3;
+        const countdown = document.getElementById(elementId);
+        if (countdown) {
+            countdown.textContent = timeLeft;
+            const interval = setInterval(() => {
+                timeLeft--;
+                countdown.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    window.location.href = redirectUrl;
+                }
+            }, 1000);
+        }
+    }
+
+    // Submit application
+    if (submitBtn) {
+        submitBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const inputs = applicationForm.querySelectorAll('input[required], select[required]');
+            let valid = true;
+            inputs.forEach(input => {
+                if (!input.value) {
+                    valid = false;
+                    input.classList.add('border-red-500');
+                } else {
+                    input.classList.remove('border-red-500');
+                }
+            });
+            if (!valid) {
+                showPopup(errorPopup, 'Please fill in all required fields.');
+                setTimeout(() => hidePopup(errorPopup), 3000);
+                return;
+            }
+            const formData = new FormData(applicationForm);
+            fetch('', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.text()).then(html => {
+                if (html.includes('Error adding loan')) {
+                    showPopup(errorPopup, 'Error adding loan. Member may have an unsettled loan.');
+                    setTimeout(() => hidePopup(errorPopup), 3000);
+                } else {
+                    showPopup(successPopup, 'Loan application submitted successfully! Redirecting in <span id="success-countdown"></span> seconds...');
+                    startCountdown('success-countdown', 'loans.php?action=view<?php echo $selected_member_id ? "&member_id=$selected_member_id" : ""; ?>');
+                }
+            }).catch(() => {
+                showPopup(errorPopup, 'Error connecting to server.');
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            });
+        });
+    }
+
+    // Cancel button
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            showPopup(errorPopup, 'Action cancelled. Redirecting in <span id="cancel-countdown"></span> seconds...');
+            startCountdown('cancel-countdown', 'loans.php?action=view<?php echo $selected_member_id ? "&member_id=$selected_member_id" : ""; ?>');
+        });
+    }
+
+    // Delete loan functionality
+    const deleteButtons = document.querySelectorAll('.delete-loan-btn');
+    let activeDeleteForm = null;
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            activeDeleteForm = button.closest('form');
+            showPopup(confirmDeletePopup);
+        });
+    });
+
+    document.getElementById('cancel-delete-btn')?.addEventListener('click', () => {
+        hidePopup(confirmDeletePopup);
+        activeDeleteForm = null;
+    });
+
+    document.getElementById('confirm-delete-btn')?.addEventListener('click', () => {
+        if (activeDeleteForm) {
+            const formData = new FormData(activeDeleteForm);
+            formData.append('delete', '1');
+            fetch('', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    showPopup(successPopup, 'Loan deleted successfully! Redirecting in <span id="success-countdown"></span> seconds...');
+                    startCountdown('success-countdown', 'loans.php?action=view<?php echo $selected_member_id ? "&member_id=$selected_member_id" : ""; ?>');
+                } else {
+                    showPopup(errorPopup, 'Failed to delete loan.');
+                    setTimeout(() => hidePopup(errorPopup), 3000);
+                }
+            }).catch(() => {
+                showPopup(errorPopup, 'Error connecting to server.');
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            });
+            hidePopup(confirmDeletePopup);
+        }
+    });
+
+    // Approve loan functionality
+    const approveButtons = document.querySelectorAll('.approve-loan-btn');
+    let activeApproveForm = null;
+
+    approveButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            activeApproveForm = button.closest('form');
+            showPopup(confirmApprovePopup);
+        });
+    });
+
+    document.getElementById('cancel-approve-btn')?.addEventListener('click', () => {
+        hidePopup(confirmApprovePopup);
+        activeApproveForm = null;
+    });
+
+    document.getElementById('confirm-approve-btn')?.addEventListener('click', () => {
+        if (activeApproveForm) {
+            const formData = new FormData(activeApproveForm);
+            formData.append('approve', '1');
+            fetch('', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    showPopup(successPopup, 'Loan approved successfully! Redirecting in <span id="success-countdown"></span> seconds...');
+                    startCountdown('success-countdown', 'loans.php?action=view<?php echo $selected_member_id ? "&member_id=$selected_member_id" : ""; ?>');
+                } else {
+                    showPopup(errorPopup, 'Failed to approve loan.');
+                    setTimeout(() => hidePopup(errorPopup), 3000);
+                }
+            }).catch(() => {
+                showPopup(errorPopup, 'Error connecting to server.');
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            });
+            hidePopup(confirmApprovePopup);
+        }
+    });
+
+    // Keyboard navigation for popups
+    [successPopup, errorPopup, confirmDeletePopup, confirmApprovePopup].forEach(popup => {
+        popup.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hidePopup(popup);
+                if (popup === confirmDeletePopup) activeDeleteForm = null;
+                if (popup === confirmApprovePopup) activeApproveForm = null;
+            }
+        });
+    });
+
+    if (calculatorForm) {
+        calculatorForm.addEventListener('submit', (e) => {
+            if (e.submitter.name === 'calculate') {
+                e.preventDefault();
+                const formData = new FormData(calculatorForm);
+                fetch('', {
+                    method: 'POST',
+                    body: formData
+                }).then(response => response.text()).then(() => {
+                    showPopup(successPopup, 'Loan calculation completed successfully!');
+                    setTimeout(() => {
+                        hidePopup(successPopup);
+                        window.location.reload();
+                    }, 1500);
+                });
+            }
+        });
+    }
+
+    // CSV Download
+    const downloadCsvBtn = document.getElementById('download-csv');
+    if (downloadCsvBtn) {
+        downloadCsvBtn.addEventListener('click', () => {
+            const fromDate = document.getElementById('from_date').value;
+            const toDate = document.getElementById('to_date').value;
+            if (!fromDate || !toDate) {
+                showPopup(errorPopup, 'Please select both From and To dates.');
+                setTimeout(() => hidePopup(errorPopup), 3000);
+                return;
+            }
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '';
+            form.style.display = 'none';
+            const fromInput = document.createElement('input');
+            fromInput.type = 'hidden';
+            fromInput.name = 'from_date';
+            fromInput.value = fromDate;
+            const toInput = document.createElement('input');
+            toInput.type = 'hidden';
+            toInput.name = 'to_date';
+            toInput.value = toDate;
+            const downloadInput = document.createElement('input');
+            downloadInput.type = 'hidden';
+            downloadInput.name = 'download_csv';
+            downloadInput.value = '1';
+            form.appendChild(fromInput);
+            form.appendChild(toInput);
+            form.appendChild(downloadInput);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    // Show popups for PHP messages
+    <?php if ($success && !isset($_POST['calculate']) && !isset($_POST['delete']) && !isset($_POST['approve']) && !isset($_POST['settle'])): ?>
+        showPopup(successPopup, '<?php echo htmlspecialchars($success); ?> Redirecting in <span id="success-countdown"></span> seconds...');
+        startCountdown('success-countdown', 'loans.php?action=view<?php echo $selected_member_id ? "&member_id=$selected_member_id" : ""; ?>');
+    <?php endif; ?>
+
+    <?php if ($error && (isset($_POST['delete']) || isset($_POST['add']))): ?>
+        showPopup(errorPopup, '<?php echo htmlspecialchars($error); ?>');
+        setTimeout(() => hidePopup(errorPopup), 3000);
+    <?php endif; ?>
+});
 </script>
 </body>
 </html>

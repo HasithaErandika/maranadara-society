@@ -13,6 +13,34 @@ class Loan {
         }
     }
 
+    /**
+     * Get confirmed, pending loans for a member (for payment dropdown)
+     * @param int $member_id The ID of the member
+     * @return array Array of loan records (id, amount, monthly_payment)
+     */
+    public function getConfirmedPendingLoansByMemberId($member_id) {
+        $conn = $this->db->getConnection();
+        if (!$conn) {
+            error_log("Failed to connect to database in getConfirmedPendingLoansByMemberId");
+            return [];
+        }
+
+        $stmt = $conn->prepare("
+            SELECT id, amount, monthly_payment
+            FROM loans 
+            WHERE member_id = ? 
+            AND status = 'Pending' 
+            AND is_confirmed = TRUE
+            ORDER BY start_date ASC
+        ");
+        $stmt->bind_param("i", $member_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $loans = $result->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $loans;
+    }
+
     public function getLoansByMemberId($member_id) {
         $conn = $this->db->getConnection();
         if (!$conn) return false;
@@ -79,7 +107,6 @@ class Loan {
             return false;
         }
 
-        // Use provided values or calculate if not provided
         $monthly_payment = $monthly_payment ?? $this->calculateMonthlyPayment($amount, $interest_rate, $duration);
         $total_payable = $total_payable ?? ($amount + ($amount * ($interest_rate / 100)));
         $end_date = $end_date ?? date('Y-m-d', strtotime($start_date . " + $duration months"));
@@ -137,7 +164,7 @@ class Loan {
     }
 
     public function calculateLoanBreakdown($amount, $interest_rate, $duration, $start_date) {
-        $total_interest = $amount * ($interest_rate / 100); // Simple interest for the full term
+        $total_interest = $amount * ($interest_rate / 100);
         $total_payable = $amount + $total_interest;
         $monthly_payment = $total_payable / $duration;
         $end_date = date('Y-m-d', strtotime($start_date . " + $duration months"));
@@ -159,10 +186,8 @@ class Loan {
         }
 
         try {
-            // Begin transaction
             $conn->begin_transaction();
 
-            // Check loan status
             $stmt = $conn->prepare("SELECT status FROM loans WHERE id = ?");
             if (!$stmt) {
                 throw new Exception("Failed to prepare status query: " . $conn->error);
@@ -178,7 +203,6 @@ class Loan {
                 throw new Exception("Loan not found or not in 'Applied' status");
             }
 
-            // Delete loan
             $stmt = $conn->prepare("DELETE FROM loans WHERE id = ?");
             if (!$stmt) {
                 throw new Exception("Failed to prepare delete query: " . $conn->error);
@@ -190,7 +214,6 @@ class Loan {
             $success = $stmt->affected_rows > 0;
             $stmt->close();
 
-            // Commit transaction
             $conn->commit();
             return $success;
         } catch (Exception $e) {

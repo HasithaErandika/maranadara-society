@@ -62,14 +62,13 @@ class Payment {
     public function autoAddLoanSettlements($date) {
         $conn = $this->db->getConnection();
 
-        // Select pending loans with their monthly payment amounts
         $stmt = $conn->prepare("SELECT member_id, id AS loan_id, monthly_payment FROM loans WHERE status = 'Pending' AND is_confirmed = TRUE");
         $stmt->execute();
         $result = $stmt->get_result();
         $pending_loans = $result->fetch_all(MYSQLI_ASSOC);
 
         $count = 0;
-        $payment_mode = 'Cash'; // Default mode, can be adjusted
+        $payment_mode = 'Cash';
         $payment_type = 'Loan Settlement';
         $remarks = 'Monthly Loan Settlement Payment';
         $is_confirmed = false;
@@ -78,9 +77,8 @@ class Payment {
         foreach ($pending_loans as $loan) {
             $member_id = $loan['member_id'];
             $loan_id = $loan['loan_id'];
-            $amount = floatval($loan['monthly_payment']); // Use monthly_payment from loans table
+            $amount = floatval($loan['monthly_payment']);
 
-            // Check if entry already exists for this loan and month
             $month = date('Y-m', strtotime($date));
             $stmt = $conn->prepare("SELECT COUNT(*) FROM payments WHERE member_id = ? AND loan_id = ? AND payment_type = ? AND DATE_FORMAT(date, '%Y-%m') = ?");
             $stmt->bind_param("iiss", $member_id, $loan_id, $payment_type, $month);
@@ -145,6 +143,23 @@ class Payment {
     }
 
     /**
+     * Delete a payment
+     * @param int $id The payment ID
+     * @return bool True on success, false if confirmed or on error
+     */
+    public function deletePayment($id) {
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("DELETE FROM payments WHERE id = ? AND is_confirmed = FALSE");
+        $stmt->bind_param("i", $id);
+        if ($stmt->execute()) {
+            return $stmt->affected_rows > 0;
+        } else {
+            error_log("Failed to delete payment ID $id: " . $stmt->error);
+            return false;
+        }
+    }
+
+    /**
      * Get payments by member ID or all payments if member_id is null
      * @return array Array of payment records
      */
@@ -177,21 +192,8 @@ class Payment {
      */
     public function getPaymentsByType($payment_type) {
         $conn = $this->db->getConnection();
-        $stmt = $conn->prepare("SELECT * FROM payments WHERE payment_type = ?");
+        $stmt = $conn->prepare("SELECT * FROM payments WHERE payment_type = ? ORDER BY date DESC");
         $stmt->bind_param("s", $payment_type);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
-    }
-
-    /**
-     * Get confirmed loans by member ID
-     * @return array Array of confirmed loan records
-     */
-    public function getConfirmedLoansByMemberId($member_id) {
-        $conn = $this->db->getConnection();
-        $stmt = $conn->prepare("SELECT id, amount FROM loans WHERE member_id = ? AND is_confirmed = TRUE");
-        $stmt->bind_param("i", $member_id);
         $stmt->execute();
         $result = $stmt->get_result();
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -231,8 +233,9 @@ class Payment {
      * Confirm a payment
      * @return bool True on success, false if already confirmed or on error
      */
-    public function confirmPayment($id, $confirmed_by) {
+    public function confirmPayment($id, $confirmed_by = null) {
         $conn = $this->db->getConnection();
+        $confirmed_by = $confirmed_by ?? $_SESSION['db_username'] ?? 'Unknown';
         $stmt = $conn->prepare("UPDATE payments SET is_confirmed = TRUE, confirmed_by = ? WHERE id = ? AND is_confirmed = FALSE");
         $stmt->bind_param("si", $confirmed_by, $id);
         if ($stmt->execute()) {
