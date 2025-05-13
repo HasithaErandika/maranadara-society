@@ -104,22 +104,97 @@ class Payment {
 
     /**
      * Add a new payment to the database
-     * @return bool True on success, false on failure with error logged
+     * @param int $member_id The member ID
+     * @param float $amount The payment amount
+     * @param string $date The payment date (YYYY-MM-DD)
+     * @param string $payment_mode The payment mode (e.g., Cash, Bank Transfer, Cheque)
+     * @param string $payment_type The payment type (e.g., Society Issued, Membership Fee, Loan Settlement)
+     * @param string|null $receipt_number The receipt number, if any
+     * @param string|null $remarks Additional remarks, if any
+     * @param int|null $loan_id The loan ID for Loan Settlement, if applicable
+     * @return bool True on success, throws exception on failure
+     * @throws Exception If validation fails or database insertion fails
      */
-    public function addPayment($member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id = null, $is_confirmed = false, $confirmed_by = null) {
+    public function addPayment($member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number = null, $remarks = null, $loan_id = null) {
         $conn = $this->db->getConnection();
+
+        // Validate inputs
+        if (!is_numeric($member_id) || $member_id <= 0) {
+            throw new Exception("Invalid member ID.");
+        }
+        if (!is_numeric($amount) || $amount <= 0) {
+            throw new Exception("Amount must be greater than 0.");
+        }
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            throw new Exception("Invalid date format. Use YYYY-MM-DD.");
+        }
+        $allowed_modes = ['Cash', 'Bank Transfer', 'Cheque'];
+        if (!in_array($payment_mode, $allowed_modes)) {
+            throw new Exception("Invalid payment mode. Allowed: " . implode(', ', $allowed_modes) . ".");
+        }
+        $allowed_types = ['Society Issued', 'Membership Fee', 'Loan Settlement'];
+        if (!in_array($payment_type, $allowed_types)) {
+            throw new Exception("Invalid payment type. Allowed: " . implode(', ', $allowed_types) . ".");
+        }
+
+        // Verify member exists
+        $stmt = $conn->prepare("SELECT id FROM members WHERE id = ?");
+        $stmt->bind_param("i", $member_id);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows === 0) {
+            $stmt->close();
+            throw new Exception("Member ID $member_id does not exist.");
+        }
+        $stmt->close();
+
+        // Handle loan_id for Loan Settlement
+        if ($payment_type === 'Loan Settlement') {
+            if (!is_numeric($loan_id) || $loan_id <= 0) {
+                throw new Exception("Loan ID is required for Loan Settlement.");
+            }
+            // Verify loan exists, belongs to member, and is eligible
+            $stmt = $conn->prepare("SELECT member_id, status, is_confirmed FROM loans WHERE id = ?");
+            $stmt->bind_param("i", $loan_id);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result->num_rows === 0) {
+                $stmt->close();
+                throw new Exception("Loan ID $loan_id does not exist.");
+            }
+            $loan = $result->fetch_assoc();
+            if ($loan['member_id'] !== $member_id) {
+                $stmt->close();
+                throw new Exception("Loan ID $loan_id does not belong to member ID $member_id.");
+            }
+            if ($loan['status'] !== 'Pending' || !$loan['is_confirmed']) {
+                $stmt->close();
+                throw new Exception("Loan ID $loan_id is not eligible for settlement.");
+            }
+            $stmt->close();
+        } else {
+            $loan_id = null; // Ensure loan_id is NULL for non-loan payments
+        }
+
+        // Convert empty strings to NULL for nullable fields
+        $receipt_number = empty($receipt_number) ? null : $receipt_number;
+        $remarks = empty($remarks) ? null : $remarks;
+
+        // Insert payment
         $stmt = $conn->prepare(
             "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, receipt_number, remarks, loan_id, is_confirmed, confirmed_by) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, NULL)"
         );
-        $stmt->bind_param("idsssssisis", $member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id, $is_confirmed, $confirmed_by);
+        $stmt->bind_param("idsssssi", $member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id);
 
-        if ($stmt->execute()) {
-            return true;
-        } else {
-            error_log("Failed to add payment: " . $stmt->error);
-            return false;
+        if (!$stmt->execute()) {
+            $error = $stmt->error;
+            $stmt->close();
+            error_log("Failed to add payment for member ID $member_id: $error");
+            throw new Exception("Database error: $error");
         }
+
+        $stmt->close();
+        return true;
     }
 
     /**

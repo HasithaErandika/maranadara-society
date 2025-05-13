@@ -223,7 +223,7 @@ class Loan {
         }
     }
 
-    private function getLoanById($loan_id) {
+    public function getLoanById($loan_id) {
         $conn = $this->db->getConnection();
         $stmt = $conn->prepare("
             SELECT l.*, COALESCE(SUM(p.amount), 0) as total_paid
