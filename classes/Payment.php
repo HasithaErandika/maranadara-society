@@ -62,39 +62,77 @@ class Payment {
     public function autoAddLoanSettlements($date) {
         $conn = $this->db->getConnection();
 
-        $stmt = $conn->prepare("SELECT member_id, id AS loan_id, monthly_payment FROM loans WHERE status = 'Pending' AND is_confirmed = TRUE");
+        // Get all pending loans with their payment history
+        $stmt = $conn->prepare("
+            SELECT 
+                l.*,
+                COALESCE(SUM(CASE WHEN p.is_confirmed = TRUE THEN p.amount ELSE 0 END), 0) as total_paid,
+                MAX(CASE WHEN p.is_confirmed = TRUE THEN p.date ELSE NULL END) as last_payment_date,
+                COALESCE(SUM(CASE WHEN p.is_confirmed = FALSE THEN p.amount ELSE 0 END), 0) as unpaid_amount
+            FROM loans l
+            LEFT JOIN payments p ON l.id = p.loan_id 
+                AND p.payment_type = 'Loan Settlement'
+            WHERE l.status = 'Pending' AND l.is_confirmed = TRUE
+            GROUP BY l.id
+        ");
         $stmt->execute();
-        $result = $stmt->get_result();
-        $pending_loans = $result->fetch_all(MYSQLI_ASSOC);
+        $pending_loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
         $count = 0;
         $payment_mode = 'Cash';
         $payment_type = 'Loan Settlement';
-        $remarks = 'Monthly Loan Settlement Payment';
         $is_confirmed = false;
         $confirmed_by = null;
 
         foreach ($pending_loans as $loan) {
             $member_id = $loan['member_id'];
-            $loan_id = $loan['loan_id'];
-            $amount = floatval($loan['monthly_payment']);
+            $loan_id = $loan['id'];
+            $monthly_payment = floatval($loan['monthly_payment']);
+            $total_paid = floatval($loan['total_paid']);
+            $unpaid_amount = floatval($loan['unpaid_amount']);
+            $last_payment_date = $loan['last_payment_date'];
 
-            $month = date('Y-m', strtotime($date));
-            $stmt = $conn->prepare("SELECT COUNT(*) FROM payments WHERE member_id = ? AND loan_id = ? AND payment_type = ? AND DATE_FORMAT(date, '%Y-%m') = ?");
-            $stmt->bind_param("iiss", $member_id, $loan_id, $payment_type, $month);
-            $stmt->execute();
-            $exists = $stmt->get_result()->fetch_row()[0];
+            // Calculate months since last payment or loan start
+            $start_date = $last_payment_date ? $last_payment_date : $loan['start_date'];
+            $months_diff = (strtotime($date) - strtotime($start_date)) / (30 * 24 * 60 * 60);
+            $months_diff = floor($months_diff);
 
-            if ($exists == 0) {
-                $stmt = $conn->prepare(
-                    "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, remarks, loan_id, is_confirmed, confirmed_by) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-                );
-                $stmt->bind_param("idssssisis", $member_id, $amount, $date, $payment_mode, $payment_type, $remarks, $loan_id, $is_confirmed, $confirmed_by);
-                if ($stmt->execute()) {
-                    $count++;
-                } else {
-                    error_log("Failed to auto-add loan settlement for loan $loan_id: " . $stmt->error);
+            if ($months_diff > 0) {
+                // Calculate total amount due including any previous unpaid amounts
+                $total_due = $monthly_payment * $months_diff;
+                
+                // Add any previous unpaid amounts
+                if ($unpaid_amount > 0) {
+                    $total_due += $unpaid_amount;
+                }
+
+                // Check if payment already exists for this month
+                $stmt = $conn->prepare("
+                    SELECT COUNT(*) as exists_count 
+                    FROM payments 
+                    WHERE loan_id = ? 
+                    AND payment_type = 'Loan Settlement' 
+                    AND DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(?, '%Y-%m')
+                ");
+                $stmt->bind_param("is", $loan_id, $date);
+                $stmt->execute();
+                $exists = $stmt->get_result()->fetch_assoc()['exists_count'];
+
+                if ($exists == 0) {
+                    $remarks = $months_diff > 1 ? 
+                        "Payment for " . $months_diff . " months" . ($unpaid_amount > 0 ? " (including previous unpaid amount)" : "") : 
+                        "Monthly payment" . ($unpaid_amount > 0 ? " (including previous unpaid amount)" : "");
+
+                    $stmt = $conn->prepare(
+                        "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, remarks, loan_id, is_confirmed, confirmed_by) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                    );
+                    $stmt->bind_param("idsssssii", $member_id, $total_due, $date, $payment_mode, $payment_type, $remarks, $loan_id, $is_confirmed, $confirmed_by);
+                    if ($stmt->execute()) {
+                        $count++;
+                    } else {
+                        error_log("Failed to auto-add loan settlement for loan $loan_id: " . $stmt->error);
+                    }
                 }
             }
         }
