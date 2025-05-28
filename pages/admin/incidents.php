@@ -51,21 +51,42 @@ $total_pages = ceil($total_incidents / $items_per_page);
 $all_members = $member->getAllMembers();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check if it's an AJAX request
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+              strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
     if (isset($_POST['delete'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         if ($id) {
             try {
                 if ($incident->deleteIncident($id)) {
-                    $success = "Incident deleted successfully.";
+                    if ($isAjax) {
+                        echo json_encode(['success' => true, 'message' => 'Incident deleted successfully.']);
+                    } else {
+                        $success = "Incident deleted successfully.";
+                    }
                 } else {
-                    $error = "Failed to delete incident. Please try again.";
+                    if ($isAjax) {
+                        echo json_encode(['success' => false, 'message' => 'Failed to delete incident. Please try again.']);
+                    } else {
+                        $error = "Failed to delete incident. Please try again.";
+                    }
                 }
             } catch (Exception $e) {
-                $error = "Error deleting incident: " . $e->getMessage();
+                if ($isAjax) {
+                    echo json_encode(['success' => false, 'message' => 'Error deleting incident: ' . $e->getMessage()]);
+                } else {
+                    $error = "Error deleting incident: " . $e->getMessage();
+                }
             }
         } else {
-            $error = "Invalid incident ID.";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Invalid incident ID.']);
+            } else {
+                $error = "Invalid incident ID.";
+            }
         }
+        if ($isAjax) exit;
     } elseif (isset($_POST['update'])) {
         $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
         $incident_type = trim($_POST['incident_type'] ?? '');
@@ -73,9 +94,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status = trim($_POST['status'] ?? '');
 
         if (empty($incident_type)) {
-            $error = "Incident type is required.";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Incident type is required.']);
+            } else {
+                $error = "Incident type is required.";
+            }
         } elseif (!in_array($status, ['Open', 'In Progress', 'Resolved', 'Closed'])) {
-            $error = "Invalid status.";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Invalid status.']);
+            } else {
+                $error = "Invalid status.";
+            }
         } else {
             try {
                 $data = [
@@ -85,14 +114,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 
                 if ($incident->updateIncident($id, $data)) {
-                    $success = "Incident updated successfully.";
+                    if ($isAjax) {
+                        echo json_encode(['success' => true, 'message' => 'Incident updated successfully.']);
+                    } else {
+                        $success = "Incident updated successfully.";
+                    }
                 } else {
-                    $error = "Failed to update incident. Please try again.";
+                    if ($isAjax) {
+                        echo json_encode(['success' => false, 'message' => 'Failed to update incident. Please try again.']);
+                    } else {
+                        $error = "Failed to update incident. Please try again.";
+                    }
                 }
             } catch (Exception $e) {
-                $error = "Error updating incident: " . $e->getMessage();
+                if ($isAjax) {
+                    echo json_encode(['success' => false, 'message' => 'Error updating incident: ' . $e->getMessage()]);
+                } else {
+                    $error = "Error updating incident: " . $e->getMessage();
+                }
             }
         }
+        if ($isAjax) exit;
     } elseif (isset($_POST['add'])) {
         $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
         $incident_type = trim($_POST['incident_type'] ?? '');
@@ -100,23 +142,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $remarks = trim($_POST['remarks'] ?? '');
 
         if (!$member_id) {
-            $error = "Please select a valid member.";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Please select a valid member.']);
+            } else {
+                $error = "Please select a valid member.";
+            }
         } elseif (empty($incident_type)) {
-            $error = "Incident type is required.";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Incident type is required.']);
+            } else {
+                $error = "Incident type is required.";
+            }
         } elseif (empty($incident_datetime)) {
-            $error = "Incident date and time are required.";
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Incident date and time are required.']);
+            } else {
+                $error = "Incident date and time are required.";
+            }
         } else {
             try {
                 $incident_id = $incident->generateIncidentId();
                 if ($incident->addIncident($incident_id, $member_id, $incident_type, $incident_datetime, $remarks)) {
-                    $success = "Incident reported successfully.";
+                    if ($isAjax) {
+                        echo json_encode(['success' => true, 'message' => 'Incident reported successfully.']);
+                    } else {
+                        $success = "Incident reported successfully.";
+                    }
                 } else {
-                    $error = "Failed to report incident. Please try again.";
+                    if ($isAjax) {
+                        echo json_encode(['success' => false, 'message' => 'Failed to report incident. Please try again.']);
+                    } else {
+                        $error = "Failed to report incident. Please try again.";
+                    }
                 }
             } catch (Exception $e) {
-                $error = "Error reporting incident: " . $e->getMessage();
+                if ($isAjax) {
+                    echo json_encode(['success' => false, 'message' => 'Error reporting incident: ' . $e->getMessage()]);
+                } else {
+                    $error = "Error reporting incident: " . $e->getMessage();
+                }
             }
         }
+        if ($isAjax) exit;
     }
 }
 ?>
@@ -126,473 +193,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Incidents - Maranadhara Samithi</title>
+    <title>Incidents - Maranadara Society</title>
+    <link rel="stylesheet" href="../../assets/css/incidents.css">
     <!-- Remix Icons -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fc;
-            color: #2d3748;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1280px;
-            margin: 0 auto;
-            padding: 20px;
-            padding-top: 80px;
-        }
-
-        .form-section, .card {
-            background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-            margin-top: 50px;
-        }
-
-        .form-section h2, .card h2 {
-            font-size: 1.5rem;
-            color: #f97316;
-            margin-bottom: 16px;
-            border-bottom: 2px solid #edf2f7;
-            padding-bottom: 8px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            margin-bottom: 6px;
-            color: #4a5568;
-        }
-
-        .required-mark, .required {
-            color: #e53e3e;
-        }
-
-        .input-field {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            transition: all 0.2s ease;
-            background: #fff;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #f97316;
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
-        }
-
-        .input-field:invalid:not(:placeholder-shown) {
-            border-color: #e53e3e;
-        }
-
-        .input-field.valid {
-            border-color: #48bb78;
-        }
-
-        .error-text {
-            display: none;
-            color: #e53e3e;
-            font-size: 0.75rem;
-            margin-top: 4px;
-        }
-
-        .error-text.show {
-            display: block;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-primary {
-            background-color: #f97316;
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            background-color: #ed8936;
-        }
-
-        .btn-secondary {
-            background-color: #a0aec0;
-            color: #fff;
-        }
-
-        .btn-secondary:hover {
-            background-color: #718096;
-        }
-
-        .btn-danger {
-            color: #e53e3e;
-            background: none;
-            border: 1px solid transparent;
-        }
-
-        .btn-danger:hover {
-            background-color: #fde2e2;
-            border-color: #e53e3e;
-            color: #c53030;
-        }
-
-        .btn-icon {
-            background: none;
-            color: #718096;
-            padding: 8px;
-            position: relative;
-        }
-
-        .btn-icon:hover {
-            color: #f97316;
-        }
-
-        .btn-icon:hover .tooltip {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        .tooltip {
-            visibility: hidden;
-            background: #2d3748;
-            color: #fff;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            opacity: 0;
-            transition: opacity 0.2s;
-            z-index: 10;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1000;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.show {
-            display: flex;
-        }
-
-        .modal-content {
-            background: #fff;
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-            max-width: 600px;
-            width: 90%;
-            position: relative;
-            animation: modalFadeIn 0.3s ease;
-        }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        .modal-overlay.show {
-            display: block;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: none;
-            border: none;
-            color: #718096;
-            font-size: 1.25rem;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .modal-close:hover {
-            color: #f97316;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            background: #fff;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-        }
-
-        .table th, .table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #edf2f7;
-        }
-
-        .table th {
-            background: #f7fafc;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #2d3748;
-        }
-
-        .table th.sortable:hover {
-            background: #edf2f7;
-            color: #f97316;
-            cursor: pointer;
-        }
-
-        .table tbody tr:hover {
-            background: #f7fafc;
-        }
-
-        .search-container {
-            position: relative;
-            max-width: 500px;
-            margin-bottom: 24px;
-        }
-
-        .search-container .ri-search-line {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #718096;
-            font-size: 1.25rem;
-        }
-
-        .search-container .ri-close-line {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #718096;
-            cursor: pointer;
-            font-size: 1.25rem;
-            transition: color 0.2s;
-        }
-
-        .search-container .ri-close-line:hover {
-            color: #f97316;
-        }
-
-        .search-container .input-field {
-            padding: 12px 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        .search-options {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #fff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-            display: none;
-            margin-top: 4px;
-        }
-
-        .search-options.show {
-            display: block;
-        }
-
-        .search-option {
-            padding: 12px;
-            font-size: 0.875rem;
-            color: #2d3748;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .search-option:hover {
-            background: #f7fafc;
-        }
-
-        .search-option.active {
-            background: #f97316;
-            color: #fff;
-        }
-
-        .search-loading {
-            display: none;
-            position: absolute;
-            right: 40px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        .search-loading.show {
-            display: block;
-        }
-
-        .alert {
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .alert-success {
-            background: #f0fff4;
-            color: #48bb78;
-        }
-
-        .alert-error {
-            background: #fff5f5;
-            color: #e53e3e;
-        }
-
-        .pagination-btn {
-            padding: 8px 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            color: #2d3748;
-            background: #fff;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .pagination-btn:hover:not(.disabled) {
-            background: #f97316;
-            color: #fff;
-            border-color: #f97316;
-        }
-
-        .pagination-btn.disabled {
-            background: #edf2f7;
-            color: #a0aec0;
-            cursor: not-allowed;
-        }
-
-        .flex {
-            display: flex;
-            gap: 16px;
-            align-items: center;
-        }
-
-        .main {
-            flex: 1;
-            padding: 24px;
-            margin-left: 240px;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 24px;
-            color: #718096;
-            font-size: 1rem;
-        }
-
-        .no-results i {
-            font-size: 2rem;
-            color: #f97316;
-            margin-bottom: 12px;
-        }
-
-        @media (max-width: 768px) {
-            .main {
-                margin-left: 0;
-                padding: 16px;
-            }
-
-            .grid {
-                grid-template-columns: 1fr;
-            }
-
-            .container {
-                padding: 16px;
-            }
-
-            .search-container {
-                max-width: 100%;
-            }
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .animate-slide-in {
-            animation: slideIn 0.5s ease-out;
-        }
-
-        /* Spinner */
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f97316;
-            border-top: 3px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
 </head>
 <body>
 <?php include '../../includes/header.php'; ?>
@@ -805,6 +411,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </form>
         </div>
+    </div>
+</div>
+
+<!-- Popup Overlay -->
+<div id="popup-overlay" class="popup-overlay"></div>
+
+<!-- Success Popup -->
+<div id="success-popup" class="popup">
+    <div class="popup-content">
+        <i class="ri-checkbox-circle-fill" style="font-size: 3rem; color: #48bb78; margin-bottom: 1rem;"></i>
+        <h3 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">Success!</h3>
+        <p class="popup-message" style="color: #4a5568; margin-bottom: 1rem;"></p>
+        <p class="countdown" style="color: #718096; font-size: 0.875rem;">Redirecting in 3 seconds...</p>
+    </div>
+</div>
+
+<!-- Error Popup -->
+<div id="error-popup" class="popup">
+    <div class="popup-content">
+        <i class="ri-error-warning-fill" style="font-size: 3rem; color: #e53e3e; margin-bottom: 1rem;"></i>
+        <h3 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">Error!</h3>
+        <p class="popup-message" style="color: #4a5568; margin-bottom: 1rem;"></p>
+        <button class="btn btn-secondary popup-close" style="margin-top: 1rem;">Close</button>
+    </div>
+</div>
+
+<!-- Cancel Popup -->
+<div id="cancel-popup" class="popup">
+    <div class="popup-content">
+        <i class="ri-close-circle-fill" style="font-size: 3rem; color: #f97316; margin-bottom: 1rem;"></i>
+        <h3 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem;">Cancelled</h3>
+        <p class="popup-message" style="color: #4a5568; margin-bottom: 1rem;">Operation has been cancelled.</p>
+        <p class="countdown" style="color: #718096; font-size: 0.875rem;">Redirecting in 3 seconds...</p>
     </div>
 </div>
 

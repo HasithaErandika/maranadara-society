@@ -1,24 +1,52 @@
 <?php
 define('APP_START', true);
 
-if (session_status() === PHP_SESSION_NONE) {
+ob_start();
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+
     session_start();
-}
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    error_log("Unauthorized access attempt - Session role: " . (isset($_SESSION['role']) ? $_SESSION['role'] : 'not set'));
-    header("Location: ../login.php");
-    exit;
-}
+error_log("payments.php: Session: " . print_r($_SESSION, true));
 
-require_once '../../classes/Member.php';
-require_once '../../classes/Payment.php';
-require_once '../../classes/Loan.php';
+try {
+    if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+        error_log("Unauthorized access attempt - Session role: " . (isset($_SESSION['role']) ? $_SESSION['role'] : 'not set'));
+        header("Location: ../../admin-login.php");
+        exit;
+    }
+
+    require_once __DIR__ . '/../../classes/Member.php';
+    require_once __DIR__ . '/../../classes/Payment.php';
+    require_once __DIR__ . '/../../classes/Loan.php';
+    require_once __DIR__ . '/../../classes/Database.php';
 
 $member = new Member();
 $payment = new Payment();
 $loan = new Loan();
+    $db = new Database();
 $error = $success = '';
+
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' && isset($_GET['action']) && $_GET['action'] === 'get_loans') {
+        ob_end_clean();
+        header('Content-Type: application/json');
+        
+        $member_id = filter_input(INPUT_GET, 'member_id', FILTER_VALIDATE_INT);
+        if (!$member_id || $member_id <= 0) {
+            echo json_encode(['status' => 'error', 'message' => 'Invalid member ID', 'code' => 1001]);
+            exit;
+        }
+
+        try {
+            $loans = $loan->getConfirmedPendingLoansByMemberId($member_id);
+            echo json_encode(['status' => 'success', 'data' => $loans]);
+        } catch (Exception $e) {
+            error_log("payments.php: get_loans error: " . $e->getMessage());
+            echo json_encode(['status' => 'error', 'message' => 'Failed to fetch loans: ' . $e->getMessage(), 'code' => $e->getCode() ?: 1012]);
+        }
+        exit;
+    }
 
 $members = $member->getAllMembers();
 $society_payments = $payment->getPaymentsByType('Society Issued');
@@ -26,29 +54,45 @@ $membership_payments = $payment->getPaymentsByType('Membership Fee');
 $loan_payments = $payment->getPaymentsByType('Loan Settlement');
 
 $current_month = date('Y-m-01');
-if (isset($_GET['auto_add_fees']) && isset($_GET['tab']) && $_GET['tab'] === 'membership') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_add_fees']) && isset($_POST['tab']) && $_POST['tab'] === 'membership') {
     try {
+            $conn = $db->getConnection();
+            $conn->begin_transaction();
         $count = $payment->autoAddMembershipFees($current_month);
+            $conn->commit();
         $success = $count > 0 ? "Added membership fees for $count members." : "No new fees added.";
         $membership_payments = $payment->getPaymentsByType('Membership Fee');
     } catch (Exception $e) {
-        $error = "Error adding membership fees.";
+            $conn->rollback();
+            $error = "Error adding membership fees: " . $e->getMessage();
         error_log("Auto-add fees error: " . $e->getMessage());
+        } finally {
+            $db->closeConnection();
     }
 }
 
-if (isset($_GET['auto_add_loan_settlements']) && isset($_GET['tab']) && $_GET['tab'] === 'loan') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['auto_add_loan_settlements']) && isset($_POST['tab']) && $_POST['tab'] === 'loan') {
     try {
+            $conn = $db->getConnection();
+            $conn->begin_transaction();
         $count = $payment->autoAddLoanSettlements($current_month);
+            $conn->commit();
         $success = $count > 0 ? "Added settlements for $count loans." : "No new settlements added.";
         $loan_payments = $payment->getPaymentsByType('Loan Settlement');
     } catch (Exception $e) {
-        $error = "Error adding loan settlements.";
+            $conn->rollback();
+            $error = "Error adding loan settlements: " . $e->getMessage();
         error_log("Auto-add settlements error: " . $e->getMessage());
+        } finally {
+            $db->closeConnection();
+        }
     }
-}
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['auto_add_fees']) && !isset($_POST['auto_add_loan_settlements'])) {
+        error_log("payments.php: POST received: " . print_r($_POST, true));
+        $conn = $db->getConnection();
+        $conn->begin_transaction();
+
     try {
         if (isset($_POST['add'])) {
             $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
@@ -58,85 +102,145 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $payment_type = filter_input(INPUT_POST, 'payment_type', FILTER_SANITIZE_STRING);
             $receipt_number = filter_input(INPUT_POST, 'receipt_number', FILTER_SANITIZE_STRING) ?: null;
             $remarks = filter_input(INPUT_POST, 'monthly_contribution', FILTER_SANITIZE_STRING) ?: null;
-            $loan_id = ($payment_type === 'Loan Settlement' && !empty($_POST['loan_id'])) ? filter_input(INPUT_POST, 'loan_id', FILTER_VALIDATE_INT) : null;
+                $loan_id = ($payment_type === 'Loan Settlement' && !empty($_POST['loan_id']) && $_POST['loan_id'] > 0) ? filter_input(INPUT_POST, 'loan_id', FILTER_VALIDATE_INT) : null;
 
-            if (!$member_id || $amount <= 0 || !$date || !$payment_mode || !$payment_type) {
-                $error = "Please fill all required fields correctly.";
-            } elseif ($payment_type === 'Loan Settlement' && !$loan_id) {
-                $error = "Please select a loan for settlement.";
-            } else {
-                if ($payment->addPayment($member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id)) {
-                    $success = "Payment added successfully!";
-                    $society_payments = $payment->getPaymentsByType('Society Issued');
-                    $membership_payments = $payment->getPaymentsByType('Membership Fee');
-                    $loan_payments = $payment->getPaymentsByType('Loan Settlement');
-                } else {
-                    $error = "Failed to add payment.";
-                    error_log("Add payment failed: member_id=$member_id, type=$payment_type");
+                if (!$member_id || $member_id <= 0) {
+                    throw new Exception("Invalid member selection.", 1001);
                 }
-            }
+                if (!$amount || $amount <= 0) {
+                    throw new Exception("Amount must be greater than 0.", 1002);
+                }
+                if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                    throw new Exception("Invalid date format.", 1003);
+                }
+                if (!$payment_mode || !in_array($payment_mode, ['Cash', 'Bank Transfer', 'Cheque'])) {
+                    throw new Exception("Invalid payment mode.", 1004);
+                }
+                if (!$payment_type || !in_array($payment_type, ['Society Issued', 'Membership Fee', 'Loan Settlement'])) {
+                    throw new Exception("Invalid payment type.", 1005);
+                }
+
+                $member_data = $member->getMemberById($member_id);
+                if (!$member_data) {
+                    throw new Exception("Selected member does not exist.", 1006);
+                }
+
+                if ($payment_type === 'Loan Settlement') {
+                    if (!$loan_id || $loan_id <= 0) {
+                        throw new Exception("Please select a valid loan for settlement.", 1007);
+                    }
+                    $loan_data = $loan->getLoanById($loan_id);
+                    if (!$loan_data) {
+                        throw new Exception("Selected loan does not exist.", 1008);
+                    }
+                    if ($loan_data['member_id'] !== $member_id) {
+                        throw new Exception("Selected loan does not belong to this member.", 1009);
+                    }
+                    if ($loan_data['status'] !== 'Pending' || !$loan_data['is_confirmed']) {
+                        throw new Exception("Selected loan is not eligible for settlement.", 1010);
+                    }
+            } else {
+                    $loan_id = null;
+                }
+
+                if (!$payment->addPayment($member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id)) {
+                    throw new Exception("Failed to add payment to database.", 1011);
+                }
+
+                $conn->commit();
+                $success = "Payment added successfully!";
+                $society_payments = $payment->getPaymentsByType('Society Issued');
+                $membership_payments = $payment->getPaymentsByType('Membership Fee');
+                $loan_payments = $payment->getPaymentsByType('Loan Settlement');
         } elseif (isset($_POST['update'])) {
-            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
-            $amount = filter_input(INPUT_POST, 'amount', FILTER_VALIDATE_FLOAT);
-            $date = filter_input(INPUT_POST, 'date', FILTER_SANITIZE_STRING);
-            $payment_mode = filter_input(INPUT_POST, 'payment_mode', FILTER_SANITIZE_STRING);
-            $payment_type = filter_input(INPUT_POST, 'payment_type', FILTER_SANITIZE_STRING);
-            $receipt_number = filter_input(INPUT_POST, 'receipt_number', FILTER_SANITIZE_STRING) ?: null;
-            $remarks = filter_input(INPUT_POST, 'monthly_contribution', FILTER_SANITIZE_STRING) ?: null;
-            $loan_id = ($payment_type === 'Loan Settlement' && !empty($_POST['loan_id'])) ? filter_input(INPUT_POST, 'loan_id', FILTER_VALIDATE_INT) : null;
+            $id = intval($_POST['id']);
+            $member_id = intval($_POST['member_id']);
+            $amount = floatval($_POST['amount']);
+            $date = $_POST['date'];
+            $payment_mode = $_POST['payment_mode'];
+            $payment_type = $_POST['payment_type'];
+            $receipt_number = $_POST['receipt_number'] ?: null;
+            $remarks = $_POST['remarks'] ?: null;
+            $loan_id = $_POST['payment_type'] === 'Loan Settlement' ? intval($_POST['loan_id']) : null;
 
-            if (!$id || !$member_id || $amount <= 0 || !$date || !$payment_mode || !$payment_type) {
-                $error = "Please fill all required fields correctly.";
-            } elseif ($payment_type === 'Loan Settlement' && !$loan_id) {
-                $error = "Please select a loan for settlement.";
-            } else {
-                if ($payment->updatePayment($id, $member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id)) {
-                    $success = "Payment updated successfully!";
-                    $society_payments = $payment->getPaymentsByType('Society Issued');
-                    $membership_payments = $payment->getPaymentsByType('Membership Fee');
-                    $loan_payments = $payment->getPaymentsByType('Loan Settlement');
-                } else {
-                    $error = "Failed to update payment or payment is confirmed.";
-                    error_log("Update payment failed: id=$id");
+            if ($payment->updatePayment($id, $member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id)) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode(['success' => true, 'message' => 'Payment updated successfully!']);
+                    exit;
                 }
+                $success = "Payment updated successfully!";
+            } else {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode(['success' => false, 'message' => 'Error updating payment.']);
+                    exit;
+                }
+                $error = "Error updating payment.";
             }
         } elseif (isset($_POST['delete'])) {
-            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            if (!$id) {
-                $error = "Invalid payment ID.";
-            } else {
-                if ($payment->deletePayment($id)) {
-                    $success = "Payment deleted successfully!";
-                    $society_payments = $payment->getPaymentsByType('Society Issued');
-                    $membership_payments = $payment->getPaymentsByType('Membership Fee');
-                    $loan_payments = $payment->getPaymentsByType('Loan Settlement');
-                } else {
-                    $error = "Failed to delete payment or payment is confirmed.";
-                    error_log("Delete payment failed: id=$id");
+            $id = intval($_POST['id']);
+            if ($payment->deletePayment($id)) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode(['success' => true, 'message' => 'Payment deleted successfully!']);
+                    exit;
                 }
+                $success = "Payment deleted successfully!";
+            } else {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode(['success' => false, 'message' => 'Error deleting payment.']);
+                    exit;
+                }
+                $error = "Error deleting payment.";
             }
         } elseif (isset($_POST['confirm'])) {
-            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-            if (!$id) {
-                $error = "Invalid payment ID.";
-            } else {
-                if ($payment->confirmPayment($id)) {
-                    $success = "Payment confirmed!";
-                    $society_payments = $payment->getPaymentsByType('Society Issued');
-                    $membership_payments = $payment->getPaymentsByType('Membership Fee');
-                    $loan_payments = $payment->getPaymentsByType('Loan Settlement');
-                } else {
-                    $error = "Failed to confirm payment or already confirmed.";
-                    error_log("Confirm payment failed: id=$id");
+            $id = intval($_POST['id']);
+            if ($payment->confirmPayment($id)) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode(['success' => true, 'message' => 'Payment confirmed successfully!']);
+                    exit;
                 }
+                $success = "Payment confirmed successfully!";
+            } else {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode(['success' => false, 'message' => 'Error confirming payment.']);
+                    exit;
+                }
+                $error = "Error confirming payment.";
             }
         }
     } catch (Exception $e) {
-        $error = "An unexpected error occurred.";
-        error_log("POST error: " . $e->getMessage());
+        error_log("Error in payments.php: " . $e->getMessage());
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+            echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+            exit;
+        }
+        $error = "Error: " . $e->getMessage();
     }
 }
+
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        ob_end_clean();
+        header('Content-Type: application/json');
+        if ($success) {
+            echo json_encode(['success' => true, 'message' => $success]);
+        } else {
+            echo json_encode(['success' => false, 'message' => $error['message'] ?? 'Unknown server error', 'code' => $error['code'] ?? 1018]);
+        }
+        exit;
+    }
+
+    $js_success = json_encode($success);
+    $js_error = json_encode($error ? $error['message'] : '');
+    error_log("payments.php: JS Success: $js_success");
+    error_log("payments.php: JS Error: $js_error");
+
+} catch (Exception $e) {
+    $error = "Initialization error: " . $e->getMessage();
+    error_log("payments.php: Error: $error");
+    $js_success = json_encode('');
+    $js_error = json_encode($error);
+}
+
+ob_end_flush();
 ?>
 
 <!DOCTYPE html>
@@ -145,331 +249,108 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Payments - Maranadhara Samithi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --primary-orange: #F97316;
-            --orange-dark: #C2410C;
-            --orange-light: #FFF7ED;
-            --gray-bg: #F9FAFB;
-            --card-bg: #FFFFFF;
-            --text-primary: #1F2937;
-            --text-secondary: #6B7280;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --border-radius: 8px;
-        }
-        [data-theme="dark"] {
-            --primary-orange: #FB923C;
-            --orange-dark: #EA580C;
-            --orange-light: #431407;
-            --gray-bg: #111827;
-            --card-bg: #1F2937;
-            --text-primary: #F9FAFB;
-            --text-secondary: #9CA3AF;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        }
-        body {
-            background-color: var(--gray-bg);
-            color: var(--text-primary);
-            font-family: 'Inter', sans-serif;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-        .card {
-            background-color: var(--card-bg);
-            box-shadow: var(--shadow);
-            border-radius: var(--border-radius);
-            padding: 1.5rem;
-        }
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: var(--border-radius);
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            position: relative;
-        }
-        .btn-primary {
-            background-color: var(--primary-orange);
-            color: white;
-        }
-        .btn-primary:hover {
-            background-color: var(--orange-dark);
-        }
-        .btn-danger {
-            background-color: #EF4444;
-            color: white;
-        }
-        .btn-danger:hover {
-            background-color: #DC2626;
-        }
-        .btn-success {
-            background-color: #10B981;
-            color: white;
-        }
-        .btn-success:hover {
-            background-color: #059669;
-        }
-        .btn-icon {
-            padding: 0.5rem;
-            width: 2.5rem;
-            height: 2.5rem;
-            justify-content: center;
-        }
-        .btn-loading::after {
-            content: '';
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid white;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            position: absolute;
-            right: 0.5rem;
-        }
-        .input-field {
-            border: 1px solid var(--text-secondary);
-            border-radius: var(--border-radius);
-            padding: 0.75rem;
-            width: 100%;
-            background-color: var(--card-bg);
-            transition: border-color 0.2s ease;
-        }
-        .input-field:focus {
-            border-color: var(--primary-orange);
-            outline: none;
-        }
-        .input-field:invalid:not(:placeholder-shown) {
-            border-color: #EF4444;
-        }
-        .table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background-color: var(--card-bg);
-        }
-        .table th, .table td {
-            padding: 1rem;
-            border-bottom: 1px solid var(--text-secondary);
-            text-align: left;
-        }
-        .table thead th {
-            background-color: var(--primary-orange);
-            color: white;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .table tbody tr:nth-child(even) {
-            background-color: var(--orange-light);
-        }
-        .tab-btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            color: var(--text-primary);
-            font-weight: 500;
-            background-color: var(--card-bg);
-            transition: all 0.2s ease;
-        }
-        .tab-btn.active {
-            background-color: var(--primary-orange);
-            color: white;
-        }
-        .tab-btn:hover:not(.active) {
-            background-color: var(--orange-light);
-        }
-        .alert {
-            border-radius: var(--border-radius);
-            padding: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            animation: slide-in 0.5s ease-out;
-            margin-bottom: 1rem;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-content {
-            background-color: var(--card-bg);
-            border-radius: var(--border-radius);
-            padding: 2rem;
-            width: 90%;
-            max-width: 500px;
-            animation: modal-slide-in 0.3s ease-out;
-        }
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 1.25rem;
-            cursor: pointer;
-            color: var(--text-secondary);
-        }
-        .modal-close:hover {
-            color: var(--primary-orange);
-        }
-        .tooltip {
-            position: relative;
-        }
-        .tooltip::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #1F2937;
-            color: white;
-            padding: 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s ease;
-        }
-        .tooltip:hover::after {
-            opacity: 1;
-            visibility: visible;
-            bottom: 120%;
-        }
-        @media (max-width: 640px) {
-            .card {
-                padding: 1rem;
-            }
-            .table th, .table td {
-                padding: 0.5rem;
-                font-size: 0.875rem;
-            }
-            .btn {
-                padding: 0.5rem 1rem;
-            }
-            .tab-btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-            }
-        }
-        @keyframes slide-in {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes modal-slide-in {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/payments.css">
 </head>
 <body>
-<?php include '../../includes/header.php'; ?>
-<?php include '../../includes/sidepanel.php'; ?>
+<?php include __DIR__ . '/../../includes/header.php'; ?>
+<div class="flex min-h-screen">
+    <?php include __DIR__ . '/../../includes/sidepanel.php'; ?>
+    <main class="main">
+        <div class="container">
+            <h1 class="animate-slide-in" style="font-size: 2rem; font-weight: 700; margin-bottom: 20px;">Manage Payments</h1>
+            <div class="progress-bar" id="progress-bar"></div>
 
-<main class="p-6 sm:p-8 max-w-7xl mx-auto">
-    <h1 class="text-3xl font-bold text-[var(--primary-orange)] mb-6">Manage Payments</h1>
-
-    <!-- Tabs -->
-    <div class="flex flex-wrap gap-2 mb-6">
-        <button class="tab-btn <?php echo !isset($_GET['tab']) || $_GET['tab'] === 'add' ? 'active' : ''; ?>" onclick="showTab('add')">Add Payment</button>
-        <button class="tab-btn <?php echo isset($_GET['tab']) && $_GET['tab'] === 'society' ? 'active' : ''; ?>" onclick="showTab('society')">Society Issued</button>
-        <button class="tab-btn <?php echo isset($_GET['tab']) && $_GET['tab'] === 'membership' ? 'active' : ''; ?>" onclick="showTab('membership')">Membership Fees</button>
-        <button class="tab-btn <?php echo isset($_GET['tab']) && $_GET['tab'] === 'loan' ? 'active' : ''; ?>" onclick="showTab('loan')">Loan Settlements</button>
+            <div class="tab-container">
+                <button class="tab-btn <?php echo !isset($_GET['tab']) || $_GET['tab'] === 'add' ? 'active' : ''; ?>" data-tab="add">Add Payment</button>
+                <button class="tab-btn <?php echo isset($_GET['tab']) && $_GET['tab'] === 'society' ? 'active' : ''; ?>" data-tab="society">Society Issued</button>
+                <button class="tab-btn <?php echo isset($_GET['tab']) && $_GET['tab'] === 'membership' ? 'active' : ''; ?>" data-tab="membership">Membership Fees</button>
+                <button class="tab-btn <?php echo isset($_GET['tab']) && $_GET['tab'] === 'loan' ? 'active' : ''; ?>" data-tab="loan">Loan Settlements</button>
     </div>
 
-    <?php if ($error): ?>
-        <div class="alert bg-red-50 text-red-600">
-            <i class="fas fa-exclamation-circle"></i>
-            <span><?php echo htmlspecialchars($error); ?></span>
-        </div>
-    <?php endif; ?>
-    <?php if ($success): ?>
-        <div class="alert bg-green-50 text-green-600">
-            <i class="fas fa-check-circle"></i>
-            <span><?php echo htmlspecialchars($success); ?></span>
-        </div>
-    <?php endif; ?>
-
-    <!-- Add Payment -->
-    <div id="tab-add" class="card <?php echo isset($_GET['tab']) && $_GET['tab'] !== 'add' ? 'hidden' : ''; ?>">
-        <h2 class="text-xl font-semibold mb-4">Add Payment</h2>
-        <form method="POST" class="space-y-6" id="add-payment-form">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Member <span class="text-red-500">*</span></label>
-                    <select name="member_id" class="input-field" required aria-required="true" onchange="updateLoans()">
+            <div id="tab-add" class="tab-content <?php echo isset($_GET['tab']) && $_GET['tab'] !== 'add' ? 'hidden' : ''; ?>">
+                <form method="POST" id="add-payment-form" class="form-section">
+                    <h2>Add Payment</h2>
+                    <div class="grid">
+                        <div class="form-group">
+                            <label for="member_id" class="form-label">Member <span class="required-mark">*</span></label>
+                            <select name="member_id" id="member_id" class="input-field" required>
                         <option value="" disabled selected>Select Member</option>
                         <?php foreach ($members as $m): ?>
                             <option value="<?php echo $m['id']; ?>"><?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?></option>
                         <?php endforeach; ?>
                     </select>
+                            <span class="error-text" id="member_id-error">Please select a member.</span>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Amount (LKR) <span class="text-red-500">*</span></label>
-                    <input type="number" name="amount" step="0.01" min="0.01" class="input-field" required aria-required="true" placeholder="0.00">
+                        <div class="form-group">
+                            <label for="amount" class="form-label">Amount (LKR) <span class="required-mark">*</span></label>
+                            <input type="number" name="amount" id="amount" step="0.01" min="0.01" class="input-field" required placeholder="0.00">
+                            <span class="error-text" id="amount-error">Amount must be greater than 0.</span>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Date <span class="text-red-500">*</span></label>
-                    <input type="date" name="date" class="input-field" required aria-required="true" value="<?php echo date('Y-m-d'); ?>">
+                        <div class="form-group">
+                            <label for="date" class="form-label">Date <span class="required-mark">*</span></label>
+                            <input type="date" name="date" id="date" class="input-field" required value="<?php echo date('Y-m-d'); ?>">
+                            <span class="error-text" id="date-error">Please select a valid date.</span>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Payment Mode <span class="text-red-500">*</span></label>
-                    <select name="payment_mode" class="input-field" required aria-required="true">
+                        <div class="form-group">
+                            <label for="payment_mode" class="form-label">Payment Mode <span class="required-mark">*</span></label>
+                            <select name="payment_mode" id="payment_mode" class="input-field" required>
                         <option value="" disabled selected>Select Mode</option>
                         <option value="Cash">Cash</option>
                         <option value="Bank Transfer">Bank Transfer</option>
                         <option value="Cheque">Cheque</option>
                     </select>
+                            <span class="error-text" id="payment_mode-error">Please select a payment mode.</span>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Payment Type <span class="text-red-500">*</span></label>
-                    <select name="payment_type" class="input-field" required aria-required="true" onchange="toggleLoanSection()">
+                        <div class="form-group">
+                            <label for="payment_type" class="form-label">Payment Type <span class="required-mark">*</span></label>
+                            <select name="payment_type" id="payment_type" class="input-field" required>
                         <option value="" disabled selected>Select Type</option>
                         <option value="Society Issued">Society Issued</option>
                         <option value="Membership Fee">Membership Fee</option>
                         <option value="Loan Settlement">Loan Settlement</option>
                     </select>
+                            <span class="error-text" id="payment_type-error">Please select a payment type.</span>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Receipt Number</label>
-                    <input type="text" name="receipt_number" class="input-field" placeholder="e.g., R12345">
+                        <div class="form-group">
+                            <label for="receipt_number" class="form-label">Receipt Number</label>
+                    <input type="text" name="receipt_number" id="receipt_number" class="input-field" placeholder="e.g., R12345">
+                            <span class="error-text" id="receipt_number-error"></span>
                 </div>
-                <div id="loan-section" class="sm:col-span-2 hidden">
-                    <label class="block text-sm font-medium mb-1">Select Loan <span class="text-red-500">*</span></label>
-                    <select name="loan_id" class="input-field" aria-required="true">
+                        <div class="form-group hidden" id="loan-section">
+                            <label for="loan_id" class="form-label">Select Loan <span class="required-mark">*</span></label>
+                            <select name="loan_id" id="loan_id" class="input-field">
                         <option value="" disabled selected>Select a Loan</option>
                     </select>
+                            <span class="error-text" id="loan_id-error">Please select a loan.</span>
                 </div>
-                <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium mb-1">Remarks</label>
-                    <textarea name="monthly_contribution" class="input-field" rows="3" placeholder="Additional details..."></textarea>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="monthly_contribution" class="form-label">Remarks</label>
+                    <textarea name="monthly_contribution" id="monthly_contribution" class="input-field" rows="4" placeholder="Additional details..."></textarea>
+                            <span class="error-text" id="monthly_contribution-error"></span>
                 </div>
             </div>
-            <div class="flex gap-4">
-                <button type="submit" name="add" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add Payment
+                    <div class="flex">
+                        <button type="submit" name="add" class="btn btn-primary">
+                            <i class="ri-add-line"></i>Add Payment
                 </button>
-                <button type="reset" class="btn btn-danger" onclick="toggleLoanSection()">Reset</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetForm('add-payment-form')">
+                            <i class="ri-close-line"></i>Cancel
+                        </button>
             </div>
         </form>
     </div>
 
-    <!-- Society Issued -->
-    <div id="tab-society" class="card <?php echo !isset($_GET['tab']) || $_GET['tab'] !== 'society' ? 'hidden' : ''; ?>">
-        <h2 class="text-xl font-semibold mb-4">Society Issued Payments</h2>
-        <div class="overflow-x-auto">
-            <table class="table">
+            <div id="tab-society" class="tab-content <?php echo !isset($_GET['tab']) || $_GET['tab'] !== 'society' ? 'hidden' : ''; ?>">
+                <div class="flex justify-between items-center">
+                    <h2>Society Issued Payments</h2>
+                    <div class="form-group">
+                        <label for="society-search" class="form-label">Search</label>
+                        <input type="text" id="society-search" class="input-field" placeholder="Search payments...">
+            </div>
+        </div>
+            <table class="table" id="society-table">
                 <thead>
                     <tr>
                         <th>Member ID</th>
@@ -486,56 +367,55 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <tbody>
                     <?php foreach ($society_payments as $p): ?>
                         <?php $m = $member->getMemberById($p['member_id']); ?>
-                        <tr>
+                            <tr data-payment-id="<?php echo $p['id']; ?>">
                             <td><?php echo htmlspecialchars($m['member_id'] ?? 'N/A'); ?></td>
                             <td><?php echo number_format($p['amount'], 2); ?></td>
                             <td><?php echo htmlspecialchars($p['date']); ?></td>
                             <td><?php echo htmlspecialchars($p['payment_mode']); ?></td>
                             <td><?php echo htmlspecialchars($p['receipt_number'] ?? 'N/A'); ?></td>
                             <td><?php echo htmlspecialchars($p['remarks'] ?? 'N/A'); ?></td>
-                            <td>
-                                <span class="px-2 py-1 rounded-full text-sm <?php echo $p['is_confirmed'] ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'; ?>">
-                                    <?php echo $p['is_confirmed'] ? 'Confirmed' : 'Pending'; ?>
-                                </span>
-                            </td>
+                                <td><?php echo $p['is_confirmed'] ? 'Confirmed' : 'Pending'; ?></td>
                             <td><?php echo htmlspecialchars($p['confirmed_by'] ?? 'N/A'); ?></td>
-                            <td class="flex gap-2">
+                                <td>
                                 <?php if (!$p['is_confirmed']): ?>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $p['id']; ?>">
-                                        <button type="submit" name="confirm" class="btn btn-success btn-icon tooltip" data-tooltip="Confirm Payment" onclick="return confirm('Confirm this payment?');">
-                                            <i class="fas fa-check"></i>
+                                        <button class="btn btn-primary confirm-payment" data-id="<?php echo $p['id']; ?>">
+                                            <i class="ri-check-line"></i>Confirm
                                         </button>
-                                    </form>
-                                    <button class="btn btn-primary btn-icon tooltip" data-tooltip="Edit Payment" onclick="showEditModal(<?php echo json_encode($p, JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>)">
-                                        <i class="fas fa-edit"></i>
+                                        <button class="btn btn-primary edit-payment" data-payment='<?php echo json_encode($p, JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>'>
+                                            <i class="ri-edit-line"></i>Edit
                                     </button>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $p['id']; ?>">
-                                        <button type="submit" name="delete" class="btn btn-danger btn-icon tooltip" data-tooltip="Delete Payment" onclick="return confirm('Delete this payment?');">
-                                            <i class="fas fa-trash"></i>
+                                        <button class="btn btn-danger delete-payment" data-id="<?php echo $p['id']; ?>">
+                                            <i class="ri-delete-bin-line"></i>Delete
                                         </button>
-                                    </form>
                                 <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($society_payments)): ?>
-                        <tr><td colspan="9" class="text-center py-4">No payments found.</td></tr>
+                            <tr><td colspan="9">No payments found.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
-        </div>
+        <div class="pagination" id="society-pagination"></div>
     </div>
 
-    <!-- Membership Fees -->
-    <div id="tab-membership" class="card <?php echo !isset($_GET['tab']) || $_GET['tab'] !== 'membership' ? 'hidden' : ''; ?>">
-        <div class="flex justify-between mb-4">
-            <h2 class="text-xl font-semibold">Membership Fees</h2>
-            <a href="?tab=membership&auto_add_fees=1" class="btn btn-primary"><i class="fas fa-plus"></i> Auto-Add Fees</a>
+            <div id="tab-membership" class="tab-content <?php echo !isset($_GET['tab']) || $_GET['tab'] !== 'membership' ? 'hidden' : ''; ?>">
+                <div class="flex justify-between items-center">
+                    <h2>Membership Fees</h2>
+                    <div class="flex gap-4">
+                        <div class="form-group">
+                            <label for="membership-search" class="form-label">Search</label>
+                            <input type="text" id="membership-search" class="input-field" placeholder="Search payments...">
+                </div>
+                        <form method="POST" class="inline">
+                            <input type="hidden" name="tab" value="membership">
+                            <button type="submit" name="auto_add_fees" value="1" class="btn btn-primary">
+                                <i class="ri-add-line"></i>Auto-Add Fees
+                            </button>
+                        </form>
+            </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="table">
+            <table class="table" id="membership-table">
                 <thead>
                     <tr>
                         <th>Member ID</th>
@@ -552,56 +432,55 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <tbody>
                     <?php foreach ($membership_payments as $p): ?>
                         <?php $m = $member->getMemberById($p['member_id']); ?>
-                        <tr>
+                            <tr data-payment-id="<?php echo $p['id']; ?>">
                             <td><?php echo htmlspecialchars($m['member_id'] ?? 'N/A'); ?></td>
                             <td><?php echo number_format($p['amount'], 2); ?></td>
                             <td><?php echo htmlspecialchars($p['date']); ?></td>
                             <td><?php echo htmlspecialchars($p['payment_mode']); ?></td>
                             <td><?php echo htmlspecialchars($p['receipt_number'] ?? 'N/A'); ?></td>
                             <td><?php echo htmlspecialchars($p['remarks'] ?? 'N/A'); ?></td>
-                            <td>
-                                <span class="px-2 py-1 rounded-full text-sm <?php echo $p['is_confirmed'] ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'; ?>">
-                                    <?php echo $p['is_confirmed'] ? 'Confirmed' : 'Pending'; ?>
-                                </span>
-                            </td>
+                                <td><?php echo $p['is_confirmed'] ? 'Confirmed' : 'Pending'; ?></td>
                             <td><?php echo htmlspecialchars($p['confirmed_by'] ?? 'N/A'); ?></td>
-                            <td class="flex gap-2">
+                                <td>
                                 <?php if (!$p['is_confirmed']): ?>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $p['id']; ?>">
-                                        <button type="submit" name="confirm" class="btn btn-success btn-icon tooltip" data-tooltip="Confirm Payment" onclick="return confirm('Confirm this payment?');">
-                                            <i class="fas fa-check"></i>
+                                        <button class="btn btn-primary confirm-payment" data-id="<?php echo $p['id']; ?>">
+                                            <i class="ri-check-line"></i>Confirm
                                         </button>
-                                    </form>
-                                    <button class="btn btn-primary btn-icon tooltip" data-tooltip="Edit Payment" onclick="showEditModal(<?php echo json_encode($p, JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>)">
-                                        <i class="fas fa-edit"></i>
+                                        <button class="btn btn-primary edit-payment" data-payment='<?php echo json_encode($p, JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>'>
+                                            <i class="ri-edit-line"></i>Edit
                                     </button>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $p['id']; ?>">
-                                        <button type="submit" name="delete" class="btn btn-danger btn-icon tooltip" data-tooltip="Delete Payment" onclick="return confirm('Delete this payment?');">
-                                            <i class="fas fa-trash"></i>
+                                        <button class="btn btn-danger delete-payment" data-id="<?php echo $p['id']; ?>">
+                                            <i class="ri-delete-bin-line"></i>Delete
                                         </button>
-                                    </form>
                                 <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($membership_payments)): ?>
-                        <tr><td colspan="9" class="text-center py-4">No payments found.</td></tr>
+                            <tr><td colspan="9">No payments found.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
-        </div>
+        <div class="pagination" id="membership-pagination"></div>
     </div>
 
-    <!-- Loan Settlements -->
-    <div id="tab-loan" class="card <?php echo !isset($_GET['tab']) || $_GET['tab'] !== 'loan' ? 'hidden' : ''; ?>">
-        <div class="flex justify-between mb-4">
-            <h2 class="text-xl font-semibold">Loan Settlements</h2>
-            <a href="?tab=loan&auto_add_loan_settlements=1" class="btn btn-primary"><i class="fas fa-plus"></i> Auto-Add Settlements</a>
+            <div id="tab-loan" class="tab-content <?php echo !isset($_GET['tab']) || $_GET['tab'] !== 'loan' ? 'hidden' : ''; ?>">
+                <div class="flex justify-between items-center">
+                    <h2>Loan Settlements</h2>
+                    <div class="flex gap-4">
+                        <div class="form-group">
+                            <label for="loan-search" class="form-label">Search</label>
+                            <input type="text" id="loan-search" class="input-field" placeholder="Search payments...">
+                </div>
+                        <form method="POST" class="inline">
+                            <input type="hidden" name="tab" value="loan">
+                            <button type="submit" name="auto_add_loan_settlements" value="1" class="btn btn-primary">
+                                <i class="ri-add-line"></i>Auto-Add Settlements
+                            </button>
+                        </form>
+            </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="table">
+            <table class="table" id="loan-table">
                 <thead>
                     <tr>
                         <th>Member ID</th>
@@ -619,7 +498,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <tbody>
                     <?php foreach ($loan_payments as $p): ?>
                         <?php $m = $member->getMemberById($p['member_id']); ?>
-                        <tr>
+                            <tr data-payment-id="<?php echo $p['id']; ?>">
                             <td><?php echo htmlspecialchars($m['member_id'] ?? 'N/A'); ?></td>
                             <td><?php echo htmlspecialchars($p['loan_id'] ?? 'N/A'); ?></td>
                             <td><?php echo number_format($p['amount'], 2); ?></td>
@@ -627,263 +506,148 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <td><?php echo htmlspecialchars($p['payment_mode']); ?></td>
                             <td><?php echo htmlspecialchars($p['receipt_number'] ?? 'N/A'); ?></td>
                             <td><?php echo htmlspecialchars($p['remarks'] ?? 'N/A'); ?></td>
-                            <td>
-                                <span class="px-2 py-1 rounded-full text-sm <?php echo $p['is_confirmed'] ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'; ?>">
-                                    <?php echo $p['is_confirmed'] ? 'Confirmed' : 'Pending'; ?>
-                                </span>
-                            </td>
+                                <td><?php echo $p['is_confirmed'] ? 'Confirmed' : 'Pending'; ?></td>
                             <td><?php echo htmlspecialchars($p['confirmed_by'] ?? 'N/A'); ?></td>
-                            <td class="flex gap-2">
+                                <td>
                                 <?php if (!$p['is_confirmed']): ?>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $p['id']; ?>">
-                                        <button type="submit" name="confirm" class="btn btn-success btn-icon tooltip" data-tooltip="Confirm Payment" onclick="return confirm('Confirm this payment?');">
-                                            <i class="fas fa-check"></i>
+                                        <button class="btn btn-primary confirm-payment" data-id="<?php echo $p['id']; ?>">
+                                            <i class="ri-check-line"></i>Confirm
                                         </button>
-                                    </form>
-                                    <button class="btn btn-primary btn-icon tooltip" data-tooltip="Edit Payment" onclick="showEditModal(<?php echo json_encode($p, JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>)">
-                                        <i class="fas fa-edit"></i>
+                                        <button class="btn btn-primary edit-payment" data-payment='<?php echo json_encode($p, JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS); ?>'>
+                                            <i class="ri-edit-line"></i>Edit
                                     </button>
-                                    <form method="POST" class="inline">
-                                        <input type="hidden" name="id" value="<?php echo $p['id']; ?>">
-                                        <button type="submit" name="delete" class="btn btn-danger btn-icon tooltip" data-tooltip="Delete Payment" onclick="return confirm('Delete this payment?');">
-                                            <i class="fas fa-trash"></i>
+                                        <button class="btn btn-danger delete-payment" data-id="<?php echo $p['id']; ?>">
+                                            <i class="ri-delete-bin-line"></i>Delete
                                         </button>
-                                    </form>
                                 <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                     <?php if (empty($loan_payments)): ?>
-                        <tr><td colspan="10" class="text-center py-4">No payments found.</td></tr>
+                            <tr><td colspan="10">No payments found.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
-        </div>
+        <div class="pagination" id="loan-pagination"></div>
     </div>
 
-    <!-- Edit Modal -->
     <div id="edit-modal" class="modal">
         <div class="modal-content">
-            <span class="modal-close" onclick="closeEditModal()">×</span>
-            <h2 class="text-xl font-semibold mb-4">Edit Payment</h2>
-            <form method="POST" class="space-y-6" id="edit-payment-form">
+                    <span class="modal-close" onclick="showCancelPopup()">×</span>
+                    <form method="POST" id="edit-payment-form" class="form-section">
+                        <h2>Edit Payment</h2>
                 <input type="hidden" name="id" id="edit-id">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Member <span class="text-red-500">*</span></label>
-                        <select name="member_id" id="edit-member_id" class="input-field" required aria-required="true" onchange="updateEditLoans()">
+                        <div class="grid">
+                            <div class="form-group">
+                                <label for="edit-member_id" class="form-label">Member <span class="required-mark">*</span></label>
+                                <select name="member_id" id="edit-member_id" class="input-field" required>
                             <option value="" disabled>Select Member</option>
                             <?php foreach ($members as $m): ?>
                                 <option value="<?php echo $m['id']; ?>"><?php echo htmlspecialchars($m['member_id'] . ' - ' . $m['full_name']); ?></option>
                             <?php endforeach; ?>
                         </select>
+                                <span class="error-text" id="edit-member_id-error">Please select a member.</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Amount (LKR) <span class="text-red-500">*</span></label>
-                        <input type="number" name="amount" id="edit-amount" step="0.01" min="0.01" class="input-field" required aria-required="true">
+                            <div class="form-group">
+                                <label for="edit-amount" class="form-label">Amount (LKR) <span class="required-mark">*</span></label>
+                                <input type="number" name="amount" id="edit-amount" step="0.01" min="0.01" class="input-field" required>
+                                <span class="error-text" id="edit-amount-error">Amount must be greater than 0.</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" id="edit-date" class="input-field" required aria-required="true">
+                            <div class="form-group">
+                                <label for="edit-date" class="form-label">Date <span class="required-mark">*</span></label>
+                                <input type="date" name="date" id="edit-date" class="input-field" required>
+                                <span class="error-text" id="edit-date-error">Please select a valid date.</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Payment Mode <span class="text-red-500">*</span></label>
-                        <select name="payment_mode" id="edit-payment_mode" class="input-field" required aria-required="true">
+                            <div class="form-group">
+                                <label for="edit-payment_mode" class="form-label">Payment Mode <span class="required-mark">*</span></label>
+                                <select name="payment_mode" id="edit-payment_mode" class="input-field" required>
                             <option value="" disabled>Select Mode</option>
                             <option value="Cash">Cash</option>
                             <option value="Bank Transfer">Bank Transfer</option>
                             <option value="Cheque">Cheque</option>
                         </select>
+                                <span class="error-text" id="edit-payment_mode-error">Please select a payment mode.</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Payment Type <span class="text-red-500">*</span></label>
-                        <select name="payment_type" id="edit-payment_type" class="input-field" required aria-required="true" onchange="toggleEditLoanSection()">
+                            <div class="form-group">
+                                <label for="edit-payment_type" class="form-label">Payment Type <span class="required-mark">*</span></label>
+                                <select name="payment_type" id="edit-payment_type" class="input-field" required>
                             <option value="" disabled>Select Type</option>
                             <option value="Society Issued">Society Issued</option>
                             <option value="Membership Fee">Membership Fee</option>
                             <option value="Loan Settlement">Loan Settlement</option>
                         </select>
+                                <span class="error-text" id="edit-payment_type-error">Please select a payment type.</span>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Receipt Number</label>
+                            <div class="form-group">
+                                <label for="edit-receipt_number" class="form-label">Receipt Number</label>
                         <input type="text" name="receipt_number" id="edit-receipt_number" class="input-field" placeholder="e.g., R12345">
+                                <span class="error-text" id="edit-receipt_number-error"></span>
                     </div>
-                    <div id="edit-loan-section" class="sm:col-span-2 hidden">
-                        <label class="block text-sm font-medium mb-1">Select Loan <span class="text-red-500">*</span></label>
-                        <select name="loan_id" id="edit-loan_id" class="input-field" aria-required="true">
+                            <div class="form-group hidden" id="edit-loan-section">
+                                <label for="edit-loan_id" class="form-label">Select Loan <span class="required-mark">*</span></label>
+                                <select name="loan_id" id="edit-loan_id" class="input-field">
                             <option value="" disabled>Select a Loan</option>
                         </select>
+                                <span class="error-text" id="edit-loan_id-error">Please select a loan.</span>
                     </div>
-                    <div class="sm:col-span-2">
-                        <label class="block text-sm font-medium mb-1">Remarks</label>
-                        <textarea name="monthly_contribution" id="edit-remarks" class="input-field" rows="3"></textarea>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label for="edit-remarks" class="form-label">Remarks</label>
+                        <textarea name="monthly_contribution" id="edit-remarks" class="input-field" rows="4"></textarea>
+                                <span class="error-text" id="edit-remarks-error"></span>
                     </div>
                 </div>
-                <div class="flex gap-4">
-                    <button type="submit" name="update" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Update
+                        <div class="flex">
+                            <button type="submit" name="update" class="btn btn-primary">
+                                <i class="ri-save-line"></i>Update
                     </button>
-                    <button type="button" class="btn btn-danger" onclick="closeEditModal()">Cancel</button>
+                            <button type="button" class="btn btn-secondary" onclick="showCancelPopup()">
+                                <i class="ri-close-line"></i>Cancel
+                            </button>
                 </div>
             </form>
+                </div>
+            </div>
+
+            <div class="popup-overlay" id="popup-overlay"></div>
+            <div class="popup" id="success-popup">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; color: #2ecc71; margin-bottom: 20px;"><i class="ri-checkbox-circle-fill"></i></div>
+                    <h3 style="font-size: 1.5rem; font-weight: 700;">Success!</h3>
+                    <p style="color: #7f8c8d; margin-top: 10px;" id="success-message"></p>
+                    <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
+                        Redirecting in <span id="success-countdown" style="font-weight: 600;">3</span> seconds...
+                    </div>
+                </div>
+            </div>
+            <div class="popup" id="error-popup">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"><i class="ri-error-warning-fill"></i></div>
+                    <h3 style="font-size: 1.5rem; font-weight: 700;">Error</h3>
+                    <p style="color: #7f8c8d; margin-top: 10px;" id="error-message"></p>
+                    <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
+                        Redirecting in <span id="error-countdown" style="font-weight: 600;">3</span> seconds...
+                    </div>
+                </div>
+            </div>
+            <div class="popup" id="cancel-popup">
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; color: #7f8c8d; margin-bottom: 20px;"><i class="ri-close-circle-fill"></i></div>
+                    <h3 style="font-size: 1.5rem; font-weight: 700;">Cancelled</h3>
+                    <p style="color: #7f8c8d; margin-top: 10px;">The operation has been cancelled.</p>
+                    <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
+                        Redirecting in <span id="cancel-countdown" style="font-weight: 600;">3</span> seconds...
+                    </div>
+                </div>
         </div>
     </div>
 </main>
-
-<?php include '../../includes/footer.php'; ?>
+</div>
 
 <script>
-    function showTab(tab) {
-        document.querySelectorAll('.card').forEach(c => c.classList.add('hidden'));
-        document.getElementById(`tab-${tab}`).classList.remove('hidden');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`button[onclick="showTab('${tab}')"]`).classList.add('active');
-        window.history.replaceState({}, '', `?tab=${tab}`);
-    }
-
-    function toggleLoanSection() {
-        const type = document.querySelector('#add-payment-form [name="payment_type"]').value;
-        const section = document.getElementById('loan-section');
-        const select = section.querySelector('select');
-        section.classList.toggle('hidden', type !== 'Loan Settlement');
-        select.required = type === 'Loan Settlement';
-        if (type === 'Loan Settlement') updateLoans();
-        else select.innerHTML = '<option value="" disabled selected>Select a Loan</option>';
-    }
-
-    async function updateLoans() {
-        const memberId = document.querySelector('#add-payment-form [name="member_id"]').value;
-        const dropdown = document.querySelector('#add-payment-form [name="loan_id"]');
-        dropdown.innerHTML = '<option value="" disabled selected>Loading...</option>';
-
-        if (!memberId || isNaN(memberId)) {
-            dropdown.innerHTML = '<option value="" disabled selected>No member selected</option>';
-            return;
-        }
-
-        try {
-            const response = await fetch(`/maranadara-society/get_loans.php?member_id=${encodeURIComponent(memberId)}`, {
-                headers: { 'Accept': 'application/json' }
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.json();
-            dropdown.innerHTML = '<option value="" disabled selected>Select a Loan</option>';
-
-            if (data.status !== 'success') {
-                throw new Error(data.message || 'Invalid response format');
-            }
-
-            if (!data.data || data.data.length === 0) {
-                dropdown.innerHTML += '<option value="" disabled>No active loans available</option>';
-            } else {
-                data.data.forEach(loan => {
-                    dropdown.innerHTML += `<option value="${loan.id}">Loan #${loan.id} - LKR ${Number(loan.amount).toFixed(2)} (Monthly: ${Number(loan.monthly_payment).toFixed(2)})</option>`;
-                });
-            }
-        } catch (error) {
-            console.error('Loan fetch error:', error.message);
-            dropdown.innerHTML = '<option value="" disabled>No active loans available</option>';
-        }
-    }
-
-    function showEditModal(payment) {
-        document.getElementById('edit-id').value = payment.id;
-        document.getElementById('edit-member_id').value = payment.member_id;
-        document.getElementById('edit-amount').value = payment.amount;
-        document.getElementById('edit-date').value = payment.date;
-        document.getElementById('edit-payment_mode').value = payment.payment_mode;
-        document.getElementById('edit-payment_type').value = payment.payment_type;
-        document.getElementById('edit-receipt_number').value = payment.receipt_number || '';
-        document.getElementById('edit-remarks').value = payment.remarks || '';
-        const loanSection = document.getElementById('edit-loan-section');
-        const select = loanSection.querySelector('select');
-        loanSection.classList.toggle('hidden', payment.payment_type !== 'Loan Settlement');
-        select.required = payment.payment_type === 'Loan Settlement';
-        if (payment.payment_type === 'Loan Settlement') {
-            updateEditLoans(payment.loan_id);
-        }
-        document.getElementById('edit-modal').style.display = 'flex';
-    }
-
-    function closeEditModal() {
-        document.getElementById('edit-modal').style.display = 'none';
-    }
-
-    function toggleEditLoanSection() {
-        const type = document.getElementById('edit-payment_type').value;
-        const section = document.getElementById('edit-loan-section');
-        const select = section.querySelector('select');
-        section.classList.toggle('hidden', type !== 'Loan Settlement');
-        select.required = type === 'Loan Settlement';
-        if (type === 'Loan Settlement') updateEditLoans();
-        else select.innerHTML = '<option value="" disabled selected>Select a Loan</option>';
-    }
-
-    async function updateEditLoans(selectedId = null) {
-        const memberId = document.getElementById('edit-member_id').value;
-        const dropdown = document.getElementById('edit-loan_id');
-        dropdown.innerHTML = '<option value="" disabled selected>Loading...</option>';
-
-        if (!memberId || isNaN(memberId)) {
-            dropdown.innerHTML = '<option value="" disabled selected>No member selected</option>';
-            return;
-        }
-
-        try {
-            const response = await fetch(`/maranadara-society/get_loans.php?member_id=${encodeURIComponent(memberId)}`, {
-                headers: { 'Accept': 'application/json' }
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.json();
-            dropdown.innerHTML = '<option value="" disabled selected>Select a Loan</option>';
-
-            if (data.status !== 'success') {
-                throw new Error(data.message || 'Invalid response format');
-            }
-
-            if (!data.data || data.data.length === 0) {
-                dropdown.innerHTML += '<option value="" disabled>No active loans available</option>';
-            } else {
-                data.data.forEach(loan => {
-                    const selected = loan.id == selectedId ? ' selected' : '';
-                    dropdown.innerHTML += `<option value="${loan.id}"${selected}>Loan #${loan.id} - LKR ${Number(loan.amount).toFixed(2)} (Monthly: ${Number(loan.monthly_payment).toFixed(2)})</option>`;
-                });
-            }
-        } catch (error) {
-            console.error('Loan fetch error:', error.message);
-            dropdown.innerHTML = '<option value="" disabled>No active loans available</option>';
-        }
-    }
-
-    document.getElementById('add-payment-form')?.addEventListener('submit', (e) => {
-        const button = e.target.querySelector('button[name="add"]');
-        button.disabled = true;
-        button.classList.add('btn-loading');
-        setTimeout(() => {
-            button.disabled = false;
-            button.classList.remove('btn-loading');
-        }, 1000);
-    });
-
-    document.getElementById('edit-payment-form')?.addEventListener('submit', (e) => {
-        const button = e.target.querySelector('button[name="update"]');
-        button.disabled = true;
-        button.classList.add('btn-loading');
-        setTimeout(() => {
-            button.disabled = false;
-            button.classList.remove('btn-loading');
-        }, 1000);
-    });
-
-    // Theme toggle (if needed)
-    document.getElementById('theme-toggle')?.addEventListener('click', () => {
-        document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-    });
+    window.successMsg = <?php echo json_encode($success ?? ''); ?>;
+    window.errorMsg = <?php echo json_encode($error ?? ''); ?>;
+    window.baseUrl = '<?php echo htmlspecialchars($_SERVER['SCRIPT_NAME'], ENT_QUOTES, 'UTF-8'); ?>';
 </script>
+<script src="../../assets/js/payments.js"></script>
 </body>
 </html>

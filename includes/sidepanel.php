@@ -53,24 +53,24 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
                     </div>
                 </li>
 
-                <li class="nav-item <?php echo in_array($currentPage, ['finances', 'transactions', 'reports']) ? 'active' : ''; ?>">
+                <li class="nav-item <?php echo in_array($currentPage, ['get_loans', 'loans', 'payments']) ? 'active' : ''; ?>">
                     <a href="#" class="nav-link">
                         <i class="ri-wallet-line"></i>
                         <span class="nav-text">Financial Management</span>
                         <i class="ri-arrow-down-s-line nav-arrow"></i>
                     </a>
                     <div class="submenu">
-                        <a href="finances.php" class="submenu-link <?php echo $currentPage === 'finances' ? 'active' : ''; ?>">
+                        <a href="get_loans.php" class="submenu-link <?php echo $currentPage === 'get_loans' ? 'active' : ''; ?>">
                             <i class="ri-line-chart-line"></i>
-                            Overview
+                            View Loans
                         </a>
-                        <a href="transactions.php" class="submenu-link <?php echo $currentPage === 'transactions' ? 'active' : ''; ?>">
+                        <a href="loans.php" class="submenu-link <?php echo $currentPage === 'loans' ? 'active' : ''; ?>">
                             <i class="ri-exchange-dollar-line"></i>
-                            Transactions
+                            Loans
                         </a>
-                        <a href="reports.php" class="submenu-link <?php echo $currentPage === 'reports' ? 'active' : ''; ?>">
+                        <a href="payments.php" class="submenu-link <?php echo $currentPage === 'payments' ? 'active' : ''; ?>">
                             <i class="ri-file-chart-line"></i>
-                            Reports
+                            Payments
                         </a>
                     </div>
                 </li>
