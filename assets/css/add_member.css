@@ -248,3 +248,26 @@ body {
 .animate-slide-in {
     animation: slideIn 0.5s ease-out;
 }
+
+.date-input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.date-input-container .date-picker {
+    flex: 1;
+    padding-right: 35px;
+}
+
+.date-picker-icon {
+    position: absolute;
+    right: 10px;
+    color: #e67e22;
+    cursor: pointer;
+    font-size: 1.2rem;
+}
+
+.date-picker-icon:hover {
+    color: #d35400;
+}

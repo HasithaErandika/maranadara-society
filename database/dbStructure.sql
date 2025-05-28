@@ -44,34 +44,35 @@ CREATE TABLE documents (
 );
 
 CREATE TABLE IF NOT EXISTS family_details (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    member_id INT NOT NULL,
-    spouse_name VARCHAR(100),
-    spouse_age INT,
-    spouse_gender ENUM('Male', 'Female', 'Other'),
-    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_member_spouse (member_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    member_id INT(11) NOT NULL,
+    spouse_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    spouse_dob DATE DEFAULT NULL,
+    spouse_gender ENUM('Male', 'Female', 'Other') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    INDEX (member_id)
+) 
 
--- Create children table
-CREATE TABLE IF NOT EXISTS children (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    member_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    age INT NOT NULL,
-    gender ENUM('Male', 'Female', 'Other') NOT NULL,
-    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE children (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    member_id INT(11) NOT NULL,
+    name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    child_dob DATE NOT NULL,
+    gender ENUM('Male', 'Female', 'Other') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    INDEX (member_id)
+);
 
 -- Create dependents table
-CREATE TABLE IF NOT EXISTS dependents (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    member_id INT NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    relationship VARCHAR(50) NOT NULL,
-    age INT,
-    FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci; 
+CREATE TABLE dependents (
+    id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    member_id INT(11) NOT NULL,
+    name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    relationship VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    dependant_dob DATE DEFAULT NULL,
+    dependant_address VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    INDEX (member_id)
+);
 
 -- Table: loans
 CREATE TABLE loans (

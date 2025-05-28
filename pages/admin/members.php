@@ -46,6 +46,7 @@ try {
 
     $error = $success = '';
 
+    // Handle pagination and search
     $items_per_page = isset($_GET['items_per_page']) ? max(5, min(50, (int)$_GET['items_per_page'])) : 10;
     $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
     $offset = ($page - 1) * $items_per_page;
@@ -62,6 +63,7 @@ try {
                    stripos(strtolower($m['nic_number'] ?? ''), $search) !== false ||
                    stripos(strtolower($m['contact_number'] ?? ''), $search) !== false;
         });
+        $total_members = count($members);
     }
 
     $members_paginated = array_slice($members, $offset, $items_per_page);
@@ -74,7 +76,7 @@ try {
 
         if ($selected_member) {
             $member_id = (int)$selected_member['id'];
-            $family_details = $family->getFamilyDetailsByMemberId($member_id);
+            $family = $family->getFamilyDetails($member_id);
             $all_payments = $payment->getPaymentsByMemberId($member_id);
             $incidents = $incident->getIncidentsByMemberId($member_id);
             $loans = $loan->getLoansByMemberId($member_id);
@@ -107,208 +109,148 @@ try {
         }
     }
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-        $db = new Database();
-        $conn = $db->getConnection();
-
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
-            if (isset($_POST['delete'])) {
-                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                if ($id) {
-                    if ($member->deleteMember($id)) {
-                        ob_end_clean();
-                        header('Content-Type: application/json');
-                        echo json_encode(['success' => true, 'message' => 'Member deleted successfully.']);
-                        exit;
-                    } else {
-                        throw new Exception("Failed to delete member.");
-                    }
-                } else {
-                    throw new Exception("Invalid member ID.");
-                }
-            } elseif (isset($_POST['update'])) {
-                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                $full_name = trim($_POST['full_name'] ?? '');
-                $contact_number = trim($_POST['contact_number'] ?? '');
-                $membership_type = trim($_POST['membership_type'] ?? '');
-                $payment_status = trim($_POST['payment_status'] ?? '');
-                $member_status = trim($_POST['member_status'] ?? '');
-
-                if (empty($full_name)) {
-                    throw new Exception("Full name is required.");
-                }
-                if (empty($contact_number) || !preg_match('/^\+94\d{9}$/', $contact_number)) {
-                    throw new Exception("Valid contact number is required (format: +94XXXXXXXXX).");
-                }
-                if (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
-                    throw new Exception("Invalid membership type.");
-                }
-                if (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
-                    throw new Exception("Invalid payment status.");
-                }
-                if (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
-                    throw new Exception("Invalid member status.");
-                }
-
-                $data = [
-                    'full_name' => $full_name,
-                    'contact_number' => $contact_number,
-                    'membership_type' => $membership_type,
-                    'payment_status' => $payment_status,
-                    'member_status' => $member_status
-                ];
-
-                if ($member->updateMember($id, $data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Member updated successfully.']);
-                    exit;
-                } else {
-                    throw new Exception("Failed to update member.");
-                }
-            } elseif (isset($_POST['update_details'])) {
-                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                $full_name = trim($_POST['full_name'] ?? '');
-                $date_of_birth = trim($_POST['date_of_birth'] ?? '');
-                $gender = trim($_POST['gender'] ?? '');
-                $nic_number = trim($_POST['nic_number'] ?? '');
-                $address = trim($_POST['address'] ?? '');
-                $contact_number = trim($_POST['contact_number'] ?? '');
-                $email = trim($_POST['email'] ?? '');
-                $date_of_joining = trim($_POST['date_of_joining'] ?? '');
-                $membership_type = trim($_POST['membership_type'] ?? '');
-                $payment_status = trim($_POST['payment_status'] ?? '');
-                $member_status = trim($_POST['member_status'] ?? '');
-
-                if (empty($full_name)) {
-                    throw new Exception("Full name is required.");
-                }
-                if (empty($date_of_birth) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_of_birth)) {
-                    throw new Exception("Valid date of birth is required (format: YYYY-MM-DD).");
-                }
-                if (!in_array($gender, ['Male', 'Female', 'Other'])) {
-                    throw new Exception("Invalid gender.");
-                }
-                if (empty($nic_number) || !preg_match('/^\d{9}[vVxX]|\d{12}$/', $nic_number)) {
-                    throw new Exception("Valid NIC number is required.");
-                }
-                if (empty($address)) {
-                    throw new Exception("Address is required.");
-                }
-                if (empty($contact_number) || !preg_match('/^\+94\d{9}$/', $contact_number)) {
-                    throw new Exception("Valid contact number is required (format: +94XXXXXXXXX).");
-                }
-                if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    throw new Exception("Valid email is required.");
-                }
-                if (empty($date_of_joining) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_of_joining)) {
-                    throw new Exception("Valid join date is required (format: YYYY-MM-DD).");
-                }
-                if (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
-                    throw new Exception("Invalid membership type.");
-                }
-                if (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
-                    throw new Exception("Invalid payment status.");
-                }
-                if (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
-                    throw new Exception("Invalid member status.");
-                }
-
-                $data = [
-                    'full_name' => $full_name,
-                    'date_of_birth' => $date_of_birth,
-                    'gender' => $gender,
-                    'nic_number' => $nic_number,
-                    'address' => $address,
-                    'contact_number' => $contact_number,
-                    'email' => $email,
-                    'date_of_joining' => $date_of_joining,
-                    'membership_type' => $membership_type,
-                    'payment_status' => $payment_status,
-                    'member_status' => $member_status
-                ];
-
-                if ($member->updateMember($id, $data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Member details updated successfully.']);
-                    exit;
-                } else {
-                    throw new Exception("Failed to update member details.");
-                }
-            } elseif (isset($_POST['update_family'])) {
-                $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
+            // Handle member deletion
+            if (isset($_POST['delete']) && isset($_POST['id'])) {
+                $memberId = $_POST['id'];
                 
-                // Process spouse data
+                // Delete family details first
+                $family->deleteFamilyDetails($memberId);
+                
+                // Delete the member
+                $result = $member->deleteMember($memberId);
+                
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Member deleted successfully'
+                    ]);
+                } else {
+                    throw new Exception('Failed to delete member');
+                }
+                exit;
+            }
+
+            // Handle member update
+            if (isset($_POST['update']) && isset($_POST['id'])) {
+                $memberId = $_POST['id'];
+                $data = [
+                    'full_name' => $_POST['full_name'] ?? '',
+                    'contact_number' => $_POST['contact_number'] ?? '',
+                    'membership_type' => $_POST['membership_type'] ?? 'Individual',
+                    'payment_status' => $_POST['payment_status'] ?? 'Active',
+                    'member_status' => $_POST['member_status'] ?? 'Active'
+                ];
+                $result = $member->updateMember($memberId, $data);
+                
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Member updated successfully'
+                    ]);
+                } else {
+                    throw new Exception('Failed to update member');
+                }
+                exit;
+            }
+
+            // Handle member details update
+            if (isset($_POST['update_details']) && isset($_POST['id'])) {
+                $memberId = $_POST['id'];
+                $data = [
+                    'full_name' => $_POST['full_name'] ?? '',
+                    'date_of_birth' => $_POST['date_of_birth'] ?? '',
+                    'gender' => $_POST['gender'] ?? 'Male',
+                    'nic_number' => $_POST['nic_number'] ?? '',
+                    'address' => $_POST['address'] ?? '',
+                    'contact_number' => $_POST['contact_number'] ?? '',
+                    'email' => $_POST['email'] ?? '',
+                    'date_of_joining' => $_POST['date_of_joining'] ?? '',
+                    'membership_type' => $_POST['membership_type'] ?? 'Individual',
+                    'payment_status' => $_POST['payment_status'] ?? 'Active',
+                    'member_status' => $_POST['member_status'] ?? 'Active'
+                ];
+                $result = $member->updateMember($memberId, $data);
+                
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Member details updated successfully'
+                    ]);
+                } else {
+                    throw new Exception('Failed to update member details');
+                }
+                exit;
+            }
+
+            // Handle family details update
+            if (isset($_POST['update_family']) && isset($_POST['member_id'])) {
+                $memberId = $_POST['member_id'];
                 $spouse_data = null;
                 if (!empty($_POST['spouse_name'])) {
                     $spouse_data = [
-                        'name' => trim($_POST['spouse_name']),
-                        'age' => !empty($_POST['spouse_age']) ? (int)$_POST['spouse_age'] : null,
-                        'gender' => !empty($_POST['spouse_gender']) ? trim($_POST['spouse_gender']) : null
+                        'name' => $_POST['spouse_name'],
+                        'dob' => $_POST['spouse_dob'],
+                        'gender' => $_POST['spouse_gender']
                     ];
                 }
 
-                // Process children data
                 $children_data = [];
                 if (isset($_POST['children']) && is_array($_POST['children'])) {
                     foreach ($_POST['children'] as $child) {
-                        if (!empty(trim($child['name']))) {
+                        if (!empty($child['name'])) {
                             $children_data[] = [
-                                'name' => trim($child['name']),
-                                'age' => !empty($child['age']) ? (int)$child['age'] : null,
-                                'gender' => !empty($child['gender']) ? trim($child['gender']) : null
+                                'name' => $child['name'],
+                                'dob' => $child['dob'],
+                                'gender' => $child['gender']
                             ];
                         }
                     }
                 }
 
-                // Process dependents data
                 $dependents_data = [];
                 if (isset($_POST['dependents']) && is_array($_POST['dependents'])) {
                     foreach ($_POST['dependents'] as $dependent) {
-                        if (!empty(trim($dependent['name']))) {
+                        if (!empty($dependent['name'])) {
                             $dependents_data[] = [
-                                'name' => trim($dependent['name']),
-                                'relationship' => !empty($dependent['relationship']) ? trim($dependent['relationship']) : null,
-                                'age' => !empty($dependent['age']) ? (int)$dependent['age'] : null
+                                'name' => $dependent['name'],
+                                'relationship' => $dependent['relationship'],
+                                'dob' => $dependent['dob'],
+                                'address' => $dependent['address']
                             ];
                         }
                     }
                 }
 
-                if (!$member_id) {
-                    throw new Exception("Invalid member ID.");
-                }
+                $result = $family->updateFamilyDetails($memberId, $spouse_data, $children_data, $dependents_data);
 
-                try {
-                    if ($family->updateFamilyDetails($member_id, $spouse_data, $children_data, $dependents_data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
-                    exit;
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Family details updated successfully'
+                    ]);
                 } else {
-                    throw new Exception("Failed to update family details.");
-                    }
-                } catch (Exception $e) {
-                    throw new Exception("Error updating family details: " . $e->getMessage());
+                    throw new Exception('Failed to update family details');
                 }
+                exit;
             }
         } catch (Exception $e) {
-            ob_end_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            error_log("members.php: POST error: " . $e->getMessage());
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                echo json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ]);
+            } else {
+                $_SESSION['error'] = $e->getMessage();
+                header('Location: members.php');
+            }
             exit;
         }
     }
 
-    // Escape messages for JavaScript (for synchronous requests)
-    $js_success = json_encode($success);
-    $js_error = json_encode($error);
-    error_log("JS Success: $js_success");
-    error_log("JS Error: $js_error");
-
-    // Clear output buffer for non-AJAX requests
+    // Clear output buffer
     ob_end_flush();
 } catch (Exception $e) {
     error_log("members.php: Fatal error: " . $e->getMessage());
@@ -328,7 +270,7 @@ try {
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- External CSS -->
-    
+    <link rel="stylesheet" href="../../assets/css/memberManagement.css">
 </head>
 <body>
 <?php include '../../includes/header.php'; ?>
@@ -491,28 +433,33 @@ try {
                     <div class="card animate-slide-in">
                         <div class="accordion-header" data-target="family-details">Family Details <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="family-details">
-                            <?php if (!empty($family_details)): ?>
+                            <?php if ($family['spouse'] || !empty($family['children']) || !empty($family['dependents'])): ?>
                                 <div class="family-details-container">
                                     <!-- Spouse Section -->
-                                    <?php if (!empty($family_details['spouse_name'])): ?>
+                                    <?php if (!empty($family['spouse'])): ?>
                                         <div class="family-section">
                                             <h3><i class="ri-user-heart-line"></i> Spouse</h3>
-                                            <p><?php echo htmlspecialchars($family_details['spouse_name']); ?></p>
+                                            <div class="family-info">
+                                                <p><strong>Name:</strong> <?php echo htmlspecialchars($family['spouse']['name']); ?></p>
+                                                <p><strong>Date of Birth:</strong> <?php echo date('d M Y', strtotime($family['spouse']['dob'])); ?></p>
+                                                <p><strong>Gender:</strong> <?php echo htmlspecialchars($family['spouse']['gender']); ?></p>
+                                            </div>
                                         </div>
                                     <?php endif; ?>
 
                                     <!-- Children Section -->
-                                    <?php if (!empty($family_details['children_info'])): ?>
+                                    <?php if (!empty($family['children'])): ?>
                                         <div class="family-section">
                                             <h3><i class="ri-parent-line"></i> Children</h3>
                                             <div class="family-list">
-                                                <?php 
-                                                $children = explode(', ', $family_details['children_info']);
-                                                foreach ($children as $child): 
-                                                ?>
+                                                <?php foreach ($family['children'] as $child): ?>
                                                     <div class="family-item">
                                                         <i class="ri-user-smile-line"></i>
-                                                        <span><?php echo htmlspecialchars($child); ?></span>
+                                                        <div class="family-info">
+                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($child['name']); ?></p>
+                                                            <p><strong>Date of Birth:</strong> <?php echo date('d M Y', strtotime($child['dob'])); ?></p>
+                                                            <p><strong>Gender:</strong> <?php echo htmlspecialchars($child['gender']); ?></p>
+                                                        </div>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -520,17 +467,19 @@ try {
                                     <?php endif; ?>
 
                                     <!-- Dependents Section -->
-                                    <?php if (!empty($family_details['dependents_info'])): ?>
+                                    <?php if (!empty($family['dependents'])): ?>
                                         <div class="family-section">
                                             <h3><i class="ri-group-line"></i> Dependents</h3>
                                             <div class="family-list">
-                                                <?php 
-                                                $dependents = explode(', ', $family_details['dependents_info']);
-                                                foreach ($dependents as $dependent): 
-                                                ?>
+                                                <?php foreach ($family['dependents'] as $dependent): ?>
                                                     <div class="family-item">
                                                         <i class="ri-user-line"></i>
-                                                        <span><?php echo htmlspecialchars($dependent); ?></span>
+                                                        <div class="family-info">
+                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($dependent['name']); ?></p>
+                                                            <p><strong>Relationship:</strong> <?php echo htmlspecialchars($dependent['relationship']); ?></p>
+                                                            <p><strong>Date of Birth:</strong> <?php echo date('d M Y', strtotime($dependent['dob'])); ?></p>
+                                                            <p><strong>Address:</strong> <?php echo htmlspecialchars($dependent['address']); ?></p>
+                                                        </div>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -538,14 +487,14 @@ try {
                                     <?php endif; ?>
                                 </div>
                                 <div class="family-actions">
-                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family_details), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
+                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
                                         <i class="ri-user-add-line"></i> Update Family Details
                                     </button>
                                 </div>
                             <?php else: ?>
                                 <div class="family-actions">
                                     <p style="color: #7f8c8d; margin-bottom: 10px;">No family details available.</p>
-                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode([]), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
+                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
                                         <i class="ri-user-add-line"></i> Add Family Details
                                     </button>
                                 </div>
@@ -758,10 +707,10 @@ try {
                             <div class="flex" style="gap: 10px;">
                                 <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&items_per_page=<?php echo $items_per_page; ?>"
                                    class="pagination-btn <?php echo $page <= 1 ? 'disabled' : ''; ?>"
-                                    <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
+                                   <?php echo $page <= 1 ? 'onclick="return false;"' : ''; ?>>Previous</a>
                                 <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&items_per_page=<?php echo $items_per_page; ?>"
                                    class="pagination-btn <?php echo $page >= $total_pages ? 'disabled' : ''; ?>"
-                                    <?php echo $page >= $total_pages ? 'onclick="return false;"' : ''; ?>>Next</a>
+                                   <?php echo $page >= $total_pages ? 'onclick="return false;"' : ''; ?>>Next</a>
                             </div>
                         </div>
                     <?php endif; ?>
@@ -772,217 +721,193 @@ try {
 </div>
 
 <!-- Overlay -->
-<div class="overlay" id="overlay"></div>
+<div class="modal-overlay" id="overlay"></div>
 
 <!-- Popups -->
-<div class="popup-overlay" id="popup-overlay"></div>
-
 <div class="popup" id="success-popup">
     <div style="text-align: center;">
-        <div style="font-size: 3rem; color: #2ecc71; margin-bottom: 20px;"><i class="ri-checkbox-circle-fill"></i></div>
-        <h3 style="font-size: 1.5rem; font-weight: 700;">Success!</h3>
-        <p style="color: #7f8c8d; margin-top: 10px;" id="success-message"></p>
-        <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-            Redirecting in <span id="success-countdown" style="font-weight: 600;">3</span> seconds...
-        </div>
+        <div style="font-size: 3rem; color: #2ecc71;"><i class="ri-checkbox-circle-line"></i></div>
+        <h3 style="font-size: 1.5rem; margin: 16px 0;">Success</h3>
+        <p id="success-message" style="color: #6b7280;">Operation completed successfully.</p>
+        <p style="color: #6b7280; margin-top: 12px;">Redirecting in <span id="success-countdown">3</span> seconds...</p>
     </div>
 </div>
 
 <div class="popup" id="error-popup">
     <div style="text-align: center;">
-        <div style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"><i class="ri-error-warning-fill"></i></div>
-        <h3 style="font-size: 1.5rem; font-weight: 700;">Error</h3>
-        <p style="color: #7f8c8d; margin-top: 10px;" id="error-message"></p>
-        <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-            Redirecting in <span id="error-countdown" style="font-weight: 600;">3</span> seconds...
-        </div>
+        <div style="font-size: 3rem; color: #e74c3c;"><i class="ri-error-warning-line"></i></div>
+        <h3 style="font-size: 1.5rem; margin: 16px 0;">Error</h3>
+        <p id="error-message" style="color: #6b7280;">An error occurred. Please try again.</p>
     </div>
 </div>
 
 <div class="popup" id="cancel-popup">
     <div style="text-align: center;">
-        <div style="font-size: 3rem; color: #7f8c8d; margin-bottom: 20px;"><i class="ri-close-circle-fill"></i></div>
-        <h3 style="font-size: 1.5rem; font-weight: 700;">Cancelled</h3>
-        <p style="color: #7f8c8d; margin-top: 10px;">The operation has been cancelled.</p>
-        <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-            Redirecting in <span id="cancel-countdown" style="font-weight: 600;">3</span> seconds...
-        </div>
+        <div style="font-size: 3rem; color: #6b7280;"><i class="ri-close-circle-line"></i></div>
+        <h3 style="font-size: 1.5rem; margin: 16px 0;">Cancelled</h3>
+        <p style="color: #6b7280;">Operation cancelled.</p>
+        <p style="color: #6b7280; margin-top: 12px;">Redirecting in <span id="cancel-countdown">3</span> seconds...</p>
     </div>
 </div>
 
-<!-- Edit Modal (Manage Members) -->
-<div id="edit-modal" class="modal">
-    <div class="modal-content">
+<!-- Edit Modal -->
+<div class="modal" id="edit-modal">
+    <div class="modal-content" role="dialog" aria-modal="true">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-        <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Member</h2>
+        <h2>Edit Member</h2>
         <form id="edit-form">
-            <input type="hidden" name="id" id="edit-id">
-            <div class="grid">
-                <div class="form-group">
-                    <label for="edit-full_name" class="form-label">Full Name <span class="required-mark">*</span></label>
-                    <input type="text" name="full_name" id="edit-full_name" class="input-field" required aria-describedby="edit-full_name-error">
-                    <span class="error-text" id="edit-full_name-error">Full name is required.</span>
-                </div>
-                <div class="form-group">
-                    <label for="edit-contact_number" class="form-label">Contact Number <span class="required-mark">*</span></label>
-                    <input type="text" name="contact_number" id="edit-contact_number" class="input-field" required aria-describedby="edit-contact_number-error">
-                    <span class="error-text" id="edit-contact_number-error">Valid contact number is required (format: +94XXXXXXXXX).</span>
-                </div>
-                <div class="form-group">
-                    <label for="edit-membership_type" class="form-label">Membership Type</label>
-                    <select name="membership_type" id="edit-membership_type" class="input-field" aria-label="Membership Type">
-                        <option value="Individual">Individual</option>
-                        <option value="Family">Family</option>
-                        <option value="Senior Citizen">Senior Citizen</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="edit-payment_status" class="form-label">Payment Status</label>
-                    <select name="payment_status" id="edit-payment_status" class="input-field" aria-label="Payment Status">
-                        <option value="Active">Active</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="edit-member_status" class="form-label">Member Status</label>
-                    <select name="member_status" id="edit-member_status" class="input-field" aria-label="Member Status">
-                        <option value="Active">Active</option>
-                        <option value="Deceased">Deceased</option>
-                        <option value="Resigned">Resigned</option>
-                    </select>
-                </div>
+            <input type="hidden" id="edit-id" name="id">
+            <div class="form-group">
+                <label class="form-label" for="edit-full_name">Full Name</label>
+                <input type="text" id="edit-full_name" name="full_name" class="input-field">
             </div>
-            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
-                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+            <div class="form-group">
+                <label class="form-label" for="edit-contact_number">Contact Number</label>
+                <input type="text" id="edit-contact_number" name="contact_number" class="input-field">
+                <span class="error-text" id="edit-contact_number-error">Invalid contact number (e.g., +94123456789)</span>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit-membership_type">Membership Type</label>
+                <select id="edit-membership_type" name="membership_type" class="input-field">
+                    <option value="Individual">Individual</option>
+                    <option value="Family">Family</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit-payment_status">Payment Status</label>
+                <select id="edit-payment_status" name="payment_status" class="input-field">
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Overdue">Overdue</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit-member_status">Member Status</label>
+                <select id="edit-member_status" name="member_status" class="input-field">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Suspended">Suspended</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Edit Details Modal (Member Details) -->
-<div id="edit-details-modal" class="modal">
-    <div class="modal-content">
+<!-- Edit Details Modal -->
+<div class="modal" id="edit-details-modal">
+    <div class="modal-content" role="dialog" aria-modal="true">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-        <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Member Details</h2>
+        <h2>Edit Member Details</h2>
         <form id="edit-details-form">
-            <input type="hidden" name="id" id="edit-details-id">
+            <input type="hidden" id="edit-details-id" name="id">
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Personal Information</h3>
+                <h3>Personal Information</h3>
                 <div class="grid">
                     <div class="form-group">
-                        <label for="edit-details-full_name" class="form-label">Full Name <span class="required-mark">*</span></label>
-                        <input type="text" name="full_name" id="edit-details-full_name" class="input-field" required aria-describedby="edit-details-full_name-error">
-                        <span class="error-text" id="edit-details-full_name-error">Full name is required.</span>
+                        <label class="form-label" for="edit-details-full_name">Full Name</label>
+                        <input type="text" id="edit-details-full_name" name="full_name" class="input-field">
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-date_of_birth" class="form-label">Date of Birth <span class="required-mark">*</span></label>
-                        <input type="date" name="date_of_birth" id="edit-details-date_of_birth" class="input-field" required aria-describedby="edit-details-date_of_birth-error">
-                        <span class="error-text" id="edit-details-date_of_birth-error">Valid date of birth is required.</span>
+                        <label class="form-label" for="edit-details-date_of_birth">Date of Birth</label>
+                        <input type="date" id="edit-details-date_of_birth" name="date_of_birth" class="input-field">
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-gender" class="form-label">Gender <span class="required-mark">*</span></label>
-                        <select name="gender" id="edit-details-gender" class="input-field" required aria-describedby="edit-details-gender-error">
+                        <label class="form-label" for="edit-details-gender">Gender</label>
+                        <select id="edit-details-gender" name="gender" class="input-field">
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
                             <option value="Other">Other</option>
                         </select>
-                        <span class="error-text" id="edit-details-gender-error">Gender is required.</span>
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-nic_number" class="form-label">NIC <span class="required-mark">*</span></label>
-                        <input type="text" name="nic_number" id="edit-details-nic_number" class="input-field" required aria-describedby="edit-details-nic_number-error">
-                        <span class="error-text" id="edit-details-nic_number-error">Valid NIC number is required.</span>
+                        <label class="form-label" for="edit-details-nic_number">NIC Number</label>
+                        <input type="text" id="edit-details-nic_number" name="nic_number" class="input-field">
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-address" class="form-label">Address <span class="required-mark">*</span></label>
-                        <input type="text" name="address" id="edit-details-address" class="input-field" required aria-describedby="edit-details-address-error">
-                        <span class="error-text" id="edit-details-address-error">Address is required.</span>
+                        <label class="form-label" for="edit-details-address">Address</label>
+                        <input type="text" id="edit-details-address" name="address" class="input-field">
                     </div>
                 </div>
             </div>
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Contact Information</h3>
+                <h3>Contact Information</h3>
                 <div class="grid">
                     <div class="form-group">
-                        <label for="edit-details-contact_number" class="form-label">Contact Number <span class="required-mark">*</span></label>
-                        <input type="text" name="contact_number" id="edit-details-contact_number" class="input-field" required aria-describedby="edit-details-contact_number-error">
-                        <span class="error-text" id="edit-details-contact_number-error">Valid contact number is required (format: +94XXXXXXXXX).</span>
+                        <label class="form-label" for="edit-details-contact_number">Contact Number</label>
+                        <input type="text" id="edit-details-contact_number" name="contact_number" class="input-field">
+                        <span class="error-text" id="edit-details-contact_number-error">Invalid contact number (e.g., +94123456789)</span>
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-email" class="form-label">Email</label>
-                        <input type="email" name="email" id="edit-details-email" class="input-field" aria-describedby="edit-details-email-error">
-                        <span class="error-text" id="edit-details-email-error">Valid email is required.</span>
+                        <label class="form-label" for="edit-details-email">Email</label>
+                        <input type="email" id="edit-details-email" name="email" class="input-field">
                     </div>
                 </div>
             </div>
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Membership Information</h3>
+                <h3>Membership Information</h3>
                 <div class="grid">
                     <div class="form-group">
-                        <label for="edit-details-date_of_joining" class="form-label">Join Date <span class="required-mark">*</span></label>
-                        <input type="date" name="date_of_joining" id="edit-details-date_of_joining" class="input-field" required aria-describedby="edit-details-date_of_joining-error">
-                        <span class="error-text" id="edit-details-date_of_joining-error">Valid join date is required.</span>
+                        <label class="form-label" for="edit-details-date_of_joining">Date of Joining</label>
+                        <input type="date" id="edit-details-date_of_joining" name="date_of_joining" class="input-field">
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-membership_type" class="form-label">Membership Type</label>
-                        <select name="membership_type" id="edit-details-membership_type" class="input-field" aria-label="Membership Type">
+                        <label class="form-label" for="edit-details-membership_type">Membership Type</label>
+                        <select id="edit-details-membership_type" name="membership_type" class="input-field">
                             <option value="Individual">Individual</option>
                             <option value="Family">Family</option>
-                            <option value="Senior Citizen">Senior Citizen</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-payment_status" class="form-label">Payment Status</label>
-                        <select name="payment_status" id="edit-details-payment_status" class="input-field" aria-label="Payment Status">
+                        <label class="form-label" for="edit-details-payment_status">Payment Status</label>
+                        <select id="edit-details-payment_status" name="payment_status" class="input-field">
                             <option value="Active">Active</option>
                             <option value="Pending">Pending</option>
-                            <option value="Inactive">Inactive</option>
+                            <option value="Overdue">Overdue</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="edit-details-member_status" class="form-label">Member Status</label>
-                        <select name="member_status" id="edit-details-member_status" class="input-field" aria-label="Member Status">
+                        <label class="form-label" for="edit-details-member_status">Member Status</label>
+                        <select id="edit-details-member_status" name="member_status" class="input-field">
                             <option value="Active">Active</option>
-                            <option value="Deceased">Deceased</option>
-                            <option value="Resigned">Resigned</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Suspended">Suspended</option>
                         </select>
                     </div>
                 </div>
             </div>
-            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
-                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Edit Family Modal -->
-<div id="edit-family-modal" class="modal">
-    <div class="modal-content">
+<div class="modal" id="edit-family-modal">
+    <div class="modal-content" role="dialog" aria-modal="true">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-        <h2 style="font-size: 1.5rem; color: #e67e22; margin-bottom: 20px;">Edit Family Details</h2>
-        <p style="color: #7f8c8d; margin-bottom: 20px; font-size: 0.9rem;">All family details are optional. You can add or remove family members as needed.</p>
+        <h2>Edit Family Details</h2>
         <form id="edit-family-form">
-            <input type="hidden" name="member_id" id="edit-family-member-id">
-            
-            <!-- Spouse Section -->
+            <input type="hidden" id="edit-family-member-id" name="member_id">
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Spouse Information (Optional)</h3>
+                <h3>Spouse Details</h3>
                 <div class="grid">
-                <div class="form-group">
-                    <label for="edit-spouse-name" class="form-label">Spouse Name</label>
-                        <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field">
-                </div>
                     <div class="form-group">
-                        <label for="edit-spouse-age" class="form-label">Spouse Age</label>
-                        <input type="number" name="spouse_age" id="edit-spouse-age" class="input-field" min="0" max="120">
-            </div>
+                        <label class="form-label" for="edit-spouse-name">Spouse Name</label>
+                        <input type="text" id="edit-spouse-name" name="spouse_name" class="input-field">
+                    </div>
                     <div class="form-group">
-                        <label for="edit-spouse-gender" class="form-label">Spouse Gender</label>
-                        <select name="spouse_gender" id="edit-spouse-gender" class="input-field">
+                        <label class="form-label" for="edit-spouse-dob">Date of Birth</label>
+                        <input type="date" id="edit-spouse-dob" name="spouse_dob" class="input-field">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="edit-spouse-gender">Gender</label>
+                        <select id="edit-spouse-gender" name="spouse_gender" class="input-field">
                             <option value="">Select Gender</option>
                             <option value="Male">Male</option>
                             <option value="Female">Female</option>
@@ -991,57 +916,42 @@ try {
                     </div>
                 </div>
             </div>
-
-            <!-- Children Section -->
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Children (Optional)</h3>
-                <div id="children-container" class="dynamic-fields">
-                    <!-- Dynamic children inputs will be added here -->
-                </div>
-                <button type="button" class="btn btn-secondary add-field" id="add-child"><i class="ri-add-line"></i> Add Child</button>
+                <h3>Children</h3>
+                <div id="children-container" class="dynamic-fields"></div>
+                <button type="button" id="add-child" class="btn btn-secondary add-field"><i class="ri-add-line"></i> Add Child</button>
             </div>
-
-            <!-- Dependents Section -->
             <div class="form-section">
-                <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Dependents (Optional)</h3>
-                <div id="dependents-container" class="dynamic-fields">
-                    <!-- Dynamic dependents inputs will be added here -->
-                </div>
-                <button type="button" class="btn btn-secondary add-field" id="add-dependent"><i class="ri-add-line"></i> Add Dependent</button>
+                <h3>Dependents</h3>
+                <div id="dependents-container" class="dynamic-fields"></div>
+                <button type="button" id="add-dependent" class="btn btn-secondary add-field"><i class="ri-add-line"></i> Add Dependent</button>
             </div>
-
-            <div class="flex" style="justify-content: flex-end; margin-top: 20px;">
-                <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                <button type="submit" class="btn btn-primary"><i class="ri-save-line"></i> Save Changes</button>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
-<div id="delete-modal" class="modal">
-    <div class="modal-content">
+<!-- Delete Modal -->
+<div class="modal delete-modal" id="delete-modal">
+    <div class="modal-content" role="dialog" aria-modal="true">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-        <div style="text-align: center;">
-            <i class="ri-error-warning-fill" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
-            <h3 style="font-size: 1.5rem; font-weight: 700;">Confirm Deletion</h3>
-            <p style="color: #7f8c8d; margin-top: 10px;">Are you sure you want to delete this member? This action cannot be undone.</p>
-            <form id="delete-form">
-                <input type="hidden" name="id" id="delete-id">
-                <div class="flex" style="justify-content: center; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="ri-delete-bin-line"></i> Delete</button>
-                </div>
-            </form>
-        </div>
+        <i class="ri-error-warning-line"></i>
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this member? This action cannot be undone.</p>
+        <form id="delete-form">
+            <input type="hidden" id="delete-id" name="id">
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary modal-close">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </div>
+        </form>
     </div>
 </div>
 
-<script>
-    // Pass PHP variables to JavaScript
-    window.successMsg = '<?php echo json_encode($js_success); ?>';
-    window.errorMsg = '<?php echo json_encode($js_error); ?>';
-</script>
+<!-- External JS -->
 <script src="../../assets/js/member.js"></script>
 </body>
 </html>
