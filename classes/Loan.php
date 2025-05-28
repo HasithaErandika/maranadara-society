@@ -13,11 +13,6 @@ class Loan {
         }
     }
 
-    /**
-     * Get confirmed, pending loans for a member (for payment dropdown)
-     * @param int $member_id The ID of the member
-     * @return array Array of loan records (id, amount, monthly_payment)
-     */
     public function getConfirmedPendingLoansByMemberId($member_id) {
         $conn = $this->db->getConnection();
         if (!$conn) {
@@ -43,7 +38,10 @@ class Loan {
 
     public function getLoansByMemberId($member_id) {
         $conn = $this->db->getConnection();
-        if (!$conn) return false;
+        if (!$conn) {
+            error_log("Failed to connect to database in getLoansByMemberId");
+            return [];
+        }
 
         $stmt = $conn->prepare("
             SELECT id, amount, interest_rate, duration, monthly_payment, 
@@ -61,16 +59,27 @@ class Loan {
 
     public function getTotalLoans() {
         $conn = $this->db->getConnection();
-        if (!$conn) return 0;
+        if (!$conn) {
+            error_log("Failed to connect to database in getTotalLoans");
+            return 0;
+        }
 
         $result = $conn->query("SELECT SUM(amount) as total FROM loans WHERE status IN ('Pending', 'Applied')");
-        return $result ? ($result->fetch_assoc()['total'] ?? 0) : 0;
+        if (!$result) {
+            error_log("Query failed in getTotalLoans: " . $conn->error);
+            return 0;
+        }
+        return $result->fetch_assoc()['total'] ?? 0;
     }
 
-    public function getAllLoans($member_id = null) {
+    public function getAllLoans($member_id = null, $page = 1, $limit = 10) {
         $conn = $this->db->getConnection();
-        if (!$conn) return [];
+        if (!$conn) {
+            error_log("Failed to connect to database in getAllLoans");
+            return [];
+        }
 
+        $offset = ($page - 1) * $limit;
         $query = "
             SELECT 
                 l.*, 
@@ -82,15 +91,19 @@ class Loan {
             " . ($member_id ? "WHERE l.member_id = ?" : "") . "
             GROUP BY l.id
             ORDER BY l.start_date DESC
+            LIMIT ? OFFSET ?
         ";
 
         if ($member_id) {
             $stmt = $conn->prepare($query);
-            $stmt->bind_param("i", $member_id);
+            $stmt->bind_param("iii", $member_id, $limit, $offset);
             $stmt->execute();
             $result = $stmt->get_result();
         } else {
-            $result = $conn->query($query);
+            $stmt = $conn->prepare($query);
+            $stmt->bind_param("ii", $limit, $offset);
+            $stmt->execute();
+            $result = $stmt->get_result();
         }
 
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -98,17 +111,22 @@ class Loan {
 
     public function addLoan($member_id, $amount, $interest_rate, $duration, $start_date, $remarks = null, $monthly_payment = null, $total_payable = null, $end_date = null) {
         $conn = $this->db->getConnection();
-        if (!$conn) return false;
+        if (!$conn) {
+            error_log("Failed to connect to database in addLoan");
+            return false;
+        }
 
         $check_stmt = $conn->prepare("SELECT id FROM loans WHERE member_id = ? AND status IN ('Applied', 'Pending')");
         $check_stmt->bind_param("i", $member_id);
         $check_stmt->execute();
         if ($check_stmt->get_result()->num_rows > 0) {
+            $check_stmt->close();
             return false;
         }
+        $check_stmt->close();
 
         $monthly_payment = $monthly_payment ?? $this->calculateMonthlyPayment($amount, $interest_rate, $duration);
-        $total_payable = $total_payable ?? ($amount + ($amount * ($interest_rate / 100)));
+        $total_payable = $total_payable ?? ($monthly_payment * $duration);
         $end_date = $end_date ?? date('Y-m-d', strtotime($start_date . " + $duration months"));
 
         $stmt = $conn->prepare("
@@ -120,13 +138,19 @@ class Loan {
             $monthly_payment, $total_payable, $start_date, $end_date, $remarks);
 
         $success = $stmt->execute();
+        if (!$success) {
+            error_log("Failed to add loan for member $member_id: " . $stmt->error);
+        }
         $stmt->close();
         return $success;
     }
 
-    public function approveLoan($loan_id) {
+    public function approveLoan($loan_id, $user_id) {
         $conn = $this->db->getConnection();
-        if (!$conn) return false;
+        if (!$conn) {
+            error_log("Failed to connect to database in approveLoan");
+            return false;
+        }
 
         $stmt = $conn->prepare("
             UPDATE loans 
@@ -135,19 +159,27 @@ class Loan {
                 confirmed_by = ? 
             WHERE id = ? AND status = 'Applied'
         ");
-        $db_username = $_SESSION['db_username'] ?? 'Unknown';
-        $stmt->bind_param("si", $db_username, $loan_id);
+        $stmt->bind_param("si", $user_id, $loan_id);
         $success = $stmt->execute() && $stmt->affected_rows > 0;
+        if (!$success) {
+            error_log("Failed to approve loan $loan_id: " . $stmt->error);
+        }
         $stmt->close();
         return $success;
     }
 
-    public function settleLoan($loan_id) {
+    public function settleLoan($loan_id, $user_id) {
         $conn = $this->db->getConnection();
-        if (!$conn) return false;
+        if (!$conn) {
+            error_log("Failed to connect to database in settleLoan");
+            return false;
+        }
 
         $loan = $this->getLoanById($loan_id);
-        if ($loan['total_paid'] < $loan['total_payable']) return false;
+        if (!$loan || $loan['total_paid'] < $loan['total_payable']) {
+            error_log("Cannot settle loan $loan_id: Insufficient payment or loan not found");
+            return false;
+        }
 
         $stmt = $conn->prepare("
             UPDATE loans 
@@ -156,17 +188,19 @@ class Loan {
                 confirmed_by = ? 
             WHERE id = ? AND status = 'Pending'
         ");
-        $db_username = $_SESSION['db_username'] ?? 'Unknown';
-        $stmt->bind_param("si", $db_username, $loan_id);
+        $stmt->bind_param("si", $user_id, $loan_id);
         $success = $stmt->execute() && $stmt->affected_rows > 0;
+        if (!$success) {
+            error_log("Failed to settle loan $loan_id: " . $stmt->error);
+        }
         $stmt->close();
         return $success;
     }
 
     public function calculateLoanBreakdown($amount, $interest_rate, $duration, $start_date) {
-        $total_interest = $amount * ($interest_rate / 100);
-        $total_payable = $amount + $total_interest;
-        $monthly_payment = $total_payable / $duration;
+        $monthly_payment = $this->calculateMonthlyPayment($amount, $interest_rate, $duration);
+        $total_payable = $monthly_payment * $duration;
+        $total_interest = $total_payable - $amount;
         $end_date = date('Y-m-d', strtotime($start_date . " + $duration months"));
 
         return [
@@ -223,8 +257,13 @@ class Loan {
         }
     }
 
-    private function getLoanById($loan_id) {
+    public function getLoanById($loan_id) {
         $conn = $this->db->getConnection();
+        if (!$conn) {
+            error_log("Failed to connect to database in getLoanById");
+            return null;
+        }
+
         $stmt = $conn->prepare("
             SELECT l.*, COALESCE(SUM(p.amount), 0) as total_paid
             FROM loans l
@@ -242,9 +281,13 @@ class Loan {
     }
 
     private function calculateMonthlyPayment($amount, $interest_rate, $duration) {
-        $total_interest = $amount * ($interest_rate / 100);
-        $total_payable = $amount + $total_interest;
-        return $total_payable / $duration;
+        $monthly_rate = $interest_rate / 100 / 12;
+        $months = $duration;
+        if ($monthly_rate == 0) {
+            return $amount / $months;
+        }
+        $monthly_payment = $amount * ($monthly_rate * pow(1 + $monthly_rate, $months)) / (pow(1 + $monthly_rate, $months) - 1);
+        return round($monthly_payment, 2);
     }
 }
 ?>

@@ -2,7 +2,8 @@
 define('APP_START', true);
 session_start();
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../login.php");
+    error_log("Unauthorized access attempt in loans.php - Session role: " . (isset($_SESSION['role']) ? $_SESSION['role'] : 'not set'));
+    header("Location: ../../admin-login.php");
     exit;
 }
 
@@ -69,14 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             );
             $success = "Loan calculation completed successfully!";
         } elseif (isset($_POST['approve'])) {
-            if ($loan->approveLoan($_POST['id'])) {
+            if ($loan->approveLoan($_POST['id'], $_SESSION['user_id'])) {
                 $success = "Loan approved successfully!";
                 $loans = $loan->getAllLoans($selected_member_id);
             } else {
                 $error = "Error approving loan.";
             }
         } elseif (isset($_POST['settle'])) {
-            if ($loan->settleLoan($_POST['id'])) {
+            if ($loan->settleLoan($_POST['id'], $_SESSION['user_id'])) {
                 $success = "Loan settlement approved successfully!";
                 $loans = $loan->getAllLoans($selected_member_id);
             } else {
@@ -783,19 +784,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const loanDetails = document.getElementById('loan-details');
     const viewButtons = document.querySelectorAll('.view-details');
 
-<<<<<<< HEAD
     viewButtons.forEach(button => {
         button.addEventListener('click', () => {
             const loan = JSON.parse(button.getAttribute('data-loan'));
             const member = JSON.parse(button.getAttribute('data-member'));
             loanDetails.innerHTML = `
-=======
-        viewButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const loan = JSON.parse(button.getAttribute('data-loan'));
-                const member = JSON.parse(button.getAttribute('data-member'));
-                loanDetails.innerHTML = `
->>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
                 <div class="grid grid-cols-1 gap-3">
                     <p><strong class="text-[var(--secondary)]">Member ID:</strong> ${member.member_id || 'N/A'}</p>
                     <p><strong class="text-[var(--secondary)]">Member Name:</strong> ${member.full_name || 'N/A'}</p>
@@ -812,13 +805,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p><strong class="text-[var(--secondary)]">Remarks:</strong> ${loan.remarks || 'N/A'}</p>
                 </div>
             `;
-<<<<<<< HEAD
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-=======
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            });
         });
 
         closeModal.addEventListener('click', () => {
@@ -892,7 +880,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     setTimeout(() => hidePopup(errorPopup), 3000);
                 }
             });
->>>>>>> ac090992e1619ec8c9b073484cfcf95e22c4eba0
         });
 
         // Auto-populate application form from calculator
