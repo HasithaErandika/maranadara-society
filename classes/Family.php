@@ -17,13 +17,13 @@ class Family {
             if ($spouse_data) {
                 $stmt = $conn->prepare("
                     INSERT INTO family_details (
-                        member_id, spouse_name, spouse_age, spouse_gender
+                        member_id, spouse_name, spouse_dob, spouse_gender
                     ) VALUES (?, ?, ?, ?)
                 ");
-                $stmt->bind_param("isis", 
+                $stmt->bind_param("isss", 
                     $member_id,
                     $spouse_data['name'],
-                    $spouse_data['age'],
+                    $spouse_data['dob'],
                     $spouse_data['gender']
                 );
                 if (!$stmt->execute()) {
@@ -35,15 +35,15 @@ class Family {
             if ($children_data && is_array($children_data)) {
                 $stmt = $conn->prepare("
                     INSERT INTO children (
-                        member_id, name, age, gender
+                        member_id, name, child_dob, gender
                     ) VALUES (?, ?, ?, ?)
                 ");
                 
                 foreach ($children_data as $child) {
-                    $stmt->bind_param("isis", 
+                    $stmt->bind_param("isss", 
                         $member_id,
                         $child['name'],
-                        $child['age'],
+                        $child['dob'],
                         $child['gender']
                     );
                     if (!$stmt->execute()) {
@@ -56,16 +56,17 @@ class Family {
             if ($dependents_data && is_array($dependents_data)) {
                 $stmt = $conn->prepare("
                     INSERT INTO dependents (
-                        member_id, name, relationship, age
-                    ) VALUES (?, ?, ?, ?)
+                        member_id, name, relationship, dependant_dob, dependant_address
+                    ) VALUES (?, ?, ?, ?, ?)
                 ");
                 
                 foreach ($dependents_data as $dependent) {
-                    $stmt->bind_param("issi", 
+                    $stmt->bind_param("issss", 
                         $member_id,
                         $dependent['name'],
                         $dependent['relationship'],
-                        $dependent['age']
+                        $dependent['dob'],
+                        $dependent['address']
                     );
                     if (!$stmt->execute()) {
                         throw new Exception("Failed to add dependent details");
@@ -91,7 +92,7 @@ class Family {
 
         // Get spouse details
         $stmt = $conn->prepare("
-            SELECT spouse_name as name, spouse_age as age, spouse_gender as gender 
+            SELECT spouse_name as name, spouse_dob as dob, spouse_gender as gender 
             FROM family_details 
             WHERE member_id = ?
         ");
@@ -104,10 +105,10 @@ class Family {
 
         // Get children details
         $stmt = $conn->prepare("
-            SELECT name, age, gender 
+            SELECT name, child_dob as dob, gender 
             FROM children 
             WHERE member_id = ? 
-            ORDER BY age DESC
+            ORDER BY child_dob DESC
         ");
         $stmt->bind_param("i", $member_id);
         $stmt->execute();
@@ -118,7 +119,7 @@ class Family {
 
         // Get dependents details
         $stmt = $conn->prepare("
-            SELECT name, relationship, age 
+            SELECT name, relationship, dependant_dob as dob, dependant_address as address 
             FROM dependents 
             WHERE member_id = ? 
             ORDER BY relationship
@@ -225,8 +226,8 @@ class Family {
         if (empty($data['name'])) {
             throw new Exception("Spouse name is required");
         }
-        if (isset($data['age']) && (!is_numeric($data['age']) || $data['age'] < 0 || $data['age'] > 120)) {
-            throw new Exception("Invalid spouse age");
+        if (isset($data['dob']) && !DateTime::createFromFormat('Y-m-d', $data['dob'])) {
+            throw new Exception("Invalid spouse date of birth");
         }
         if (isset($data['gender']) && !in_array($data['gender'], ['Male', 'Female', 'Other'])) {
             throw new Exception("Invalid spouse gender");
@@ -238,8 +239,8 @@ class Family {
         if (empty($data['name'])) {
             throw new Exception("Child name is required");
         }
-        if (empty($data['age']) || !is_numeric($data['age']) || $data['age'] < 0 || $data['age'] > 120) {
-            throw new Exception("Invalid child age");
+        if (empty($data['dob']) || !DateTime::createFromFormat('Y-m-d', $data['dob'])) {
+            throw new Exception("Invalid child date of birth");
         }
         if (empty($data['gender']) || !in_array($data['gender'], ['Male', 'Female', 'Other'])) {
             throw new Exception("Invalid child gender");
@@ -254,15 +255,18 @@ class Family {
         if (empty($data['relationship'])) {
             throw new Exception("Dependent relationship is required");
         }
-        if (empty($data['age']) || !is_numeric($data['age']) || $data['age'] < 0 || $data['age'] > 120) {
-            throw new Exception("Invalid dependent age");
+        if (empty($data['dob']) || !DateTime::createFromFormat('Y-m-d', $data['dob'])) {
+            throw new Exception("Invalid dependent date of birth");
+        }
+        if (empty($data['address'])) {
+            throw new Exception("Dependent address is required");
         }
         return true;
     }
 
     public function getSpouseDetails($memberId) {
         $conn = $this->db->getConnection();
-        $stmt = $conn->prepare("SELECT * FROM family_details WHERE member_id = ?");
+        $stmt = $conn->prepare("SELECT spouse_name, spouse_dob, spouse_gender FROM family_details WHERE member_id = ?");
         $stmt->bind_param("i", $memberId);
         $stmt->execute();
         return $stmt->get_result()->fetch_assoc();
@@ -270,7 +274,7 @@ class Family {
 
     public function getChildren($memberId) {
         $conn = $this->db->getConnection();
-        $stmt = $conn->prepare("SELECT * FROM children WHERE member_id = ?");
+        $stmt = $conn->prepare("SELECT name, child_dob, gender FROM children WHERE member_id = ?");
         $stmt->bind_param("i", $memberId);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -278,13 +282,12 @@ class Family {
 
     public function getDependents($memberId) {
         $conn = $this->db->getConnection();
-        $stmt = $conn->prepare("SELECT * FROM dependents WHERE member_id = ?");
+        $stmt = $conn->prepare("SELECT name, relationship, dependant_dob, dependant_address FROM dependents WHERE member_id = ?");
         $stmt->bind_param("i", $memberId);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
-    // Additional methods from includes/classes/Family.php
     public function getFamilyDetailsByMemberId($memberId) {
         $spouse = $this->getSpouseDetails($memberId);
         $children = $this->getChildren($memberId);
@@ -292,7 +295,7 @@ class Family {
 
         $children_info = [];
         foreach ($children as $child) {
-            $children_info[] = $child['name'] . ' (' . $child['age'] . ' years)';
+            $children_info[] = $child['name'] . ' (' . $child['child_dob'] . ')';
         }
 
         $dependents_info = [];
