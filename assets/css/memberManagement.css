@@ -96,7 +96,7 @@ body {
 }
 
 .required-mark {
-    color: #e74c3c;
+    display: none; /* Hide required mark as requested */
 }
 
 .input-field {
@@ -174,7 +174,6 @@ body {
 
 .btn-secondary:hover {
     background-color: #dcdde1;
-    color: #2c3e50;
 }
 
 .btn-danger {
@@ -359,165 +358,358 @@ body {
     margin-top: 20px;
 }
 
-.popup {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.95);
-    background: #fff;
-    padding: 30px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    max-width: 500px;
-    width: 90%;
-    opacity: 0;
-    pointer-events: none;
-    transition: all 0.3s;
-    z-index: 50;
-}
-
-.popup.show {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.popup-overlay {
+/* Modal Styles */
+.modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
     opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s;
-    z-index: 40;
+    transition: opacity 0.3s ease;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
-.popup-overlay.show {
+.modal-overlay.show {
+    display: flex;
     opacity: 1;
-    pointer-events: auto;
 }
 
 .modal {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+    padding: 0;
     display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
     z-index: 1001;
 }
 
 .modal.show {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    animation: modalFadeIn 0.3s ease forwards;
 }
 
-.modal-content {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    max-width: 600px;
-    width: 90%;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.modal-overlay.show .modal {
+    transform: translateY(0);
 }
 
-.modal-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    color: #7f8c8d;
-    cursor: pointer;
+/* Edit Modal Specific Styles */
+#edit-details-modal,
+#edit-family-modal {
+    display: none;
 }
 
-.modal-close:hover {
+#edit-details-modal.show,
+#edit-family-modal.show {
+    display: block;
+}
+
+/* Delete Modal Specific Styles */
+.delete-modal .modal {
+    max-width: 400px;
+    text-align: center;
+}
+
+.delete-modal .modal-content {
+    padding: 2rem;
+}
+
+.delete-modal .modal-content i {
+    font-size: 2.5rem;
     color: #e74c3c;
+    margin-bottom: 1rem;
 }
 
-#edit-details-modal .modal-content,
-#edit-family-modal .modal-content {
-    max-width: 600px;
-    padding: 24px;
+.delete-modal .modal-content h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
 }
 
-.form-actions {
+.delete-modal .modal-content p {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.delete-modal .modal-actions {
     display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #eee;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
 }
 
-.dynamic-fields {
+/* Form Actions in Modal */
+.modal .form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Dynamic Fields in Modal */
+.modal .dynamic-fields {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
 
-.add-field {
+.modal .add-field {
     align-self: flex-start;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
 }
 
-.modal-content .flex {
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid #eee;
+/* Animation for Modal Content */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.header-buttons {
+/* Ensure modals are visible when shown */
+.modal-overlay.show .modal.show {
+    display: block;
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Fix for modal stacking */
+.modal-overlay {
+    pointer-events: auto;
+}
+
+.modal {
+    pointer-events: auto;
+}
+
+/* Ensure modal content is clickable */
+.modal * {
+    pointer-events: auto;
+}
+
+.modal-header {
+    background: #f8f9fa;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+    border-radius: 12px 12px 0 0;
     display: flex;
-    gap: 1rem;
+    justify-content: space-between;
     align-items: center;
 }
 
-.family-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
-}
-
-.pagination-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    background-color: #f5f6fa;
+.modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
     color: #2c3e50;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    border: 1px solid #dcdde1;
+    margin: 0;
 }
 
-.pagination-btn:hover:not(.disabled) {
-    background-color: #e67e22;
-    color: white;
-    border-color: #e67e22;
+.modal-close {
+    background: none;
+    border: none;
+    color: #6c757d;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    transition: color 0.2s ease;
 }
 
-.pagination-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.modal-close:hover {
+    color: #343a40;
 }
 
-.flex {
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 12px 12px;
     display: flex;
-    gap: 20px;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Form Styles within Modal */
+.modal .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.modal .form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #495057;
+}
+
+.modal .input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.modal .input-field:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+    outline: none;
+}
+
+.modal .input-field.error {
+    border-color: #dc3545;
+}
+
+.modal .error-text {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+/* Button Styles within Modal */
+.modal .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+}
+
+.modal .btn-primary {
+    background: #4a90e2;
+    color: white;
+}
+
+.modal .btn-primary:hover {
+    background: #357abd;
+}
+
+.modal .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.modal .btn-secondary:hover {
+    background: #5a6268;
+}
+
+.modal .btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.modal .btn-danger:hover {
+    background: #c82333;
+}
+
+/* Family Details Section in Modal */
+.family-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.family-section:last-child {
+    margin-bottom: 0;
+}
+
+.family-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    margin-bottom: 1rem;
+}
+
+.family-content {
+    background: white;
+    border-radius: 6px;
+    padding: 1.25rem;
+    border: 1px solid #e9ecef;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .modal {
+        width: 95%;
+        margin: 1rem;
+    }
+
+    .modal-header {
+        padding: 1rem;
+    }
+
+    .modal-body {
+        padding: 1rem;
+    }
+
+    .modal-footer {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Animation for Modal Content */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal.show {
+    animation: modalFadeIn 0.3s ease forwards;
+}
+
+/* Scrollbar Styling for Modal */
+.modal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.modal::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.modal::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 .main {
@@ -592,11 +784,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: scale(1); }
-}
-
 .animate-slide-in {
     animation: slideIn 0.5s ease-out;
 }
@@ -612,4 +799,87 @@ body {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+.family-details-container {
+    padding: 20px;
+}
+
+.family-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.family-section h3 {
+    color: #e67e22;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.family-info {
+    margin-left: 30px;
+}
+
+.family-info p {
+    margin: 8px 0;
+    color: #333;
+}
+
+.family-info p strong {
+    color: #7f8c8d;
+    margin-right: 8px;
+}
+
+.family-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.family-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.family-item i {
+    color: #e67e22;
+    font-size: 1.2rem;
+    margin-top: 4px;
+}
+
+.family-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.edit-family-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: #e67e22;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.edit-family-btn:hover {
+    background-color: #d35400;
+}
+
+.edit-family-btn i {
+    font-size: 1.1rem;
 }

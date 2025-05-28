@@ -145,7 +145,7 @@ try {
             // Add spouse details (optional)
             if (isset($_POST['spouse_name']) && !empty(trim($_POST['spouse_name']))) {
                 $spouse_name = trim($_POST['spouse_name']);
-                $spouse_age = !empty($_POST['spouse_age']) ? (int)$_POST['spouse_age'] : null;
+                $spouse_dob = !empty($_POST['spouse_dob']) ? $_POST['spouse_dob'] : null;
                 $spouse_gender = !empty($_POST['spouse_gender']) ? $_POST['spouse_gender'] : null;
 
                 if ($family->getSpouseCount($new_member_id) >= 1) {
@@ -154,7 +154,7 @@ try {
 
                 $spouse_data = [
                     'name' => $spouse_name,
-                    'age' => $spouse_age,
+                    'dob' => $spouse_dob,
                     'gender' => $spouse_gender
                 ];
 
@@ -172,10 +172,10 @@ try {
             if (isset($_POST['children']) && is_array($_POST['children']) && !empty($_POST['children'])) {
                 $children_data = [];
                 foreach ($_POST['children'] as $child) {
-                    if (!empty(trim($child['name'])) && !empty($child['age']) && !empty($child['gender'])) {
+                    if (!empty(trim($child['name'])) && !empty($child['dob']) && !empty($child['gender'])) {
                         $children_data[] = [
                             'name' => trim($child['name']),
-                            'age' => (int)$child['age'],
+                            'dob' => $child['dob'],
                             'gender' => $child['gender']
                         ];
                     }
@@ -201,11 +201,12 @@ try {
             if (isset($_POST['dependents']) && is_array($_POST['dependents']) && !empty($_POST['dependents'])) {
                 $dependents_data = [];
                 foreach ($_POST['dependents'] as $dependent) {
-                    if (!empty(trim($dependent['name'])) && !empty(trim($dependent['relationship']))) {
+                    if (!empty(trim($dependent['name'])) && !empty(trim($dependent['relationship'])) && !empty($dependent['dob']) && !empty(trim($dependent['address']))) {
                         $dependents_data[] = [
                             'name' => trim($dependent['name']),
                             'relationship' => trim($dependent['relationship']),
-                            'age' => !empty($dependent['age']) ? (int)$dependent['age'] : null
+                            'dob' => $dependent['dob'],
+                            'address' => trim($dependent['address'])
                         ];
                     }
                 }
@@ -281,9 +282,7 @@ ob_end_flush();
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <!-- Inter Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-       
-    </style>
+    <link rel="stylesheet" href="../../assets/css/add_member.css">
 </head>
 <body>
 <?php include __DIR__ . '/../../includes/header.php'; ?>
@@ -419,9 +418,9 @@ ob_end_flush();
                                         <span class="error-text" id="spouse_name-error">Spouse name is required if provided.</span>
                                     </div>
                                     <div class="form-group">
-                                        <label for="spouse_age" class="form-label">Age</label>
-                                        <input type="number" id="spouse_age" name="spouse_age" class="input-field" min="0" max="120">
-                                        <span class="error-text" id="spouse_age-error">Age must be between 0 and 120.</span>
+                                        <label for="spouse_dob" class="form-label">Date of Birth</label>
+                                        <input type="date" id="spouse_dob" name="spouse_dob" class="input-field" max="<?php echo date('Y-m-d'); ?>">
+                                        <span class="error-text" id="spouse_dob-error">Valid date of birth is required if provided.</span>
                                     </div>
                                     <div class="form-group">
                                         <label for="spouse_gender" class="form-label">Gender</label>

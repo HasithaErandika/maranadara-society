@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         spouseDetails.style.display = 'none';
         addSpouseBtn.style.display = 'inline-flex';
         document.getElementById('spouse_name').value = '';
-        document.getElementById('spouse_age').value = '';
+        document.getElementById('spouse_dob').value = '';
         document.getElementById('spouse_gender').value = '';
     });
 
@@ -89,9 +89,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="error-text">Child name is required if provided.</span>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Age</label>
-                        <input type="number" name="children[${childCount}][age]" class="input-field" min="0" max="120">
-                        <span class="error-text">Age is required if provided.</span>
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" name="children[${childCount}][dob]" class="input-field" max="${new Date().toISOString().split('T')[0]}">
+                        <span class="error-text">Date of birth is required if provided.</span>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Gender</label>
@@ -128,9 +128,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="error-text">Relationship is required if provided.</span>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Age</label>
-                        <input type="number" name="dependents[${dependentCount}][age]" class="input-field" min="0" max="120">
-                        <span class="error-text">Age must be between 0 and 120 if provided.</span>
+                        <label class="form-label">Date of Birth</label>
+                        <input type="date" name="dependents[${dependentCount}][dob]" class="input-field" max="${new Date().toISOString().split('T')[0]}">
+                        <span class="error-text">Date of birth is required if provided.</span>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" name="dependents[${dependentCount}][address]" class="input-field">
+                        <span class="error-text">Address is required if provided.</span>
                     </div>
                 </div>
             `;
