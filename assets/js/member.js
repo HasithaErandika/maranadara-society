@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelPopup = document.getElementById('cancel-popup');
     const successMessage = document.getElementById('success-message');
     const errorMessage = document.getElementById('error-message');
+    const deleteIdInput = document.getElementById('delete-id');
 
     function showModal(modal) {
         modal.classList.add('show');
@@ -111,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearInterval(interval);
                     hidePopup(successPopup);
                     if (redirectUrl) {
-                        window.location.replace(redirectUrl);
+                        window.location.href = redirectUrl;
                     }
                 }
             }, 1000);
@@ -174,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Set spouse information
                 document.getElementById('edit-spouse-name').value = family.spouse_name || '';
-                document.getElementById('edit-spouse-age').value = family.spouse_age || '';
+                document.getElementById('edit-spouse-dob').value = family.spouse_dob || '';
                 document.getElementById('edit-spouse-gender').value = family.spouse_gender || '';
 
                 const childrenContainer = document.getElementById('children-container');
@@ -193,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <input type="text" name="children[][name]" class="input-field" value="${child.name || ''}" placeholder="Child Name">
                                 </div>
                                 <div class="form-group">
-                                    <input type="number" name="children[][age]" class="input-field" value="${child.age || ''}" placeholder="Age" min="0" max="120">
+                                    <input type="date" name="children[][dob]" class="input-field date-picker" value="${child.child_dob || ''}" max="${new Date().toISOString().split('T')[0]}" required readonly>
                                 </div>
                                 <div class="form-group">
                                     <select name="children[][gender]" class="input-field">
@@ -234,7 +235,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <input type="number" name="dependents[][age]" class="input-field" value="${dependent.age || ''}" placeholder="Age" min="0" max="120">
+                                    <input type="date" name="dependents[][dob]" class="input-field date-picker" value="${dependent.dependant_dob || ''}" max="${new Date().toISOString().split('T')[0]}" required readonly>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" name="dependents[][address]" class="input-field" value="${dependent.dependant_address || ''}" placeholder="Address">
                                 </div>
                                 <div class="form-group">
                                     <button type="button" class="btn-icon remove-field"><i class="ri-delete-bin-line"></i></button>
@@ -277,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="text" name="children[][name]" class="input-field" placeholder="Child Name">
                     </div>
                     <div class="form-group">
-                        <input type="number" name="children[][age]" class="input-field" placeholder="Age" min="0" max="120">
+                        <input type="date" name="children[][dob]" class="input-field date-picker" max="${new Date().toISOString().split('T')[0]}" required readonly>
                     </div>
                     <div class="form-group">
                         <select name="children[][gender]" class="input-field">
@@ -308,7 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </select>
                     </div>
                     <div class="form-group">
-                        <input type="number" name="dependents[][age]" class="input-field" placeholder="Age" min="0" max="120">
+                        <input type="date" name="dependents[][dob]" class="input-field date-picker" max="${new Date().toISOString().split('T')[0]}" required readonly>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="dependents[][address]" class="input-field" placeholder="Address">
                     </div>
                     <div class="form-group">
                         <button type="button" class="btn-icon remove-field"><i class="ri-delete-bin-line"></i></button>
@@ -338,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteButtons.forEach(button => {
         button.addEventListener('click', () => {
             const id = button.getAttribute('data-id');
-            document.getElementById('delete-id').value = id;
+            deleteIdInput.value = id;
             showModal(deleteModal);
         });
     });
@@ -476,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const result = await response.json();
-            
             if (result.success) {
                 hideModal(editFamilyModal);
                 successMessage.textContent = result.message || 'Family details updated successfully';
@@ -501,16 +507,20 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('', {
                 method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                body: formData
             });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
             const result = await response.json();
+            
             if (result.success) {
+                hideModal(deleteModal);
                 successMessage.textContent = result.message;
                 showPopup(successPopup);
-                startCountdown('success-countdown', 3, 'members.php');
+                startCountdown('success-countdown', 3, window.location.href);
             } else {
                 errorMessage.textContent = result.message;
                 showPopup(errorPopup);
@@ -520,5 +530,12 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMessage.textContent = 'An unexpected error occurred. Please try again.';
             showPopup(errorPopup);
         }
+    });
+
+    // Close popups when clicking outside
+    document.getElementById('popup-overlay').addEventListener('click', function() {
+        const popups = document.querySelectorAll('.popup.show');
+        popups.forEach(popup => popup.classList.remove('show'));
+        this.classList.remove('show');
     });
 });

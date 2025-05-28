@@ -74,7 +74,7 @@ try {
 
         if ($selected_member) {
             $member_id = (int)$selected_member['id'];
-            $family_details = $family->getFamilyDetailsByMemberId($member_id);
+            $family = $family->getFamilyDetails($member_id);
             $all_payments = $payment->getPaymentsByMemberId($member_id);
             $incidents = $incident->getIncidentsByMemberId($member_id);
             $loans = $loan->getLoansByMemberId($member_id);
@@ -107,197 +107,99 @@ try {
         }
     }
 
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
-        $db = new Database();
-        $conn = $db->getConnection();
-
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
-            if (isset($_POST['delete'])) {
-                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                if ($id) {
-                    if ($member->deleteMember($id)) {
-                        ob_end_clean();
-                        header('Content-Type: application/json');
-                        echo json_encode(['success' => true, 'message' => 'Member deleted successfully.']);
-                        exit;
-                    } else {
-                        throw new Exception("Failed to delete member.");
-                    }
-                } else {
-                    throw new Exception("Invalid member ID.");
-                }
-            } elseif (isset($_POST['update'])) {
-                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                $full_name = trim($_POST['full_name'] ?? '');
-                $contact_number = trim($_POST['contact_number'] ?? '');
-                $membership_type = trim($_POST['membership_type'] ?? '');
-                $payment_status = trim($_POST['payment_status'] ?? '');
-                $member_status = trim($_POST['member_status'] ?? '');
-
-                if (empty($full_name)) {
-                    throw new Exception("Full name is required.");
-                }
-                if (empty($contact_number) || !preg_match('/^\+94\d{9}$/', $contact_number)) {
-                    throw new Exception("Valid contact number is required (format: +94XXXXXXXXX).");
-                }
-                if (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
-                    throw new Exception("Invalid membership type.");
-                }
-                if (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
-                    throw new Exception("Invalid payment status.");
-                }
-                if (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
-                    throw new Exception("Invalid member status.");
-                }
-
-                $data = [
-                    'full_name' => $full_name,
-                    'contact_number' => $contact_number,
-                    'membership_type' => $membership_type,
-                    'payment_status' => $payment_status,
-                    'member_status' => $member_status
-                ];
-
-                if ($member->updateMember($id, $data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Member updated successfully.']);
-                    exit;
-                } else {
-                    throw new Exception("Failed to update member.");
-                }
-            } elseif (isset($_POST['update_details'])) {
-                $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
-                $full_name = trim($_POST['full_name'] ?? '');
-                $date_of_birth = trim($_POST['date_of_birth'] ?? '');
-                $gender = trim($_POST['gender'] ?? '');
-                $nic_number = trim($_POST['nic_number'] ?? '');
-                $address = trim($_POST['address'] ?? '');
-                $contact_number = trim($_POST['contact_number'] ?? '');
-                $email = trim($_POST['email'] ?? '');
-                $date_of_joining = trim($_POST['date_of_joining'] ?? '');
-                $membership_type = trim($_POST['membership_type'] ?? '');
-                $payment_status = trim($_POST['payment_status'] ?? '');
-                $member_status = trim($_POST['member_status'] ?? '');
-
-                if (empty($full_name)) {
-                    throw new Exception("Full name is required.");
-                }
-                if (empty($date_of_birth) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_of_birth)) {
-                    throw new Exception("Valid date of birth is required (format: YYYY-MM-DD).");
-                }
-                if (!in_array($gender, ['Male', 'Female', 'Other'])) {
-                    throw new Exception("Invalid gender.");
-                }
-                if (empty($nic_number) || !preg_match('/^\d{9}[vVxX]|\d{12}$/', $nic_number)) {
-                    throw new Exception("Valid NIC number is required.");
-                }
-                if (empty($address)) {
-                    throw new Exception("Address is required.");
-                }
-                if (empty($contact_number) || !preg_match('/^\+94\d{9}$/', $contact_number)) {
-                    throw new Exception("Valid contact number is required (format: +94XXXXXXXXX).");
-                }
-                if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                    throw new Exception("Valid email is required.");
-                }
-                if (empty($date_of_joining) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_of_joining)) {
-                    throw new Exception("Valid join date is required (format: YYYY-MM-DD).");
-                }
-                if (!in_array($membership_type, ['Individual', 'Family', 'Senior Citizen'])) {
-                    throw new Exception("Invalid membership type.");
-                }
-                if (!in_array($payment_status, ['Active', 'Pending', 'Inactive'])) {
-                    throw new Exception("Invalid payment status.");
-                }
-                if (!in_array($member_status, ['Active', 'Deceased', 'Resigned'])) {
-                    throw new Exception("Invalid member status.");
-                }
-
-                $data = [
-                    'full_name' => $full_name,
-                    'date_of_birth' => $date_of_birth,
-                    'gender' => $gender,
-                    'nic_number' => $nic_number,
-                    'address' => $address,
-                    'contact_number' => $contact_number,
-                    'email' => $email,
-                    'date_of_joining' => $date_of_joining,
-                    'membership_type' => $membership_type,
-                    'payment_status' => $payment_status,
-                    'member_status' => $member_status
-                ];
-
-                if ($member->updateMember($id, $data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Member details updated successfully.']);
-                    exit;
-                } else {
-                    throw new Exception("Failed to update member details.");
-                }
-            } elseif (isset($_POST['update_family'])) {
-                $member_id = filter_input(INPUT_POST, 'member_id', FILTER_VALIDATE_INT);
+            // Handle member deletion
+            if (isset($_POST['delete']) && isset($_POST['id'])) {
+                $memberId = $_POST['id'];
                 
-                // Process spouse data
-                $spouse_data = null;
-                if (!empty($_POST['spouse_name'])) {
-                    $spouse_data = [
-                        'name' => trim($_POST['spouse_name']),
-                        'age' => !empty($_POST['spouse_age']) ? (int)$_POST['spouse_age'] : null,
-                        'gender' => !empty($_POST['spouse_gender']) ? trim($_POST['spouse_gender']) : null
-                    ];
-                }
-
-                // Process children data
-                $children_data = [];
-                if (isset($_POST['children']) && is_array($_POST['children'])) {
-                    foreach ($_POST['children'] as $child) {
-                        if (!empty(trim($child['name']))) {
-                            $children_data[] = [
-                                'name' => trim($child['name']),
-                                'age' => !empty($child['age']) ? (int)$child['age'] : null,
-                                'gender' => !empty($child['gender']) ? trim($child['gender']) : null
-                            ];
-                        }
-                    }
-                }
-
-                // Process dependents data
-                $dependents_data = [];
-                if (isset($_POST['dependents']) && is_array($_POST['dependents'])) {
-                    foreach ($_POST['dependents'] as $dependent) {
-                        if (!empty(trim($dependent['name']))) {
-                            $dependents_data[] = [
-                                'name' => trim($dependent['name']),
-                                'relationship' => !empty($dependent['relationship']) ? trim($dependent['relationship']) : null,
-                                'age' => !empty($dependent['age']) ? (int)$dependent['age'] : null
-                            ];
-                        }
-                    }
-                }
-
-                if (!$member_id) {
-                    throw new Exception("Invalid member ID.");
-                }
-
-                try {
-                    if ($family->updateFamilyDetails($member_id, $spouse_data, $children_data, $dependents_data)) {
-                    ob_end_clean();
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => true, 'message' => 'Family details updated successfully.']);
-                    exit;
+                // Delete family details first
+                $family->deleteFamilyDetails($memberId);
+                
+                // Delete the member
+                $result = $member->deleteMember($memberId);
+                
+                if ($result) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Member deleted successfully'
+                    ]);
                 } else {
-                    throw new Exception("Failed to update family details.");
+                    throw new Exception('Failed to delete member');
+                }
+                exit;
+            }
+
+            // Handle other POST requests
+            $memberId = $_POST['member_id'] ?? null;
+            if (!$memberId) {
+                throw new Exception('Member ID is required');
+            }
+
+            // Get family details
+            $spouse_data = null;
+            if (!empty($_POST['spouse_name'])) {
+                $spouse_data = [
+                    'name' => $_POST['spouse_name'],
+                    'dob' => $_POST['spouse_dob'],
+                    'gender' => $_POST['spouse_gender']
+                ];
+            }
+
+            $children_data = [];
+            if (isset($_POST['children']) && is_array($_POST['children'])) {
+                foreach ($_POST['children'] as $child) {
+                    if (!empty($child['name'])) {
+                        $children_data[] = [
+                            'name' => $child['name'],
+                            'dob' => $child['dob'],
+                            'gender' => $child['gender']
+                        ];
                     }
-                } catch (Exception $e) {
-                    throw new Exception("Error updating family details: " . $e->getMessage());
                 }
             }
+
+            $dependents_data = [];
+            if (isset($_POST['dependents']) && is_array($_POST['dependents'])) {
+                foreach ($_POST['dependents'] as $dependent) {
+                    if (!empty($dependent['name'])) {
+                        $dependents_data[] = [
+                            'name' => $dependent['name'],
+                            'relationship' => $dependent['relationship'],
+                            'dob' => $dependent['dob'],
+                            'address' => $dependent['address']
+                        ];
+                    }
+                }
+            }
+
+            // Update family details
+            $result = $family->updateFamilyDetails($memberId, $spouse_data, $children_data, $dependents_data);
+
+            if ($result) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Family details updated successfully'
+                    ]);
+                } else {
+                    $_SESSION['success'] = 'Family details updated successfully';
+                    header('Location: members.php');
+                }
+            } else {
+                throw new Exception('Failed to update family details');
+            }
+            exit;
         } catch (Exception $e) {
-            ob_end_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                echo json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ]);
+            } else {
+                $_SESSION['error'] = $e->getMessage();
+                header('Location: members.php');
+            }
             exit;
         }
     }
@@ -491,28 +393,33 @@ try {
                     <div class="card animate-slide-in">
                         <div class="accordion-header" data-target="family-details">Family Details <i class="ri-arrow-down-s-line"></i></div>
                         <div class="accordion-content" id="family-details">
-                            <?php if (!empty($family_details)): ?>
+                            <?php if ($family['spouse'] || !empty($family['children']) || !empty($family['dependents'])): ?>
                                 <div class="family-details-container">
                                     <!-- Spouse Section -->
-                                    <?php if (!empty($family_details['spouse_name'])): ?>
+                                    <?php if (!empty($family['spouse'])): ?>
                                         <div class="family-section">
                                             <h3><i class="ri-user-heart-line"></i> Spouse</h3>
-                                            <p><?php echo htmlspecialchars($family_details['spouse_name']); ?></p>
+                                            <div class="family-info">
+                                                <p><strong>Name:</strong> <?php echo htmlspecialchars($family['spouse']['name']); ?></p>
+                                                <p><strong>Date of Birth:</strong> <?php echo date('d M Y', strtotime($family['spouse']['dob'])); ?></p>
+                                                <p><strong>Gender:</strong> <?php echo htmlspecialchars($family['spouse']['gender']); ?></p>
+                                            </div>
                                         </div>
                                     <?php endif; ?>
 
                                     <!-- Children Section -->
-                                    <?php if (!empty($family_details['children_info'])): ?>
+                                    <?php if (!empty($family['children'])): ?>
                                         <div class="family-section">
                                             <h3><i class="ri-parent-line"></i> Children</h3>
                                             <div class="family-list">
-                                                <?php 
-                                                $children = explode(', ', $family_details['children_info']);
-                                                foreach ($children as $child): 
-                                                ?>
+                                                <?php foreach ($family['children'] as $child): ?>
                                                     <div class="family-item">
                                                         <i class="ri-user-smile-line"></i>
-                                                        <span><?php echo htmlspecialchars($child); ?></span>
+                                                        <div class="family-info">
+                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($child['name']); ?></p>
+                                                            <p><strong>Date of Birth:</strong> <?php echo date('d M Y', strtotime($child['dob'])); ?></p>
+                                                            <p><strong>Gender:</strong> <?php echo htmlspecialchars($child['gender']); ?></p>
+                                                        </div>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -520,17 +427,19 @@ try {
                                     <?php endif; ?>
 
                                     <!-- Dependents Section -->
-                                    <?php if (!empty($family_details['dependents_info'])): ?>
+                                    <?php if (!empty($family['dependents'])): ?>
                                         <div class="family-section">
                                             <h3><i class="ri-group-line"></i> Dependents</h3>
                                             <div class="family-list">
-                                                <?php 
-                                                $dependents = explode(', ', $family_details['dependents_info']);
-                                                foreach ($dependents as $dependent): 
-                                                ?>
+                                                <?php foreach ($family['dependents'] as $dependent): ?>
                                                     <div class="family-item">
                                                         <i class="ri-user-line"></i>
-                                                        <span><?php echo htmlspecialchars($dependent); ?></span>
+                                                        <div class="family-info">
+                                                            <p><strong>Name:</strong> <?php echo htmlspecialchars($dependent['name']); ?></p>
+                                                            <p><strong>Relationship:</strong> <?php echo htmlspecialchars($dependent['relationship']); ?></p>
+                                                            <p><strong>Date of Birth:</strong> <?php echo date('d M Y', strtotime($dependent['dob'])); ?></p>
+                                                            <p><strong>Address:</strong> <?php echo htmlspecialchars($dependent['address']); ?></p>
+                                                        </div>
                                                     </div>
                                                 <?php endforeach; ?>
                                             </div>
@@ -538,14 +447,14 @@ try {
                                     <?php endif; ?>
                                 </div>
                                 <div class="family-actions">
-                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family_details), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
+                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
                                         <i class="ri-user-add-line"></i> Update Family Details
                                     </button>
                                 </div>
                             <?php else: ?>
                                 <div class="family-actions">
                                     <p style="color: #7f8c8d; margin-bottom: 10px;">No family details available.</p>
-                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode([]), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
+                                    <button class="btn btn-primary edit-family-btn" data-family='<?php echo htmlspecialchars(json_encode($family), ENT_QUOTES); ?>' data-member-id="<?php echo htmlspecialchars($selected_member['id']); ?>">
                                         <i class="ri-user-add-line"></i> Add Family Details
                                     </button>
                                 </div>
@@ -972,14 +881,14 @@ try {
             <div class="form-section">
                 <h3 style="font-size: 1.2rem; color: #e67e22; margin-bottom: 15px;">Spouse Information (Optional)</h3>
                 <div class="grid">
-                <div class="form-group">
-                    <label for="edit-spouse-name" class="form-label">Spouse Name</label>
-                        <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field">
-                </div>
                     <div class="form-group">
-                        <label for="edit-spouse-age" class="form-label">Spouse Age</label>
-                        <input type="number" name="spouse_age" id="edit-spouse-age" class="input-field" min="0" max="120">
-            </div>
+                        <label for="edit-spouse-name" class="form-label">Spouse Name</label>
+                        <input type="text" name="spouse_name" id="edit-spouse-name" class="input-field">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-spouse-dob" class="form-label">Date of Birth</label>
+                        <input type="date" name="spouse_dob" id="edit-spouse-dob" class="input-field" max="<?php echo date('Y-m-d'); ?>">
+                    </div>
                     <div class="form-group">
                         <label for="edit-spouse-gender" class="form-label">Spouse Gender</label>
                         <select name="spouse_gender" id="edit-spouse-gender" class="input-field">
@@ -1019,21 +928,19 @@ try {
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div id="delete-modal" class="modal">
+<div id="delete-modal" class="modal delete-modal">
     <div class="modal-content">
         <button class="modal-close" aria-label="Close modal"><i class="ri-close-line"></i></button>
-        <div style="text-align: center;">
-            <i class="ri-error-warning-fill" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
-            <h3 style="font-size: 1.5rem; font-weight: 700;">Confirm Deletion</h3>
-            <p style="color: #7f8c8d; margin-top: 10px;">Are you sure you want to delete this member? This action cannot be undone.</p>
-            <form id="delete-form">
-                <input type="hidden" name="id" id="delete-id">
-                <div class="flex" style="justify-content: center; margin-top: 20px;">
-                    <button type="button" class="btn btn-secondary modal-close"><i class="ri-close-line"></i> Cancel</button>
-                    <button type="submit" class="btn btn-primary"><i class="ri-delete-bin-line"></i> Delete</button>
-                </div>
-            </form>
-        </div>
+        <i class="ri-error-warning-fill"></i>
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this member? This action cannot be undone.</p>
+        <form id="delete-form">
+            <input type="hidden" name="id" id="delete-id">
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel modal-close">Cancel</button>
+                <button type="submit" class="btn-delete">Delete</button>
+            </div>
+        </form>
     </div>
 </div>
 
