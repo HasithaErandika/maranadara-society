@@ -426,4 +426,248 @@ document.addEventListener('DOMContentLoaded', () => {
             updateLoans('edit-payment-form');
         }
     });
+
+    // Add event listeners for membership fees table
+    document.querySelectorAll('#membership-table .edit-payment').forEach(button => {
+        button.addEventListener('click', () => {
+            const payment = JSON.parse(button.dataset.payment);
+            showEditModal(payment);
+        });
+    });
+
+    document.querySelectorAll('#membership-table .delete-payment').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = button.dataset.id;
+            deletePayment(id);
+        });
+    });
+
+    document.querySelectorAll('#membership-table .confirm-payment').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = button.dataset.id;
+            confirmPayment(id);
+        });
+    });
+
+    // Modal functionality
+    const modal = document.getElementById('edit-modal');
+    const closeModal = document.querySelector('.modal-close');
+    const popupOverlay = document.getElementById('popup-overlay');
+    const successPopup = document.getElementById('success-popup');
+    const errorPopup = document.getElementById('error-popup');
+    const cancelPopup = document.getElementById('cancel-popup');
+
+    function showPopup(popup, message = '') {
+        if (message) {
+            const messageEl = popup.querySelector('p');
+            if (messageEl) messageEl.innerHTML = message;
+        }
+        popupOverlay.classList.add('show');
+        popup.classList.add('show');
+        popup.focus();
+    }
+
+    function hidePopup(popup) {
+        popupOverlay.classList.remove('show');
+        popup.classList.remove('show');
+    }
+
+    function startCountdown(elementId, redirectUrl) {
+        let timeLeft = 3;
+        const countdown = document.getElementById(elementId);
+        if (countdown) {
+            countdown.textContent = timeLeft;
+            const interval = setInterval(() => {
+                timeLeft--;
+                countdown.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    window.location.href = redirectUrl;
+                }
+            }, 1000);
+        }
+    }
+
+    // Edit payment functionality
+    document.querySelectorAll('.edit-payment').forEach(button => {
+        button.addEventListener('click', () => {
+            const payment = JSON.parse(button.dataset.payment);
+            showEditModal(payment);
+        });
+    });
+
+    function showEditModal(payment) {
+        document.getElementById('edit-id').value = payment.id;
+        document.getElementById('edit-member_id').value = payment.member_id;
+        document.getElementById('edit-amount').value = payment.amount;
+        document.getElementById('edit-date').value = payment.date;
+        document.getElementById('edit-payment_mode').value = payment.payment_mode;
+        document.getElementById('edit-payment_type').value = payment.payment_type;
+        document.getElementById('edit-receipt_number').value = payment.receipt_number || '';
+        document.getElementById('edit-remarks').value = payment.remarks || '';
+
+        if (payment.payment_type === 'Loan Settlement') {
+            document.getElementById('edit-loan-section').classList.remove('hidden');
+            // Fetch and populate loans for the member
+            fetch(`?action=get_loans&member_id=${payment.member_id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const loanSelect = document.getElementById('edit-loan_id');
+                        loanSelect.innerHTML = '<option value="">Select a Loan</option>';
+                        data.data.forEach(loan => {
+                            const option = document.createElement('option');
+                            option.value = loan.id;
+                            option.textContent = `Loan #${loan.id} - ${loan.amount}`;
+                            if (loan.id === payment.loan_id) option.selected = true;
+                            loanSelect.appendChild(option);
+                        });
+                    }
+                });
+        } else {
+            document.getElementById('edit-loan-section').classList.add('hidden');
+        }
+
+        modal.style.display = 'block';
+    }
+
+    // Close modal functionality
+    closeModal.addEventListener('click', () => {
+        showPopup(cancelPopup, 'Changes cancelled. Redirecting in <span id="cancel-countdown"></span> seconds...');
+        startCountdown('cancel-countdown', window.location.href);
+    });
+
+    // Delete payment functionality
+    document.querySelectorAll('.delete-payment').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = button.dataset.id;
+            if (confirm('Are you sure you want to delete this payment?')) {
+                deletePayment(id);
+            }
+        });
+    });
+
+    function deletePayment(id) {
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('delete', '1');
+
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showPopup(successPopup, data.message + ' Redirecting in <span id="success-countdown"></span> seconds...');
+                startCountdown('success-countdown', window.location.href);
+            } else {
+                showPopup(errorPopup, data.message);
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            }
+        })
+        .catch(error => {
+            showPopup(errorPopup, 'Error connecting to server.');
+            setTimeout(() => hidePopup(errorPopup), 3000);
+        });
+    }
+
+    // Confirm payment functionality
+    document.querySelectorAll('.confirm-payment').forEach(button => {
+        button.addEventListener('click', () => {
+            const id = button.dataset.id;
+            confirmPayment(id);
+        });
+    });
+
+    function confirmPayment(id) {
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('confirm', '1');
+
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showPopup(successPopup, data.message + ' Redirecting in <span id="success-countdown"></span> seconds...');
+                startCountdown('success-countdown', window.location.href);
+            } else {
+                showPopup(errorPopup, data.message);
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            }
+        })
+        .catch(error => {
+            showPopup(errorPopup, 'Error connecting to server.');
+            setTimeout(() => hidePopup(errorPopup), 3000);
+        });
+    }
+
+    // Form submission handling
+    document.getElementById('edit-payment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        formData.append('update', '1');
+
+        fetch('', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showPopup(successPopup, data.message + ' Redirecting in <span id="success-countdown"></span> seconds...');
+                startCountdown('success-countdown', window.location.href);
+            } else {
+                showPopup(errorPopup, data.message);
+                setTimeout(() => hidePopup(errorPopup), 3000);
+            }
+        })
+        .catch(error => {
+            showPopup(errorPopup, 'Error connecting to server.');
+            setTimeout(() => hidePopup(errorPopup), 3000);
+        });
+    });
+
+    // Payment type change handling
+    document.getElementById('payment_type').addEventListener('change', function() {
+        const loanSection = document.getElementById('loan-section');
+        if (this.value === 'Loan Settlement') {
+            loanSection.classList.remove('hidden');
+        } else {
+            loanSection.classList.add('hidden');
+        }
+    });
+
+    // Member change handling for loan selection
+    document.getElementById('member_id').addEventListener('change', function() {
+        const loanSelect = document.getElementById('loan_id');
+        if (this.value && document.getElementById('payment_type').value === 'Loan Settlement') {
+            fetch(`?action=get_loans&member_id=${this.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        loanSelect.innerHTML = '<option value="">Select a Loan</option>';
+                        data.data.forEach(loan => {
+                            const option = document.createElement('option');
+                            option.value = loan.id;
+                            option.textContent = `Loan #${loan.id} - ${loan.amount}`;
+                            loanSelect.appendChild(option);
+                        });
+                    }
+                });
+        }
+    });
+
+    // Show initial popups if there are messages
+    if (window.successMsg) {
+        showPopup(successPopup, window.successMsg + ' Redirecting in <span id="success-countdown"></span> seconds...');
+        startCountdown('success-countdown', window.location.href);
+    }
+    if (window.errorMsg) {
+        showPopup(errorPopup, window.errorMsg);
+        setTimeout(() => hidePopup(errorPopup), 3000);
+    }
 });
