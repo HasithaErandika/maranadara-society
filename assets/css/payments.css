@@ -271,7 +271,13 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 2000;
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.popup-overlay.show {
+    display: flex;
 }
 
 .popup {
@@ -280,20 +286,45 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: var(--card-bg);
-    padding: 20px;
+    background-color: white;
+    padding: 30px;
     border-radius: 12px;
-    z-index: 2100;
-    width: 90%;
-    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+    min-width: 300px;
+    max-width: 90%;
+    text-align: center;
 }
 
 .popup.show {
     display: block;
+    animation: popupFadeIn 0.3s ease-out;
 }
 
-.popup-overlay.show {
-    display: block;
+@keyframes popupFadeIn {
+    from { opacity: 0; transform: translate(-50%, -60%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.popup i {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.popup h3 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.popup p {
+    margin: 0 0 20px 0;
+    color: var(--text-secondary);
+}
+
+.popup .countdown {
+    font-size: 14px;
+    color: var(--text-secondary);
 }
 
 .hidden {
