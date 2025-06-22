@@ -51,13 +51,13 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
     <?php include '../../includes/sidepanel.php'; ?>
 
     <main class="main-content p-6 flex-1">
-        <div class="mb-8 animate-in">
+        <section class="mb-8 animate-in">
             <h1 class="text-3xl font-semibold text-gray-900">Admin Dashboard</h1>
             <p class="text-gray-600 mt-1">Welcome back! Here's your society overview.</p>
-        </div>
+        </section>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <a href="members.php" class="card stat-card animate-in">
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" aria-label="Key Statistics">
+            <a href="members.php" class="card stat-card animate-in" aria-label="Total Members">
                 <div class="flex items-center gap-4">
                     <i class="fas fa-users text-2xl text-orange-500"></i>
                     <div>
@@ -66,7 +66,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
                     </div>
                 </div>
             </a>
-            <div class="card stat-card animate-in">
+            <div class="card stat-card animate-in" aria-label="Membership Fees">
                 <div class="flex items-center gap-4">
                     <i class="fas fa-money-bill text-2xl text-orange-500"></i>
                     <div>
@@ -75,7 +75,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
                     </div>
                 </div>
             </div>
-            <a href="loans.php" class="card stat-card animate-in">
+            <a href="loans.php" class="card stat-card animate-in" aria-label="Total Loans">
                 <div class="flex items-center gap-4">
                     <i class="fas fa-hand-holding-usd text-2xl text-orange-500"></i>
                     <div>
@@ -84,7 +84,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
                     </div>
                 </div>
             </a>
-            <a href="payments.php" class="card stat-card animate-in">
+            <a href="payments.php" class="card stat-card animate-in" aria-label="Society Payments">
                 <div class="flex items-center gap-4">
                     <i class="fas fa-hand-holding-heart text-2xl text-orange-500"></i>
                     <div>
@@ -93,19 +93,19 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
                     </div>
                 </div>
             </a>
-        </div>
+        </section>
 
-        <div class="card mb-8 animate-in">
+        <section class="card mb-8 animate-in quick-actions" aria-label="Quick Actions">
             <h2 class="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <a href="add_member.php" class="btn-primary"><i class="fas fa-user-plus mr-2"></i> Add Member</a>
-                <a href="incidents.php?action=add" class="btn-primary"><i class="fas fa-file-alt mr-2"></i> Record Incident</a>
-                <a href="payments.php" class="btn-primary"><i class="fas fa-money-bill mr-2"></i> Add Payment</a>
-                <a href="loans.php?action=add" class="btn-primary"><i class="fas fa-hand-holding-usd mr-2"></i> Add Loan</a>
+                <a href="add_member.php" class="btn-primary" aria-label="Add Member"><i class="fas fa-user-plus mr-2"></i> Add Member</a>
+                <a href="incidents.php?action=add" class="btn-primary" aria-label="Record Incident"><i class="fas fa-file-alt mr-2"></i> Record Incident</a>
+                <a href="payments.php" class="btn-primary" aria-label="Add Payment"><i class="fas fa-money-bill mr-2"></i> Add Payment</a>
+                <a href="loans.php?action=add" class="btn-primary" aria-label="Add Loan"><i class="fas fa-hand-holding-usd mr-2"></i> Add Loan</a>
             </div>
-        </div>
+        </section>
 
-        <div class="financial-summary animate-in">
+        <section class="financial-summary animate-in" aria-label="Financial Summary">
             <h2 class="text-lg font-medium text-gray-900 mb-6">Financial Summary</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div class="flex items-center gap-4">
@@ -153,7 +153,7 @@ $net_position = ($total_membership_fees + $total_loan_settlements + $total_inter
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </main>
 </div>
 <!-- <?php include '../../includes/footer.php'; ?> -->

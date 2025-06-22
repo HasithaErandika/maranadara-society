@@ -281,18 +281,18 @@ try {
         <div class="container">
             <div class="flex justify-between items-center mb-6 animate-slide-in">
                 <div>
-                    <h1 style="font-size: 2rem; font-weight: 700;">
+                    <h1 style="font-size: 2rem; font-weight: 700; color: var(--primary-orange);">
                         <?php echo $selected_member ? 'Member Details' : 'Manage Members'; ?>
                     </h1>
                     <?php if (!$selected_member): ?>
-                        <p style="font-size: 0.9rem; color: #7f8c8d;">View and manage member records efficiently.</p>
+                        <p style="font-size: 0.95rem; color: var(--text-secondary);">View and manage member records efficiently.</p>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Search Bar -->
             <?php if (!$selected_member): ?>
-                <form method="GET" class="search-container animate-slide-in" id="search-form" role="search">
+                <form method="GET" class="search-container animate-slide-in" id="search-form" role="search" aria-label="Search Members">
                     <i class="ri-search-line"></i>
                     <input type="text" name="search" id="search-input" value="<?php echo htmlspecialchars($search); ?>"
                            placeholder="Search members..." class="input-field" aria-label="Search members">
@@ -724,7 +724,7 @@ try {
 <div class="modal-overlay" id="overlay"></div>
 
 <!-- Popups -->
-<div class="popup" id="success-popup">
+<div class="popup" id="success-popup" role="alertdialog" aria-modal="true" aria-labelledby="success-message" style="display: none;">
     <div style="text-align: center;">
         <div style="font-size: 3rem; color: #2ecc71;"><i class="ri-checkbox-circle-line"></i></div>
         <h3 style="font-size: 1.5rem; margin: 16px 0;">Success</h3>
@@ -733,7 +733,7 @@ try {
     </div>
 </div>
 
-<div class="popup" id="error-popup">
+<div class="popup" id="error-popup" role="alertdialog" aria-modal="true" aria-labelledby="error-message" style="display: none;">
     <div style="text-align: center;">
         <div style="font-size: 3rem; color: #e74c3c;"><i class="ri-error-warning-line"></i></div>
         <h3 style="font-size: 1.5rem; margin: 16px 0;">Error</h3>
@@ -741,11 +741,11 @@ try {
     </div>
 </div>
 
-<div class="popup" id="cancel-popup">
+<div class="popup" id="cancel-popup" role="alertdialog" aria-modal="true" aria-labelledby="cancel-message" style="display: none;">
     <div style="text-align: center;">
         <div style="font-size: 3rem; color: #6b7280;"><i class="ri-close-circle-line"></i></div>
         <h3 style="font-size: 1.5rem; margin: 16px 0;">Cancelled</h3>
-        <p style="color: #6b7280;">Operation cancelled.</p>
+        <p id="cancel-message" style="color: #6b7280;">Operation cancelled.</p>
         <p style="color: #6b7280; margin-top: 12px;">Redirecting in <span id="cancel-countdown">3</span> seconds...</p>
     </div>
 </div>

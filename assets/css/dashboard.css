@@ -4,11 +4,12 @@
     --orange-light: #FED7AA;
     --gray-bg: #F9FAFB;
     --card-bg: #FFFFFF;
+    --section-bg: #FFF7ED;
     --text-primary: #111827;
     --text-secondary: #6B7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow: 0 4px 12px -2px rgba(0,0,0,0.10);
     --sidebar-width: 100px;
-    --sidebar-expanded: 240px; /* Increased for better visibility of expansion */
+    --sidebar-expanded: 240px;
 }
 
 body {
@@ -17,29 +18,34 @@ body {
     font-family: 'Inter', sans-serif;
     margin: 0;
     line-height: 1.5;
-    position: relative; /* Needed for absolute positioning of sidebar */
+    position: relative;
 }
 
 .main-content {
-    margin-left: 300px; /* Initial left margin to avoid overlap with the default sidebar */
-    transition: margin-left 0.3s ease; /* You can keep this for other potential margin changes */
-    padding: 20px; /* Add some padding around the content */
+    margin-left: 300px;
+    transition: margin-left 0.3s ease;
+    padding: 32px 32px 32px 32px;
+    background: var(--section-bg);
+    min-height: 100vh;
 }
 
 .sidebar {
-    position: absolute; /* Take it out of the normal flow */
-    top: 0;
-    left: 0;
-    width: var(--sidebar-width);
-    height: 10%; /* Make it full height */
-    background: var(--card-bg); /* Give it a background */
+    position: fixed !important;
+    top: var(--header-height, 64px) !important;
+    left: 0 !important;
+    width: 270px !important;
+    height: calc(100vh - var(--header-height, 64px)) !important;
+    background: var(--card-bg);
     box-shadow: var(--shadow);
-    transition: width 0.3s ease;
-    z-index: 10; /* Ensure it's on top of the content */
+    z-index: 100;
+    transition: var(--transition, all 0.3s ease);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar:hover, .sidebar.expanded {
-    width: var(--sidebar-expanded);
+    width: 270px !important;
 }
 
 /* Remove the rules that were shifting the main content */
@@ -49,49 +55,91 @@ body {
 
 .card {
     background: var(--card-bg);
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 14px;
+    padding: 28px 24px;
     box-shadow: var(--shadow);
-    transition: transform 0.2s ease;
+    transition: transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s cubic-bezier(.4,0,.2,1);
+    border: 1px solid #F3F4F6;
+    margin-bottom: 0;
 }
 
-.card:hover {
-    transform: translateY(-2px);
+.card:hover, .stat-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px -4px rgba(249,115,22,0.10);
 }
 
 .stat-card {
-    border-left: 4px solid var(--primary-orange);
+    border-left: 5px solid var(--primary-orange);
+    margin-bottom: 0;
 }
 
 .btn-primary {
     background: var(--primary-orange);
     color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    padding: 12px 0;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    box-shadow: 0 2px 8px -2px rgba(249,115,22,0.10);
+    transition: background 0.18s, transform 0.18s, box-shadow 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+    outline: none;
+    cursor: pointer;
 }
 
-.btn-primary:hover {
+.btn-primary:hover, .btn-primary:focus {
     background: var(--orange-dark);
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 4px 16px -2px rgba(249,115,22,0.15);
 }
 
 .financial-summary {
     background: var(--card-bg);
-    border-radius: 8px;
-    padding: 24px;
+    border-radius: 14px;
+    padding: 32px 24px;
     box-shadow: var(--shadow);
+    margin-top: 32px;
+}
+
+h1, h2, h3 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5em;
+}
+
+h1 {
+    font-size: 2.25rem;
+    margin-bottom: 0.25em;
+}
+
+h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5em;
+}
+
+.stat-card p.text-2xl, .stat-card p.text-lg, .stat-card p.text-xl {
+    color: var(--primary-orange);
+    font-weight: 700;
+}
+
+.stat-card p.text-sm {
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .animate-in {
-    animation: slideIn 0.3s ease-out;
+    animation: slideIn 0.3s cubic-bezier(.4,0,.2,1);
 }
 
 @keyframes slideIn {
     from {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(16px);
     }
     to {
         opacity: 1;
@@ -99,17 +147,56 @@ body {
     }
 }
 
+.grid {
+    gap: 2rem !important;
+}
+
+.quick-actions .btn-primary {
+    min-width: 100px;
+    font-size: 1rem;
+    padding: 12px 0;
+}
+
+.quick-actions {
+    margin-bottom: 0;
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        margin-left: 0;
+        padding: 16px 4vw;
+    }
+    .grid {
+        gap: 1.25rem !important;
+    }
+    .sidebar {
+        width: 220px !important;
+    }
+    .sidebar:hover, .sidebar.expanded {
+        width: 220px !important;
+    }
+}
+
 @media (max-width: 768px) {
     .main-content {
-        margin-left: 16px; /* Adjust spacing for smaller screens */
-        padding: 10px; /* Adjust padding for smaller screens */
+        margin-left: 0;
+        padding: 10px 2vw;
     }
-
     .sidebar {
-        width: 80px; /* Smaller default width for mobile */
+        width: 180px !important;
     }
-
     .sidebar:hover, .sidebar.expanded {
-        width: 200px; /* Smaller expanded width for mobile */
+        width: 180px !important;
+    }
+    .card, .financial-summary {
+        padding: 18px 10px;
+        border-radius: 10px;
+    }
+    .btn-primary {
+        font-size: 0.95rem;
+        padding: 10px 0;
+    }
+    .grid {
+        gap: 0.75rem !important;
     }
 }
