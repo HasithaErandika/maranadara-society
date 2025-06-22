@@ -62,18 +62,11 @@ class Payment {
     public function autoAddLoanSettlements($date) {
         $conn = $this->db->getConnection();
 
-        // Get all pending loans with their payment history
+        // Get all pending loans
         $stmt = $conn->prepare("
-            SELECT 
-                l.*,
-                COALESCE(SUM(CASE WHEN p.is_confirmed = TRUE THEN p.amount ELSE 0 END), 0) as total_paid,
-                MAX(CASE WHEN p.is_confirmed = TRUE THEN p.date ELSE NULL END) as last_payment_date,
-                COALESCE(SUM(CASE WHEN p.is_confirmed = FALSE THEN p.amount ELSE 0 END), 0) as unpaid_amount
+            SELECT l.*
             FROM loans l
-            LEFT JOIN payments p ON l.id = p.loan_id 
-                AND p.payment_type = 'Loan Settlement'
             WHERE l.status = 'Pending' AND l.is_confirmed = TRUE
-            GROUP BY l.id
         ");
         $stmt->execute();
         $pending_loans = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -83,57 +76,56 @@ class Payment {
         $payment_type = 'Loan Settlement';
         $is_confirmed = false;
         $confirmed_by = null;
+        $fixed_amount = 4500.00;
 
         foreach ($pending_loans as $loan) {
             $member_id = $loan['member_id'];
             $loan_id = $loan['id'];
-            $monthly_payment = floatval($loan['monthly_payment']);
-            $total_paid = floatval($loan['total_paid']);
-            $unpaid_amount = floatval($loan['unpaid_amount']);
-            $last_payment_date = $loan['last_payment_date'];
+            $start_date = $loan['start_date'];
 
-            // Calculate months since last payment or loan start
-            $start_date = $last_payment_date ? $last_payment_date : $loan['start_date'];
-            $months_diff = (strtotime($date) - strtotime($start_date)) / (30 * 24 * 60 * 60);
-            $months_diff = floor($months_diff);
+            // Find the last payment month for this loan
+            $stmt2 = $conn->prepare("
+                SELECT MAX(date) as last_payment_date
+                FROM payments
+                WHERE loan_id = ? AND payment_type = 'Loan Settlement'
+            ");
+            $stmt2->bind_param("i", $loan_id);
+            $stmt2->execute();
+            $last_payment_date = $stmt2->get_result()->fetch_assoc()['last_payment_date'];
+            $stmt2->close();
 
-            if ($months_diff > 0) {
-                // Calculate total amount due including any previous unpaid amounts
-                $total_due = $monthly_payment * $months_diff;
-                
-                // Add any previous unpaid amounts
-                if ($unpaid_amount > 0) {
-                    $total_due += $unpaid_amount;
-                }
+            $from = $last_payment_date ? date('Y-m-01', strtotime($last_payment_date . ' +1 month')) : date('Y-m-01', strtotime($start_date));
+            $to = date('Y-m-01', strtotime($date));
 
+            // Add a payment for each month from $from to $to (inclusive if same month)
+            while (strtotime($from) <= strtotime($to)) {
                 // Check if payment already exists for this month
-                $stmt = $conn->prepare("
-                    SELECT COUNT(*) as exists_count 
-                    FROM payments 
-                    WHERE loan_id = ? 
-                    AND payment_type = 'Loan Settlement' 
-                    AND DATE_FORMAT(date, '%Y-%m') = DATE_FORMAT(?, '%Y-%m')
+                $stmt3 = $conn->prepare("
+                    SELECT COUNT(*) as exists_count
+                    FROM payments
+                    WHERE loan_id = ? AND payment_type = 'Loan Settlement' AND DATE_FORMAT(date, '%Y-%m') = ?
                 ");
-                $stmt->bind_param("is", $loan_id, $date);
-                $stmt->execute();
-                $exists = $stmt->get_result()->fetch_assoc()['exists_count'];
+                $month_str = date('Y-m', strtotime($from));
+                $stmt3->bind_param("is", $loan_id, $month_str);
+                $stmt3->execute();
+                $exists = $stmt3->get_result()->fetch_assoc()['exists_count'];
+                $stmt3->close();
 
                 if ($exists == 0) {
-                    $remarks = $months_diff > 1 ? 
-                        "Payment for " . $months_diff . " months" . ($unpaid_amount > 0 ? " (including previous unpaid amount)" : "") : 
-                        "Monthly payment" . ($unpaid_amount > 0 ? " (including previous unpaid amount)" : "");
-
-                    $stmt = $conn->prepare(
-                        "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, remarks, loan_id, is_confirmed, confirmed_by) 
+                    $remarks = 'Auto loan settlement for ' . $month_str;
+                    $stmt4 = $conn->prepare(
+                        "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, remarks, loan_id, is_confirmed, confirmed_by)
                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     );
-                    $stmt->bind_param("idsssssii", $member_id, $total_due, $date, $payment_mode, $payment_type, $remarks, $loan_id, $is_confirmed, $confirmed_by);
-                    if ($stmt->execute()) {
+                    $stmt4->bind_param("idsssssii", $member_id, $fixed_amount, $from, $payment_mode, $payment_type, $remarks, $loan_id, $is_confirmed, $confirmed_by);
+                    if ($stmt4->execute()) {
                         $count++;
                     } else {
-                        error_log("Failed to auto-add loan settlement for loan $loan_id: " . $stmt->error);
+                        error_log("Failed to auto-add loan settlement for loan $loan_id: " . $stmt4->error);
                     }
+                    $stmt4->close();
                 }
+                $from = date('Y-m-01', strtotime($from . ' +1 month'));
             }
         }
 

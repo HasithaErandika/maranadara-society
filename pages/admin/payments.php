@@ -249,8 +249,8 @@ ob_end_flush();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Payments - Maranadhara Samithi</title>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../assets/css/payments.css">
 </head>
 <body>
@@ -407,12 +407,9 @@ ob_end_flush();
                             <label for="membership-search" class="form-label">Search</label>
                             <input type="text" id="membership-search" class="input-field" placeholder="Search payments...">
                 </div>
-                        <form method="POST" class="inline">
-                            <input type="hidden" name="tab" value="membership">
-                            <button type="submit" name="auto_add_fees" value="1" class="btn btn-primary">
-                                <i class="ri-add-line"></i>Auto-Add Fees
-                            </button>
-                        </form>
+                        <button type="button" id="auto-add-fees-btn" class="btn btn-primary">
+                            <i class="ri-add-line"></i>Auto-Add Fees
+                        </button>
             </div>
         </div>
             <table class="table" id="membership-table">
@@ -472,12 +469,9 @@ ob_end_flush();
                             <label for="loan-search" class="form-label">Search</label>
                             <input type="text" id="loan-search" class="input-field" placeholder="Search payments...">
                 </div>
-                        <form method="POST" class="inline">
-                            <input type="hidden" name="tab" value="loan">
-                            <button type="submit" name="auto_add_loan_settlements" value="1" class="btn btn-primary">
-                                <i class="ri-add-line"></i>Auto-Add Settlements
-                            </button>
-                        </form>
+                        <button type="button" id="auto-add-loan-btn" class="btn btn-primary">
+                            <i class="ri-add-line"></i>Auto-Add Loan Settlements
+                        </button>
             </div>
         </div>
             <table class="table" id="loan-table">
@@ -636,6 +630,28 @@ ob_end_flush();
                     <p>The operation has been cancelled.</p>
                     <div class="countdown">
                         Redirecting in <span id="cancel-countdown">3</span> seconds...
+                    </div>
+                </div>
+            </div>
+            <div class="popup" id="confirm-auto-add-fees-popup">
+                <div>
+                    <i class="ri-question-line" style="color: var(--accent); font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Confirm Auto-Add</h3>
+                    <p>Are you sure you want to add Membership Fees for all active members?</p>
+                    <div class="flex gap-4" style="justify-content: center; margin-top: 1.5rem;">
+                        <button id="confirm-auto-add-fees-yes" class="btn btn-success">Yes</button>
+                        <button id="confirm-auto-add-fees-no" class="btn btn-secondary">No</button>
+                    </div>
+                </div>
+            </div>
+            <div class="popup" id="confirm-auto-add-loan-popup">
+                <div>
+                    <i class="ri-question-line" style="color: var(--accent); font-size: 3rem; margin-bottom: 1rem;"></i>
+                    <h3>Confirm Auto-Add</h3>
+                    <p>Are you sure you want to add Loan Settlements for all eligible loans?</p>
+                    <div class="flex gap-4" style="justify-content: center; margin-top: 1.5rem;">
+                        <button id="confirm-auto-add-loan-yes" class="btn btn-success">Yes</button>
+                        <button id="confirm-auto-add-loan-no" class="btn btn-secondary">No</button>
                     </div>
                 </div>
             </div>

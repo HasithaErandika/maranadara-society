@@ -59,6 +59,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loanSection = document.getElementById('loan-section');
     const loanSelect = document.getElementById('loan_id');
 
+    // Hide loan section on page load unless 'Loan Settlement' is selected
+    if (paymentTypeSelect && loanSection) {
+        if (paymentTypeSelect.value !== 'Loan Settlement') {
+            loanSection.classList.add('hidden');
+        }
+    }
+
     if (paymentTypeSelect && loanSection && loanSelect) {
         paymentTypeSelect.addEventListener('change', async () => {
             if (paymentTypeSelect.value === 'Loan Settlement') {
@@ -315,4 +322,77 @@ document.addEventListener('DOMContentLoaded', () => {
             showPage(currentPage);
         }
     });
+
+    // Auto-Add Membership Fees with custom confirmation popup
+    const autoAddFeesBtn = document.getElementById('auto-add-fees-btn');
+    const confirmAutoAddPopup = document.getElementById('confirm-auto-add-fees-popup');
+    const confirmAutoAddYes = document.getElementById('confirm-auto-add-fees-yes');
+    const confirmAutoAddNo = document.getElementById('confirm-auto-add-fees-no');
+    const popupOverlay = document.getElementById('popup-overlay');
+
+    if (autoAddFeesBtn && confirmAutoAddPopup && confirmAutoAddYes && confirmAutoAddNo && popupOverlay) {
+        autoAddFeesBtn.addEventListener('click', () => {
+            confirmAutoAddPopup.classList.add('show');
+            popupOverlay.classList.add('show');
+        });
+        confirmAutoAddNo.addEventListener('click', () => {
+            confirmAutoAddPopup.classList.remove('show');
+            popupOverlay.classList.remove('show');
+        });
+        confirmAutoAddYes.addEventListener('click', () => {
+            confirmAutoAddPopup.classList.remove('show');
+            // Keep overlay for success popup
+            fetch(window.baseUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: 'auto_add_fees=1&tab=membership'
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    showSuccessPopup(result.message);
+                } else {
+                    showErrorPopup(result.message || 'Error adding membership fees.');
+                }
+            })
+            .catch(() => showErrorPopup('An unexpected error occurred.'));
+        });
+    }
+
+    // Auto-Add Loan Settlements with custom confirmation popup
+    const autoAddLoanBtn = document.getElementById('auto-add-loan-btn');
+    const confirmAutoAddLoanPopup = document.getElementById('confirm-auto-add-loan-popup');
+    const confirmAutoAddLoanYes = document.getElementById('confirm-auto-add-loan-yes');
+    const confirmAutoAddLoanNo = document.getElementById('confirm-auto-add-loan-no');
+
+    if (autoAddLoanBtn && confirmAutoAddLoanPopup && confirmAutoAddLoanYes && confirmAutoAddLoanNo && popupOverlay) {
+        autoAddLoanBtn.addEventListener('click', () => {
+            confirmAutoAddLoanPopup.classList.add('show');
+            popupOverlay.classList.add('show');
+        });
+        confirmAutoAddLoanNo.addEventListener('click', () => {
+            confirmAutoAddLoanPopup.classList.remove('show');
+            popupOverlay.classList.remove('show');
+        });
+        confirmAutoAddLoanYes.addEventListener('click', () => {
+            confirmAutoAddLoanPopup.classList.remove('show');
+            popupOverlay.classList.remove('show');
+            fetch(window.baseUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: 'auto_add_loan_settlements=1&tab=loan'
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    showSuccessPopup(result.message || 'Loan settlements added successfully!');
+                } else {
+                    showErrorPopup(result.message || 'Failed to add loan settlements.');
+                }
+            })
+            .catch(() => {
+                showErrorPopup('Failed to add loan settlements.');
+            });
+        });
+    }
 });

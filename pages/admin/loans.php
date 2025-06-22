@@ -70,14 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             );
             $success = "Loan calculation completed successfully!";
         } elseif (isset($_POST['approve'])) {
-            if ($loan->approveLoan($_POST['id'], $_SESSION['user_id'])) {
+            if ($loan->approveLoan($_POST['id'], $_SESSION['db_username'])) {
                 $success = "Loan approved successfully!";
                 $loans = $loan->getAllLoans($selected_member_id);
             } else {
                 $error = "Error approving loan.";
             }
         } elseif (isset($_POST['settle'])) {
-            if ($loan->settleLoan($_POST['id'], $_SESSION['user_id'])) {
+            if ($loan->settleLoan($_POST['id'], $_SESSION['db_username'])) {
                 $success = "Loan settlement approved successfully!";
                 $loans = $loan->getAllLoans($selected_member_id);
             } else {
