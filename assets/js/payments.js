@@ -102,6 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const editForm = document.getElementById('edit-payment-form');
     const editLoanSection = document.getElementById('edit-loan-section');
     const editLoanSelect = document.getElementById('edit-loan_id');
+    const modalCloseBtn = document.querySelector('.modal-close');
+
+    function closeEditModal() {
+        editModal.style.display = 'none';
+        if (editForm) editForm.reset();
+    }
 
     editButtons.forEach(button => {
         button.addEventListener('click', async () => {
@@ -140,6 +146,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', closeEditModal);
+    }
+
+    // Close modal on cancel button
+    if (editForm) {
+        const cancelBtn = editForm.querySelector('.btn-secondary');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', closeEditModal);
+        }
+    }
+
+    // Close modal when clicking outside modal content
+    if (editModal) {
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) {
+                closeEditModal();
+            }
+        });
+    }
+
+    if (editForm) {
+        editForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(editForm);
+            formData.append('update', '1');
+
+            try {
+                const response = await fetch(window.baseUrl, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showSuccessPopup(result.message);
+                    closeEditModal();
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    showErrorPopup(result.message);
+                }
+            } catch (error) {
+                showErrorPopup('An unexpected error occurred.');
+            }
+        });
+    }
+
     // Confirm, delete, and edit form submission
     document.querySelectorAll('.confirm-payment, .delete-payment').forEach(button => {
         button.addEventListener('click', async () => {
@@ -166,34 +221,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-
-    if (editForm) {
-        editForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(editForm);
-            formData.append('update', '1');
-
-            try {
-                const response = await fetch(window.baseUrl, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    showSuccessPopup(result.message);
-                    editModal.style.display = 'none';
-                    setTimeout(() => location.reload(), 3000);
-                } else {
-                    showErrorPopup(result.message);
-                }
-            } catch (error) {
-                showErrorPopup('An unexpected error occurred.');
-            }
-        });
-    }
 
     // Popup functions
     function showSuccessPopup(message) {

@@ -8,6 +8,23 @@ class Payment {
         $this->db = new Database();
     }
 
+    private function generateReceiptNumber($payment_type, $date, $conn) {
+        $prefix = $payment_type === 'Loan Settlement' ? 'PL-' : ($payment_type === 'Membership Fee' ? 'PM-' : '');
+        if (!$prefix) return null;
+        $date_part = date('ymd', strtotime($date));
+        $like = $prefix . $date_part . '%';
+        $stmt = $conn->prepare("SELECT MAX(receipt_number) as max_receipt FROM payments WHERE receipt_number LIKE ?");
+        $stmt->bind_param("s", $like);
+        $stmt->execute();
+        $max = $stmt->get_result()->fetch_assoc()['max_receipt'];
+        $stmt->close();
+        $seq = 1;
+        if ($max) {
+            $seq = intval(substr($max, -6)) + 1;
+        }
+        return $prefix . $date_part . str_pad($seq, 6, '0', STR_PAD_LEFT);
+    }
+
     /**
      * Automatically add membership fee entries for all active members
      * @param string $date The date for the payment (e.g., '2025-03-01')
@@ -38,11 +55,12 @@ class Payment {
             $exists = $stmt->get_result()->fetch_row()[0];
 
             if ($exists == 0) {
+                $receipt_number = $this->generateReceiptNumber($payment_type, $date, $conn);
                 $stmt = $conn->prepare(
-                    "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, remarks, is_confirmed, confirmed_by) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, receipt_number, remarks, is_confirmed, confirmed_by) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 );
-                $stmt->bind_param("idssssis", $member_id, $amount, $date, $payment_mode, $payment_type, $remarks, $is_confirmed, $confirmed_by);
+                $stmt->bind_param("idsssssis", $member_id, $amount, $date, $payment_mode, $payment_type, $receipt_number, $remarks, $is_confirmed, $confirmed_by);
                 if ($stmt->execute()) {
                     $count++;
                 } else {
@@ -113,11 +131,12 @@ class Payment {
 
                 if ($exists == 0) {
                     $remarks = 'Auto loan settlement for ' . $month_str;
+                    $receipt_number = $this->generateReceiptNumber($payment_type, $from, $conn);
                     $stmt4 = $conn->prepare(
-                        "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, remarks, loan_id, is_confirmed, confirmed_by)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        "INSERT INTO payments (member_id, amount, date, payment_mode, payment_type, receipt_number, remarks, loan_id, is_confirmed, confirmed_by)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                     );
-                    $stmt4->bind_param("idsssssii", $member_id, $fixed_amount, $from, $payment_mode, $payment_type, $remarks, $loan_id, $is_confirmed, $confirmed_by);
+                    $stmt4->bind_param("idssssssii", $member_id, $fixed_amount, $from, $payment_mode, $payment_type, $receipt_number, $remarks, $loan_id, $is_confirmed, $confirmed_by);
                     if ($stmt4->execute()) {
                         $count++;
                     } else {
@@ -208,6 +227,11 @@ class Payment {
         // Convert empty strings to NULL for nullable fields
         $receipt_number = empty($receipt_number) ? null : $receipt_number;
         $remarks = empty($remarks) ? null : $remarks;
+
+        // Generate receipt number if needed
+        if (empty($receipt_number) && in_array($payment_type, ['Loan Settlement', 'Membership Fee'])) {
+            $receipt_number = $this->generateReceiptNumber($payment_type, $date, $conn);
+        }
 
         // Insert payment
         $stmt = $conn->prepare(
