@@ -11,21 +11,17 @@ class Member {
     public function generateMemberId() {
         $conn = $this->db->getConnection();
         $year = date('Y');
-        
-        // Get the last member ID for the current year
         $stmt = $conn->prepare("SELECT member_id FROM members WHERE member_id LIKE ? ORDER BY member_id DESC LIMIT 1");
         $pattern = $year . '%';
         $stmt->bind_param("s", $pattern);
         $stmt->execute();
         $result = $stmt->get_result();
-        
         if ($result->num_rows > 0) {
             $last_id = $result->fetch_assoc()['member_id'];
             $sequence = intval(substr($last_id, -4)) + 1;
         } else {
             $sequence = 1;
         }
-        
         return $year . str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 
@@ -64,7 +60,6 @@ class Member {
         $member_status
     ) {
         $conn = $this->db->getConnection();
-        
         $stmt = $conn->prepare("
             INSERT INTO members (
                 member_id, full_name, date_of_birth, gender, nic_number,
@@ -72,7 +67,6 @@ class Member {
                 membership_type, contribution_amount, payment_status, member_status
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-
         $stmt->bind_param(
             "sssssssssssdss",
             $member_id,
@@ -90,11 +84,9 @@ class Member {
             $payment_status,
             $member_status
         );
-
         if (!$stmt->execute()) {
             throw new Exception("Failed to add member: " . $stmt->error);
         }
-
         return $conn->insert_id;
     }
 
@@ -116,24 +108,19 @@ class Member {
 
     public function updateMember($id, $data) {
         $conn = $this->db->getConnection();
-        
         $fields = [];
         $types = "";
         $values = [];
-        
         foreach ($data as $key => $value) {
             $fields[] = "$key = ?";
             $types .= "s";
             $values[] = $value;
         }
-        
         $values[] = $id;
         $types .= "i";
-        
         $sql = "UPDATE members SET " . implode(", ", $fields) . " WHERE id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param($types, ...$values);
-        
         return $stmt->execute();
     }
 
@@ -144,24 +131,15 @@ class Member {
         return $stmt->execute();
     }
 
-    public function getAllMembers($page = 1, $limit = 10) {
+    public function getAllMembers() {
         $conn = $this->db->getConnection();
-        $offset = ($page - 1) * $limit;
-        
-        $stmt = $conn->prepare("
-            SELECT * FROM members 
-            ORDER BY date_of_joining DESC 
-            LIMIT ? OFFSET ?
-        ");
-        $stmt->bind_param("ii", $limit, $offset);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $result = $conn->query("SELECT * FROM members ORDER BY date_of_joining DESC");
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 
     public function searchMembers($query) {
         $conn = $this->db->getConnection();
         $search = "%$query%";
-        
         $stmt = $conn->prepare("
             SELECT * FROM members 
             WHERE member_id LIKE ? 
@@ -170,7 +148,6 @@ class Member {
             OR contact_number LIKE ?
             ORDER BY date_of_joining DESC
         ");
-        
         $stmt->bind_param("ssss", $search, $search, $search, $search);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -187,7 +164,6 @@ class Member {
             if (empty($username)) {
                 throw new Exception("Username cannot be empty");
             }
-
             $conn = $this->db->getConnection();
             $stmt = $conn->prepare(
                 "SELECT m.* FROM members m 
@@ -197,12 +173,10 @@ class Member {
             if (!$stmt) {
                 throw new Exception("Prepare failed: " . $conn->error);
             }
-
             $stmt->bind_param("s", $username);
             $stmt->execute();
             $result = $stmt->get_result()->fetch_assoc();
             $stmt->close();
-
             return $result ?: null;
         } catch (Exception $e) {
             error_log("Error fetching member by username: " . $e->getMessage());
@@ -213,7 +187,6 @@ class Member {
     public function getMemberStats() {
         try {
             $conn = $this->db->getConnection();
-            
             $stats = [
                 'total' => 0,
                 'active' => 0,
@@ -225,23 +198,16 @@ class Member {
                     'Senior Citizen' => 0
                 ]
             ];
-            
-            // Get total members
             $result = $conn->query("SELECT COUNT(*) as total FROM members");
             $stats['total'] = $result->fetch_assoc()['total'];
-            
-            // Get members by status
             $result = $conn->query("SELECT payment_status, COUNT(*) as count FROM members GROUP BY payment_status");
             while ($row = $result->fetch_assoc()) {
                 $stats[strtolower($row['payment_status'])] = $row['count'];
             }
-            
-            // Get members by type
             $result = $conn->query("SELECT membership_type, COUNT(*) as count FROM members GROUP BY membership_type");
             while ($row = $result->fetch_assoc()) {
                 $stats['by_type'][$row['membership_type']] = $row['count'];
             }
-            
             return $stats;
         } catch (Exception $e) {
             error_log("Error getting member stats: " . $e->getMessage());
@@ -256,7 +222,6 @@ class Member {
             if (!$result) {
                 throw new Exception("Query failed: " . $conn->error);
             }
-
             return $result->fetch_assoc() ?: null;
         } catch (Exception $e) {
             error_log("Error fetching last member: " . $e->getMessage());
