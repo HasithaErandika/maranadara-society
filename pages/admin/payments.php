@@ -610,34 +610,35 @@ ob_end_flush();
 
             <div class="popup-overlay" id="popup-overlay"></div>
             <div class="popup" id="success-popup">
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; color: #2ecc71; margin-bottom: 20px;"><i class="ri-checkbox-circle-fill"></i></div>
-                    <h3 style="font-size: 1.5rem; font-weight: 700;">Success!</h3>
-                    <p style="color: #7f8c8d; margin-top: 10px;" id="success-message"></p>
-                    <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-                        Redirecting in <span id="success-countdown" style="font-weight: 600;">3</span> seconds...
+                <div>
+                    <i class="ri-checkbox-circle-fill" style="color: var(--success-green);"></i>
+                    <h3>Success!</h3>
+                    <p id="success-message"></p>
+                    <div class="countdown">
+                        Redirecting in <span id="success-countdown">3</span> seconds...
                     </div>
                 </div>
             </div>
             <div class="popup" id="error-popup">
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"><i class="ri-error-warning-fill"></i></div>
-                    <h3 style="font-size: 1.5rem; font-weight: 700;">Error</h3>
-                    <p style="color: #7f8c8d; margin-top: 10px;" id="error-message"></p>
-                    <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-                        Redirecting in <span id="error-countdown" style="font-weight: 600;">3</span> seconds...
+                <div>
+                    <i class="ri-error-warning-fill" style="color: var(--error-red);"></i>
+                    <h3>Error</h3>
+                    <p id="error-message"></p>
+                    <div class="countdown">
+                        Redirecting in <span id="error-countdown">3</span> seconds...
                     </div>
                 </div>
             </div>
             <div class="popup" id="cancel-popup">
-                <div style="text-align: center;">
-                    <div style="font-size: 3rem; color: #7f8c8d; margin-bottom: 20px;"><i class="ri-close-circle-fill"></i></div>
-                    <h3 style="font-size: 1.5rem; font-weight: 700;">Cancelled</h3>
-                    <p style="color: #7f8c8d; margin-top: 10px;">The operation has been cancelled.</p>
-                    <div style="margin-top: 20px; font-size: 0.8rem; color: #7f8c8d;">
-                        Redirecting in <span id="cancel-countdown" style="font-weight: 600;">3</span> seconds...
+                <div>
+                    <i class="ri-close-circle-fill" style="color: var(--cancel-gray);"></i>
+                    <h3>Cancelled</h3>
+                    <p>The operation has been cancelled.</p>
+                    <div class="countdown">
+                        Redirecting in <span id="cancel-countdown">3</span> seconds...
                     </div>
                 </div>
+            </div>
         </div>
     </div>
 </main>

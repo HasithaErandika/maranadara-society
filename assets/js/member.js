@@ -46,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!popup) return;
         if (message && popup === elements.errorPopup) {
             elements.errorMessage.textContent = message;
+        } else if (message && popup === elements.successPopup) {
+            elements.successMessage.textContent = message;
         }
         elements.overlay.classList.add('show');
         popup.classList.add('show');
@@ -74,9 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (timeLeft <= 0) {
                     clearInterval(interval);
                     hidePopup(document.querySelector('.popup.show'));
-                    if (redirectUrl) {
-                        window.location.replace(redirectUrl);
-                    }
+                    if (redirectUrl) window.location.replace(redirectUrl);
                 }
             }, 1000);
         }
@@ -189,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
         const fieldDiv = document.createElement('div');
         fieldDiv.className = 'form-group dynamic-field';
-
         if (type === 'child') {
             fieldDiv.innerHTML = `
                 <div class="grid">
@@ -239,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         }
-
         container.appendChild(fieldDiv);
         fieldDiv.querySelector('.remove-field').addEventListener('click', () => {
             if (container.children.length > 1) {
@@ -271,10 +269,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const modal = button.closest('.modal');
             if (modal) {
                 hideModal(modal);
-                // Only show cancel popup if explicitly needed
-                // Commenting out to prevent automatic cancel popup
-                // showPopup(elements.cancelPopup);
-                // startCountdown('cancel-countdown', 'members.php');
             }
         });
     });
@@ -308,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (result.success) {
                 hideModal(modal);
-                showPopup(elements.successPopup);
+                showPopup(elements.successPopup, result.message);
                 startCountdown('success-countdown', 'members.php');
             } else {
                 showPopup(elements.errorPopup, result.message || 'Operation failed');
