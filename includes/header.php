@@ -14,17 +14,14 @@ if (session_status() == PHP_SESSION_NONE) {
         <div class="header-actions">
             <?php if (isset($_SESSION['role'])): ?>
                 <div class="header-user-info">
-                    <div class="user-avatar">
-                        <i class="ri-user-line"></i>
-                    </div>
+                    <div class="user-avatar"><i class="ri-user-line"></i></div>
                     <div class="user-details">
-                        <div class="user-name"><?php echo $_SESSION['user_name'] ?? 'Admin User'; ?></div>
+                        <div class="user-name"><?= $_SESSION['user_name'] ?? 'Admin User'; ?></div>
                         <div class="user-role">Administrator</div>
                     </div>
                 </div>
                 <a href="../../login.php?logout=1" class="header-btn logout-btn" aria-label="Logout">
-                    <i class="ri-logout-box-r-line"></i>
-                    <span>Logout</span>
+                    <i class="ri-logout-box-r-line"></i> <span>Logout</span>
                 </a>
             <?php else: ?>
                 <div class="header-dropdown">
@@ -40,240 +37,222 @@ if (session_status() == PHP_SESSION_NONE) {
     </div>
 </nav>
 
+
 <style>
     :root {
-        --primary-color: #e67e22;
-        --primary-hover: #d35400;
-        --bg-color: #f5f6f5;
-        --card-bg: #FFFFFF;
-        --text-primary: #333;
-        --text-secondary: #7f8c8d;
-        --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        --transition: all 0.3s ease;
-    }
+    --accent-color: #f97316;
+    --accent-hover: #c2410c;
+    --danger-color: #e74c3c;
+    --danger-hover: #c0392b;
+    --bg-color: #fff;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+}
 
-    .header-nav {
-        position: fixed;
-        top: 0;
-        width: 100%;
-        z-index: 1000;
-        background: var(--card-bg);
-        box-shadow: var(--shadow);
-        padding: 12px 0;
-        font-family: 'Inter', sans-serif;
-        backdrop-filter: blur(10px);
-        background-color: rgba(255, 255, 255, 0.95);
-    }
+.header-nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow);
+    font-family: 'Inter', sans-serif;
+}
 
+.header-container {
+    max-width: 1200px;
+    margin: auto;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-logo {
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    gap: 10px;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.header-logo:hover {
+    color: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.header-logo i {
+    font-size: 1.75rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-user-info {
+    display: flex;
+    align-items: center;
+    background: #f3f4f6;
+    padding: 6px 14px;
+    border-radius: 24px;
+    gap: 10px;
+    transition: var(--transition);
+}
+
+.header-user-info:hover {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+.header-user-info:hover .user-name,
+.header-user-info:hover .user-role {
+    color: #fff;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    background: var(--accent-color);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.user-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-role {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.header-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-color);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.header-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(249, 115, 22, 0.15);
+}
+
+.logout-btn {
+    background: var(--danger-color);
+}
+
+.logout-btn:hover {
+    background: var(--danger-hover);
+    box-shadow: 0 6px 18px rgba(231, 76, 60, 0.15);
+}
+
+.header-dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 110%;
+    right: 0;
+    background: var(--bg-color);
+    box-shadow: var(--shadow);
+    border-radius: 12px;
+    min-width: 180px;
+    display: none;
+    padding: 10px;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.dropdown-menu.active {
+    display: block;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.dropdown-item:hover {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
     .header-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .header-logo {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--primary-color);
-        text-decoration: none;
-        transition: var(--transition);
-    }
-
-    .header-logo:hover {
-        color: var(--primary-hover);
-        transform: translateY(-1px);
-    }
-
-    .header-logo i {
-        font-size: 28px;
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 16px;
     }
 
     .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 20px;
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 10px;
     }
 
-    .header-user-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 8px 16px;
-        background: var(--bg-color);
-        border-radius: 20px;
-        transition: var(--transition);
-    }
-
-    .header-user-info:hover {
-        background: var(--primary-color);
-        color: #FFFFFF;
-    }
-
-    .header-user-info:hover .user-name,
-    .header-user-info:hover .user-role {
-        color: #FFFFFF;
+    .header-logo {
+        font-size: 1.25rem;
     }
 
     .user-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: var(--primary-color);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #FFFFFF;
-        font-size: 18px;
-    }
-
-    .user-details {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .user-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--text-primary);
-    }
-
-    .user-role {
-        font-size: 12px;
-        color: var(--text-secondary);
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
     }
 
     .header-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        background: var(--primary-color);
-        color: #FFFFFF;
-        font-size: 14px;
-        font-weight: 600;
-        border-radius: 20px;
-        text-decoration: none;
-        transition: var(--transition);
+        font-size: 0.85rem;
+        padding: 6px 12px;
     }
+}
 
-    .header-btn:hover {
-        background: var(--primary-hover);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(230, 126, 34, 0.2);
-    }
-
-    .header-btn i {
-        font-size: 18px;
-    }
-
-    .logout-btn {
-        background: #e74c3c;
-    }
-
-    .logout-btn:hover {
-        background: #c0392b;
-        box-shadow: 0 4px 8px rgba(231, 76, 60, 0.2);
-    }
-
-    .header-dropdown {
-        position: relative;
-    }
-
-    .dropdown-menu {
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
-        background: var(--card-bg);
-        box-shadow: var(--shadow);
-        border-radius: 12px;
-        min-width: 200px;
-        display: none;
-        animation: slideDown 0.3s ease;
-        padding: 8px;
-    }
-
-    .dropdown-menu.active {
-        display: block;
-    }
-
-    .dropdown-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 16px;
-        color: var(--text-primary);
-        font-size: 14px;
-        text-decoration: none;
-        transition: var(--transition);
-        border-radius: 8px;
-    }
-
-    .dropdown-item:hover {
-        background: var(--primary-color);
-        color: #FFFFFF;
-    }
-
-    .dropdown-item i {
-        font-size: 18px;
-    }
-
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @media (max-width: 768px) {
-        .header-nav {
-            padding: 10px 0;
-        }
-
-        .header-logo {
-            font-size: 20px;
-        }
-
-        .header-logo i {
-            font-size: 24px;
-        }
-
-        .header-user-info {
-            padding: 6px 12px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            font-size: 16px;
-        }
-
-        .user-name {
-            font-size: 13px;
-        }
-
-        .user-role {
-            font-size: 11px;
-        }
-
-        .header-btn {
-            padding: 6px 12px;
-            font-size: 13px;
-        }
-
-        .header-btn i {
-            font-size: 16px;
-        }
-    }
 </style>
 
 <script>

@@ -1,3 +1,4 @@
+/* Define CSS custom properties for consistent theming */
 :root {
     --primary-orange: #F97316;
     --orange-dark: #C2410C;
@@ -13,8 +14,10 @@
     --transition-fast: 0.2s ease-in-out;
     --sidebar-width: 100px;
     --sidebar-expanded: 240px;
+    --header-height: 64px;
 }
 
+/* Base styles for body */
 body {
     background: var(--gray-bg);
     color: var(--text-primary);
@@ -22,39 +25,18 @@ body {
     margin: 0;
     line-height: 1.6;
     font-size: 16px;
-    position: relative;
     -webkit-font-smoothing: antialiased;
 }
 
+/* Container for main content */
 .main-content {
-    margin-left: 270px;
-    transition: margin-left var(--transition-fast);
     padding: 2.5rem;
     background: var(--section-bg);
     min-height: 100vh;
+    transition: margin-left var(--transition-fast);
 }
 
-.sidebar {
-    position: fixed !important;
-    top: var(--header-height, 64px) !important;
-    left: 0 !important;
-    width: 270px !important;
-    height: calc(100vh - var(--header-height, 64px)) !important;
-    background: var(--card-bg);
-    box-shadow: var(--shadow);
-    z-index: 100;
-    transition: width var(--transition-fast);
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #E5E7EB;
-}
-
-.sidebar:hover,
-.sidebar.expanded {
-    width: 270px !important;
-}
-
+/* Card component */
 .card {
     background: var(--card-bg);
     border-radius: var(--radius-lg);
@@ -65,12 +47,12 @@ body {
     margin-bottom: 1.5rem;
 }
 
-.card:hover,
-.stat-card:hover {
+.card:hover {
     transform: translateY(-4px) scale(1.01);
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
 }
 
+/* Statistic card variant */
 .stat-card {
     border-left: 5px solid var(--primary-orange);
     background: var(--card-bg);
@@ -78,6 +60,12 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.stat-card:hover {
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+}
+
+/* Primary button */
 .btn-primary {
     background: var(--primary-orange);
     color: #ffffff;
@@ -103,14 +91,7 @@ body {
     box-shadow: 0 6px 20px rgba(249, 115, 22, 0.15);
 }
 
-.financial-summary {
-    background: var(--card-bg);
-    border-radius: var(--radius-lg);
-    padding: 32px 24px;
-    box-shadow: var(--shadow);
-    margin-top: 32px;
-}
-
+/* Headings */
 h1, h2, h3 {
     font-family: 'Inter', sans-serif;
     font-weight: 700;
@@ -133,6 +114,7 @@ h3 {
     line-height: 1.6;
 }
 
+/* Stat card text styles */
 .stat-card p.text-2xl,
 .stat-card p.text-lg,
 .stat-card p.text-xl {
@@ -147,6 +129,7 @@ h3 {
     margin: 0.25rem 0;
 }
 
+/* Animation for elements */
 .animate-in {
     animation: slideIn 0.3s ease-in-out;
 }
@@ -162,47 +145,27 @@ h3 {
     }
 }
 
+/* Grid layout */
 .grid {
     display: grid;
     gap: 2rem;
 }
 
-.quick-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.quick-actions .btn-primary {
-    min-width: 120px;
-    padding: 12px 16px;
-    font-size: 1rem;
-}
-
 /* Responsive Breakpoints */
 @media (max-width: 1024px) {
     .main-content {
-        margin-left: 0;
         padding: 1.5rem 4vw;
     }
     .grid {
         gap: 1.25rem;
     }
-    .sidebar {
-        width: 220px !important;
-    }
 }
 
 @media (max-width: 768px) {
     .main-content {
-        margin-left: 0;
         padding: 1rem 2vw;
     }
-    .sidebar {
-        width: 180px !important;
-    }
-    .card, .financial-summary {
+    .card {
         padding: 18px 14px;
         border-radius: var(--radius-md);
     }
