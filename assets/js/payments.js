@@ -11,6 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (addPaymentForm) {
         addPaymentForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            // Ensure date is in YYYY-MM-DD format
+            const dateInput = addPaymentForm.querySelector('input[name="date"]');
+            if (dateInput) {
+                let val = dateInput.value;
+                // If not in YYYY-MM-DD, try to convert
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+                    let d = new Date(val);
+                    if (!isNaN(d)) {
+                        let yyyy = d.getFullYear();
+                        let mm = String(d.getMonth() + 1).padStart(2, '0');
+                        let dd = String(d.getDate()).padStart(2, '0');
+                        dateInput.value = `${yyyy}-${mm}-${dd}`;
+                    }
+                }
+            }
             const formData = new FormData(addPaymentForm);
 
             try {

@@ -101,7 +101,7 @@ $current_month = date('Y-m-01');
             $payment_mode = filter_input(INPUT_POST, 'payment_mode', FILTER_SANITIZE_STRING);
             $payment_type = filter_input(INPUT_POST, 'payment_type', FILTER_SANITIZE_STRING);
             $receipt_number = filter_input(INPUT_POST, 'receipt_number', FILTER_SANITIZE_STRING) ?: null;
-            $remarks = filter_input(INPUT_POST, 'monthly_contribution', FILTER_SANITIZE_STRING) ?: null;
+            $remarks = filter_input(INPUT_POST, 'remarks', FILTER_SANITIZE_STRING) ?: null;
                 $loan_id = ($payment_type === 'Loan Settlement' && !empty($_POST['loan_id']) && $_POST['loan_id'] > 0) ? filter_input(INPUT_POST, 'loan_id', FILTER_VALIDATE_INT) : null;
 
                 if (!$member_id || $member_id <= 0) {
@@ -223,7 +223,8 @@ $current_month = date('Y-m-01');
         if ($success) {
             echo json_encode(['success' => true, 'message' => $success]);
         } else {
-            echo json_encode(['success' => false, 'message' => $error['message'] ?? 'Unknown server error', 'code' => $error['code'] ?? 1018]);
+            $msg = is_array($error) ? ($error['message'] ?? 'Unknown server error') : ($error ?: 'Unknown server error');
+            echo json_encode(['success' => false, 'message' => $msg]);
         }
         exit;
     }
@@ -319,16 +320,16 @@ ob_end_flush();
                             <span class="error-text" id="receipt_number-error"></span>
                 </div>
                         <div class="form-group hidden" id="loan-section">
-                            <label for="loan_id" class="form-label">Select Loan <span class="required-mark">*</span></label>
+                            <label for="loan_id" class="form-label">Select Loan</label>
                             <select name="loan_id" id="loan_id" class="input-field">
                         <option value="" disabled selected>Select a Loan</option>
                     </select>
                             <span class="error-text" id="loan_id-error">Please select a loan.</span>
                 </div>
                         <div class="form-group" style="grid-column: 1 / -1;">
-                            <label for="monthly_contribution" class="form-label">Remarks</label>
-                    <textarea name="monthly_contribution" id="monthly_contribution" class="input-field" rows="4" placeholder="Additional details..."></textarea>
-                            <span class="error-text" id="monthly_contribution-error"></span>
+                            <label for="remarks" class="form-label">Remarks</label>
+                    <textarea name="remarks" id="remarks" class="input-field" rows="4" placeholder="Additional details..."></textarea>
+                            <span class="error-text" id="remarks-error"></span>
                 </div>
             </div>
                     <div class="flex">
@@ -578,7 +579,7 @@ ob_end_flush();
                                 <span class="error-text" id="edit-receipt_number-error"></span>
                     </div>
                             <div class="form-group hidden" id="edit-loan-section">
-                                <label for="edit-loan_id" class="form-label">Select Loan <span class="required-mark">*</span></label>
+                                <label for="edit-loan_id" class="form-label">Select Loan</label>
                                 <select name="loan_id" id="edit-loan_id" class="input-field">
                             <option value="" disabled>Select a Loan</option>
                         </select>
@@ -586,7 +587,7 @@ ob_end_flush();
                     </div>
                             <div class="form-group" style="grid-column: 1 / -1;">
                                 <label for="edit-remarks" class="form-label">Remarks</label>
-                        <textarea name="monthly_contribution" id="edit-remarks" class="input-field" rows="4"></textarea>
+                        <textarea name="remarks" id="edit-remarks" class="input-field" rows="4"></textarea>
                                 <span class="error-text" id="edit-remarks-error"></span>
                     </div>
                 </div>
